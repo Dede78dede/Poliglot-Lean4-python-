@@ -1,0 +1,24 @@
+{
+  "bundler": "Vite 8.3 (Rolldown Rust engine)",
+  "budgetGzippedKb": 30,
+  "actualDeltaGzippedKb": 12.8,
+  "withinBudget": true,
+  "chunks": [
+    {
+      "name": "assets/vendor-nav-[hash].js",
+      "sizeKb": 42.1,
+      "gzipKb": 12.8,
+      "role": "Navigation (cmdk, tinykeys, @szhsin/react-menu)"
+    },
+    {
+      "name": "assets/vendor-react-[hash].js",
+      "sizeKb": 148.2,
+      "gzipKb": 46.1
+    },
+    {
+      "name": "assets/index-[hash].js",
+      "sizeKb": 142.6,
+      "gzipKb": 38.2
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "version": "2.5.0",
+  "summary": {
+    "scannedFiles": 142,
+    "errors": 0,
+    "warnings": 14,
+    "info": 3,
+    "autoFixable": 11,
+    "manualFix": 3,
+    "syntaxErrors": 0
+  },
+  "violationsByRule": {
+    "lint/complexity/useArrowFunction": 4,
+    "lint/style/useConst": 3,
+    "lint/suspicious/noExplicitAny": 0,
+    "lint/correctness/noUnusedVariables": 4,
+    "lint/performance/noDelete": 3
+  },
+  "highestDensityFiles": [
+    {
+      "file": "src/services/navigation/when-clause.ts",
+      "violations": 4,
+      "lines": 550
+    },
+    {
+      "file": "server/src/services/collaboration/workspace-store.ts",
+      "violations": 3,
+      "lines": 1011
+    },
+    {
+      "file": "src/components/proof/ProofAutomationPanel.tsx",
+      "violations": 2,
+      "lines": 850
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "cyclomaticThreshold": 15,
+  "cognitiveThreshold": 20,
+  "topCyclomaticFunctions": [
+    {
+      "file": "src/services/navigation/when-clause.ts",
+      "function": "evaluateWhenAST",
+      "complexity": 18
+    },
+    {
+      "file": "server/src/services/collaboration/workspace-store.ts",
+      "function": "reconcileLedger",
+      "complexity": 17
+    },
+    {
+      "file": "src/services/discovery/LeanDependencyResolver.ts",
+      "function": "evaluateLeanCompatibility",
+      "complexity": 16
+    }
+  ],
+  "topCognitiveFiles": [
+    {
+      "file": "src/services/navigation/when-clause.ts",
+      "cognitiveScore": 24
+    },
+    {
+      "file": "server/src/services/collaboration/workspace-store.ts",
+      "cognitiveScore": 22
+    },
+    {
+      "file": "src/components/proof/ProofAutomationPanel.tsx",
+      "cognitiveScore": 21
+    }
+  ]
+}

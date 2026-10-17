@@ -1,0 +1,10 @@
+name = "proofwidgets_demo"
+defaultTargets = ["ProofwidgetsDemo"]
+
+[[require]]
+name = "proofwidgets"
+git = "https://github.com/leanprover-community/ProofWidgets4"
+rev = "v0.0.113"
+
+[[lean_lib]]
+name = "ProofwidgetsDemo"

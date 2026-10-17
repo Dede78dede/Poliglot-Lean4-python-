@@ -1,0 +1,11 @@
+{
+  "totalRuns": 10,
+  "executedSpecs": 12,
+  "flakyCount": 0,
+  "failOnFlakyTests": true,
+  "results": {
+    "no-failure-observed": 12,
+    "mixed-outcomes": 0,
+    "failed-every-run": 0
+  }
+}

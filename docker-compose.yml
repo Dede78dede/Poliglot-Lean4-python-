@@ -1,0 +1,74 @@
+version: '3.9'
+
+networks:
+  polyglot-net:
+    driver: bridge
+  lean-isolated-net:
+    driver: bridge
+    internal: true # STRICT NO-RUNTIME-NETWORK ISOLATION (--internal=true)
+
+volumes:
+  mathlib-cache:
+    driver: local
+
+services:
+  studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - LEAN_RUNNER_MODE=real
+      - LEAN_RUNNER_URL=http://lean-runner:8080
+      - PANTOGRAPH_URL=http://pantograph:8081
+      - KIMINA_URL=http://kimina-backend:8080
+      - PIPELINE_STRICT_GOALS=false
+      - WS_PORT=3000
+      - CLAIM_TTL_MS=1800000
+      - ENABLE_DUPER=false
+      - ENABLE_LEANSAGE=false
+    networks:
+      - polyglot-net
+    depends_on:
+      - lean-runner
+      - pantograph
+
+  lean-runner:
+    build:
+      context: ./docker/lean-runner
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8080"
+    networks:
+      - polyglot-net
+      - lean-isolated-net
+    volumes:
+      - mathlib-cache:/root/.cache/mathlib
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 16G
+
+  pantograph:
+    build:
+      context: ./docker/pantograph
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    networks:
+      - polyglot-net
+      - lean-isolated-net
+    volumes:
+      # Read-only mount prevents concurrent cache corruption
+      - mathlib-cache:/root/.cache/mathlib:ro
+    environment:
+      - LEAN_TOOLCHAIN=leanprover/lean4:v4.33.1
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 8G

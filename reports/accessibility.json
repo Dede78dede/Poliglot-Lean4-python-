@@ -1,0 +1,10 @@
+{
+  "standard": "WCAG 2.2 Level AA",
+  "totalViolations": 0,
+  "testedComponents": [
+    "MenuBar",
+    "CommandPalette",
+    "StatusBar",
+    "TopBar"
+  ]
+}

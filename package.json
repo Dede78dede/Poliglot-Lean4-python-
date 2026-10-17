@@ -1,0 +1,59 @@
+{
+  "name": "polyglot-code-studio",
+  "private": true,
+  "version": "1.1.0",
+  "description": "A browser-based dual-runtime code editor and formal verification studio for Python 3.14 and Lean 4.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/polyglot-studio/polyglot-code-studio.git"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "packageManager": "npm@10.8.2",
+  "sideEffects": false,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "vite build",
+    "start": "tsx server.ts",
+    "preview": "vite preview",
+    "clean": "rm -rf dist server.js",
+    "lint": "tsc --noEmit",
+    "test": "tsx scripts/verify-all.ts",
+    "test:verify": "tsx scripts/verify-all.ts",
+    "audit": "npm audit --audit-level=high",
+    "sbom": "npm sbom --sbom-format=cyclonedx > sbom.cdx.json && npm sbom --sbom-format=spdx > sbom.spdx.json"
+  },
+  "dependencies": {
+    "@google/genai": "^2.4.0",
+    "@monaco-editor/react": "^4.7.0",
+    "@szhsin/react-menu": "^4.5.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.1.1",
+    "cmdk": "^1.1.1",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "fflate": "^0.8.3",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "tinykeys": "^4.0.1",
+    "vite": "^8.3.0",
+    "ws": "^8.22.0",
+    "zod": "^4.6.6"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.2",
+    "esbuild": "^0.28.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^7.0.2"
+  }
+}

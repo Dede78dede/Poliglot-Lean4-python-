@@ -1,0 +1,10 @@
+{
+  "totalRuns": 5,
+  "executedTests": 184,
+  "flakyCount": 0,
+  "results": {
+    "no-failure-observed": 184,
+    "mixed-outcomes": 0,
+    "failed-every-run": 0
+  }
+}

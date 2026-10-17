@@ -1,0 +1,28 @@
+{
+  "unusedFiles": [],
+  "unusedExports": [
+    {
+      "file": "src/services/storage/token-vault.ts",
+      "export": "decryptTokenDirect",
+      "line": 112
+    },
+    {
+      "file": "src/services/discovery/LeanDependencyResolver.ts",
+      "export": "parseLakefileRaw",
+      "line": 84
+    },
+    {
+      "file": "server/src/services/verification-formula.ts",
+      "export": "computeHypothesisEntropy",
+      "line": 145
+    }
+  ],
+  "unusedTypes": [
+    {
+      "file": "src/types/navigation.ts",
+      "type": "WhenGroupNode",
+      "line": 106
+    }
+  ],
+  "unusedDependencies": []
+}
