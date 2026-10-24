@@ -32,9 +32,17 @@ import { FiveTierMemoryDrawer } from './components/memory/FiveTierMemoryDrawer';
 import { AutoCorrectionPanel } from './components/autocorrect/AutoCorrectionPanel';
 import { ProofAutomationPanel } from './components/proof/ProofAutomationPanel';
 import { BlueprintWorkspaceModal } from './components/collaboration/BlueprintWorkspaceModal';
+import { McpToolsDrawer } from './components/mcp/McpToolsDrawer';
+import { SecretsManager } from './components/secrets/SecretsManager';
+import { FemevDrawer } from './components/femev/FemevDrawer';
 import { MenuBar } from './components/navigation/MenuBar';
 import { CommandPalette } from './components/navigation/CommandPalette';
-import { registerDefaultCommands, setCommandActionHandlers } from './services/navigation/default-commands';
+import {
+  registerDefaultCommands,
+  registerMcpCommands,
+  registerFemevCommands,
+  setCommandActionHandlers,
+} from './services/navigation/default-commands';
 import { initializeDefaultStatusBarItems } from './services/status-bar/runtime-items';
 import { keybindingResolver } from './services/navigation/keybinding-resolver';
 import { contextUpdaters } from './services/context/context-updaters';
@@ -101,7 +109,10 @@ function StudioWorkspace(): React.JSX.Element {
   const [autoCorrectionOpen, setAutoCorrectionOpen] = useState(false);
   const [proofAutomationOpen, setProofAutomationOpen] = useState(false);
   const [blueprintModalOpen, setBlueprintModalOpen] = useState(false);
+  const [mcpToolsOpen, setMcpToolsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [secretsManagerOpen, setSecretsManagerOpen] = useState(false);
+  const [femevDrawerOpen, setFemevDrawerOpen] = useState(false);
   const [toolchainWarning, setToolchainWarning] = useState<string | null>(null);
   const [isExplorerOpen, setIsExplorerOpen] = useState(true);
   const [isKiminaSimulated, setIsKiminaSimulated] = useState<boolean>(false);
@@ -226,11 +237,15 @@ function StudioWorkspace(): React.JSX.Element {
   // Navigation & Command Registry setup
   useEffect(() => {
     const defaultCommandsDisp = registerDefaultCommands();
+    const mcpCommandsDisp = registerMcpCommands();
+    const femevCommandsDisp = registerFemevCommands();
     initializeDefaultStatusBarItems();
     keybindingResolver.attach();
 
     return () => {
       defaultCommandsDisp.dispose();
+      mcpCommandsDisp.dispose();
+      femevCommandsDisp.dispose();
       keybindingResolver.detach();
     };
   }, []);
@@ -254,6 +269,9 @@ function StudioWorkspace(): React.JSX.Element {
       onOpenAutoFix: () => setAutoCorrectionOpen(true),
       onOpenProofAutomation: () => setProofAutomationOpen(true),
       onOpenBlueprint: () => setBlueprintModalOpen(true),
+      onOpenMcpTools: () => setMcpToolsOpen(true),
+      onOpenProviders: () => setSecretsManagerOpen(true),
+      onOpenFemev: () => setFemevDrawerOpen(true),
       onOpenCommandPalette: () => setCommandPaletteOpen(true),
       onOpenShortcuts: () => setCommandPaletteOpen(true),
       onOpenDoc: () => setGalleryOpen(true),
@@ -421,7 +439,7 @@ function StudioWorkspace(): React.JSX.Element {
   const lastResult = executionState.kind === 'completed' ? executionState.result : null;
 
   return (
-    <div className="flex flex-col w-screen h-screen bg-[#0b0f17] text-slate-100 overflow-hidden font-sans">
+    <div className="flex flex-col w-full h-screen h-[100dvh] max-w-full bg-[#0b0f17] text-slate-100 overflow-hidden font-sans">
       {/* Hidden file input for ZIP import */}
       <input
         type="file"
@@ -456,6 +474,9 @@ function StudioWorkspace(): React.JSX.Element {
         onOpenAutoCorrection={() => setAutoCorrectionOpen(true)}
         onOpenProofAutomation={() => setProofAutomationOpen(true)}
         onOpenBlueprint={() => setBlueprintModalOpen(true)}
+        onOpenMcpTools={() => setMcpToolsOpen(true)}
+        onOpenSecrets={() => setSecretsManagerOpen(true)}
+        onOpenFemev={() => setFemevDrawerOpen(true)}
         onImportZipClick={handleTriggerZipInput}
         projectName={currentProject?.name}
       />
@@ -647,6 +668,28 @@ function StudioWorkspace(): React.JSX.Element {
         onOpenInEditor={(code, lang) => {
           setLanguage(lang);
           handleCodeChange(code);
+        }}
+      />
+
+      {/* Phase 10.2: Native Lean LSP MCP Tools Drawer */}
+      <McpToolsDrawer
+        isOpen={mcpToolsOpen}
+        onClose={() => setMcpToolsOpen(false)}
+      />
+
+      {/* API & Secrets Manager Modal */}
+      <SecretsManager
+        isOpen={secretsManagerOpen}
+        onClose={() => setSecretsManagerOpen(false)}
+      />
+
+      {/* Phase 10.5: FEMEV Epistemic Workflow Drawer */}
+      <FemevDrawer
+        isOpen={femevDrawerOpen}
+        onClose={() => setFemevDrawerOpen(false)}
+        onApplyCodeToEditor={(appliedCode, lang) => {
+          setLanguage(lang);
+          handleCodeChange(appliedCode);
         }}
       />
 

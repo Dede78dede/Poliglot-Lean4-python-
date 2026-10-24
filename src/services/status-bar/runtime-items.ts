@@ -1,8 +1,22 @@
 import { statusBarRegistry } from './status-bar-registry';
 
 export function initializeDefaultStatusBarItems(): void {
-  // Clear any existing
+  // If default items are already registered, avoid resetting to prevent store notification cascades
+  if (statusBarRegistry.getItem('kimina-ready')) {
+    return;
+  }
   statusBarRegistry.reset();
+
+  // Phase 10.9: Unified Container Health & Readiness
+  statusBarRegistry.add({
+    id: 'system-readiness',
+    text: '● System Ready',
+    tooltip: 'Aggregate readiness: 9 containers monitored (/readyz)',
+    alignment: 'left',
+    priority: 110,
+    commandId: 'tools.systemHealth',
+    color: '#10b981',
+  });
 
   // 1. Toolchain & Runtime (Left)
   statusBarRegistry.add({
@@ -71,12 +85,28 @@ export function initializeDefaultStatusBarItems(): void {
     commandId: 'proof.openBlueprint',
   });
 
+  const defaultProviderText =
+    typeof process !== 'undefined' && process.env?.['LEANSTRAL_ENDPOINT']
+      ? 'Leanstral 1.5 (MoE)'
+      : 'Pantograph (Local)';
+
   statusBarRegistry.add({
     id: 'llm-provider',
-    text: 'Pantograph (Local)',
-    tooltip: 'Active AI/Prover Provider',
+    text: defaultProviderText,
+    tooltip: 'Active AI / Prover Provider (Leanstral 1.5 default when endpoint configured)',
     alignment: 'right',
     priority: 80,
     commandId: 'tools.llmProviders',
+  });
+
+  // Phase 10.2: Native Lean LSP MCP Client item
+  statusBarRegistry.add({
+    id: 'mcp-status',
+    text: 'MCP: Lean LSP (Stdio)',
+    tooltip: 'Native Lean LSP Model Context Protocol client (26 tools matrix)',
+    alignment: 'right',
+    priority: 75,
+    commandId: 'tools.mcpTools',
+    color: '#06b6d4',
   });
 }

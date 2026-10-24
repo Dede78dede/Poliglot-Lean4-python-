@@ -41,7 +41,9 @@ export function WorkspaceGrid({
   pipelineNode,
 }: WorkspaceGridProps): React.JSX.Element {
   const [layout, setLayout] = useState<WorkspaceLayout>(loadInitialLayout);
-  const [isNarrow, setIsNarrow] = useState<boolean>(false);
+  const [isNarrow, setIsNarrow] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
+  });
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingSplitRef = useRef<boolean>(false);
 
@@ -245,21 +247,21 @@ export function WorkspaceGrid({
         </div>
       ) : (
         /* Mobile / Narrow Tabbed Layout */
-        <div className="flex flex-col w-full h-full">
+        <div className="flex flex-col w-full h-full min-h-0 flex-1 overflow-hidden">
           {/* Top Half: Editor */}
-          <div className="h-1/2 w-full border-b border-neutral-800 overflow-hidden flex flex-col">
+          <div className="h-1/2 min-h-0 w-full border-b border-neutral-800 overflow-hidden flex flex-col">
             {tabsNode && (
               <div className="flex items-center bg-[#090d15] border-b border-neutral-800">
                 {tabsNode}
               </div>
             )}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden">
               {editorNode}
             </div>
           </div>
 
           {/* Bottom Drawer: Tabbed Auxiliary Pane */}
-          <div className="h-1/2 w-full flex flex-col bg-[#111827] overflow-hidden">
+          <div className="h-1/2 min-h-0 w-full flex flex-col bg-[#111827] overflow-hidden">
             {/* Tab navigation */}
             <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0d131f] border-b border-neutral-800 text-xs">
               {isLean && (

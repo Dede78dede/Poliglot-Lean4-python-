@@ -30,7 +30,7 @@ export function MenuBar({ onOpenCommandPalette }: MenuBarProps): React.JSX.Eleme
     <header
       role="menubar"
       aria-label="Application Main Menu"
-      className="flex items-center justify-between px-3 h-8 bg-[#0B0F17] border-b border-[#1E293B] select-none text-[12px] font-sans z-30"
+      className="flex items-center justify-between px-2 sm:px-3 h-8 bg-[#0B0F17] border-b border-[#1E293B] select-none text-[12px] font-sans z-30 overflow-x-auto shrink-0 max-w-full"
     >
       {/* Left: Brand Identity & Menu Bar Dropdowns */}
       <div className="flex items-center gap-1">

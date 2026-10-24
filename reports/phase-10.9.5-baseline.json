@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-10-24T12:00:00.000Z",
+  "phase": "10.9.5",
+  "baselineSource": "reports/phase-10.9-summary.md",
+  "featureFlagCount": 26,
+  "errorCodeCount": 30,
+  "containerCount": 9,
+  "toolchainCount": 11,
+  "externalStoreCount": 10,
+  "databaseCount": 6,
+  "cumulativeSuitesPassing": 50,
+  "status": "baseline-verified"
+}

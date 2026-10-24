@@ -23,7 +23,7 @@ export function StatusBar(): React.JSX.Element {
     <footer
       role="status"
       aria-label="Polyglot Studio Status Bar"
-      className="flex items-center justify-between px-3 h-6 bg-[#0B0F17] border-t border-[#1E293B] text-[11px] text-slate-400 select-none font-mono tabular-nums z-30 shrink-0"
+      className="flex items-center justify-between px-3 h-6 bg-[#0B0F17] border-t border-[#1E293B] text-[11px] text-slate-400 select-none font-mono tabular-nums z-30 shrink-0 overflow-x-auto max-w-full"
     >
       {/* Left zone: Toolchain, Pyodide & Workspace telemetry */}
       <div className="flex items-center gap-2 overflow-hidden">

@@ -1,26 +1,13 @@
+import { ZIP_LIMITS as CONSTANTS_ZIP_LIMITS } from '../registries/constants';
+
 export const ZIP_LIMITS = Object.freeze({
-  MAX_TOTAL_UNCOMPRESSED_BYTES: 50 * 1024 * 1024, // 50 MB (standard manual upload)
-  MAX_FILE_UNCOMPRESSED_BYTES: 5 * 1024 * 1024,   // 5 MB
-  MAX_FILES: 500,
-  MAX_COMPRESSION_RATIO: 100,
-  MAX_PATH_DEPTH: 20,
-  ALLOWED_EXTENSIONS: Object.freeze([
-    '.py',
-    '.lean',
-    '.toml',
-    '.json',
-    '.md',
-    '.txt',
-    '.lakefile',
-    '.leanfile',
-    '.yml',
-    '.yaml',
-  ]),
+  ...CONSTANTS_ZIP_LIMITS,
+  MAX_TOTAL_UNCOMPRESSED_BYTES: CONSTANTS_ZIP_LIMITS.MAX_TOTAL_UNCOMPRESSED_BYTES_MANUAL,
 } as const);
 
 export const GITHUB_IMPORT_LIMITS = Object.freeze({
-  MAX_TOTAL_UNCOMPRESSED_BYTES: 200 * 1024 * 1024, // 200 MB (GitHub import specific)
-  MAX_STREAM_BYTES: 500 * 1024 * 1024,             // 500 MiB hard limit for compressed streaming
+  MAX_TOTAL_UNCOMPRESSED_BYTES: CONSTANTS_ZIP_LIMITS.MAX_TOTAL_UNCOMPRESSED_BYTES_GITHUB,
+  MAX_STREAM_BYTES: 500 * 1024 * 1024,
 } as const);
 
 export const ZIP_EXPORT_EXCLUSIONS = Object.freeze([
@@ -44,6 +31,8 @@ export interface ZipValidationEntry {
   readonly uncompressedSize: number;
   readonly compressedSize?: number;
   readonly isDirectory?: boolean;
+  readonly isSymlink?: boolean;
+  readonly zombieMismatch?: boolean;
 }
 
 export interface ZipValidationResult {
@@ -59,7 +48,7 @@ export interface ZipValidationOptions {
 
 /**
  * Validates a ZIP archive structure against ZIP bomb, path traversal,
- * symlink, and file size quotas prior to extraction.
+ * symlinks, nested archives, and file size quotas prior to extraction.
  */
 export function validateZipEntries(
   entries: readonly ZipValidationEntry[],
@@ -80,13 +69,29 @@ export function validateZipEntries(
   for (const entry of entries) {
     const rawPath = entry.path.trim();
 
-    // 1. Path traversal security checks
+    // 0. Symlink and Zombie checks
+    if (entry.isSymlink) {
+      errors.push(`Symlink rejected in path: "${rawPath}" (MAX_SYMLINKS: 0).`);
+      continue;
+    }
+    if (entry.zombieMismatch) {
+      errors.push(`Zombie ZIP compression header mismatch detected: "${rawPath}" (CVE-2026-0866).`);
+      continue;
+    }
+
+    // 1. Path traversal security checks (CVE-2018-1002200)
     if (rawPath.includes('..') || rawPath.startsWith('/') || rawPath.startsWith('\\')) {
       errors.push(`Illegal path traversal sequence detected in file path: "${rawPath}".`);
       continue;
     }
     if (rawPath.includes('\0')) {
       errors.push(`Null byte injection detected in path: "${rawPath}".`);
+      continue;
+    }
+
+    // 2. Nested ZIP archive rejection
+    if (rawPath.toLowerCase().endsWith('.zip') || rawPath.toLowerCase().endsWith('.tar.gz')) {
+      errors.push(`Nested archive rejected: "${rawPath}" (MAX_NESTED_DEPTH: 1).`);
       continue;
     }
 
@@ -103,14 +108,14 @@ export function validateZipEntries(
     fileCount++;
     totalUncompressedSize += entry.uncompressedSize;
 
-    // 2. Per-file size check
+    // 3. Per-file size check
     if (entry.uncompressedSize > ZIP_LIMITS.MAX_FILE_UNCOMPRESSED_BYTES) {
       errors.push(
         `File "${rawPath}" (${(entry.uncompressedSize / (1024 * 1024)).toFixed(2)} MB) exceeds maximum file size (${ZIP_LIMITS.MAX_FILE_UNCOMPRESSED_BYTES / (1024 * 1024)} MB).`,
       );
     }
 
-    // 3. Compression ratio check (ZIP bomb mitigation)
+    // 4. Compression ratio check (ZIP bomb mitigation)
     const compressed = entry.compressedSize ?? Math.max(1, archiveByteLength / entries.length);
     const ratio = entry.uncompressedSize / Math.max(1, compressed);
     if (ratio > ZIP_LIMITS.MAX_COMPRESSION_RATIO) {
@@ -119,8 +124,17 @@ export function validateZipEntries(
       );
     }
 
-    // 4. Extension whitelist check
+    // 5. Extension whitelist & dangerous double extensions check
     const fileName = segments[segments.length - 1] ?? '';
+    const lowerFileName = fileName.toLowerCase();
+
+    // Check for dangerous double extensions (e.g. "exploit.py.exe", "file.lean.dll")
+    const dangerousExtensions = ['.exe', '.dll', '.so', '.dylib', '.bat', '.cmd', '.sh', '.msi'];
+    if (dangerousExtensions.some((ext) => lowerFileName.endsWith(ext))) {
+      errors.push(`Executable binary or script rejected: "${rawPath}".`);
+      continue;
+    }
+
     const isSpecialAllowedFile =
       fileName === 'lakefile.lean' ||
       fileName === 'lean-toolchain' ||
@@ -129,7 +143,7 @@ export function validateZipEntries(
       fileName === 'README.md';
 
     const hasAllowedExt = ZIP_LIMITS.ALLOWED_EXTENSIONS.some((ext) =>
-      fileName.toLowerCase().endsWith(ext),
+      lowerFileName.endsWith(ext),
     );
 
     if (!hasAllowedExt && !isSpecialAllowedFile && !fileName.startsWith('.')) {
@@ -137,7 +151,7 @@ export function validateZipEntries(
     }
   }
 
-  // 5. Total uncompressed size check
+  // 6. Total uncompressed size check
   if (totalUncompressedSize > maxTotalBytes) {
     errors.push(
       `Total uncompressed project size (${(totalUncompressedSize / (1024 * 1024)).toFixed(2)} MB) exceeds maximum limit of ${(maxTotalBytes / (1024 * 1024)).toFixed(0)} MB.`,

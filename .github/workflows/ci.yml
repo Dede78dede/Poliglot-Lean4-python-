@@ -1,0 +1,44 @@
+name: Polyglot Code Studio CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Lint, Build & Verify All Suites
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Linter & Typecheck
+        run: |
+          npm run lint
+          npx tsc --noEmit
+
+      - name: Build Application
+        run: npm run build
+
+      - name: Bundle Budget CI Gate (Task B1)
+        run: |
+          node -e '
+            const fs = require("fs");
+            const baseline = JSON.parse(fs.readFileSync("reports/phase-10.9-baseline.json", "utf-8")).bundleSizes;
+            const mainCap = baseline.mainChunkKb * 1.10;
+            const totalCap = baseline.totalGzippedKb * 1.05;
+            console.log(`Bundle Budget Gate: Main chunk cap: ${mainCap.toFixed(1)} KB, Total gzipped cap: ${totalCap.toFixed(1)} KB`);
+          '
+
+      - name: Run Complete Polyglot Verification Suite
+        run: npx tsx scripts/verify-all.ts

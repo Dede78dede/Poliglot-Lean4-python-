@@ -13,6 +13,9 @@ import {
   Layers,
   Wrench,
   Network,
+  Terminal,
+  KeyRound,
+  FlaskConical,
 } from 'lucide-react';
 import type { SupportedLanguage } from '../types/language';
 import { SUPPORTED_LANGUAGES } from '../types/language';
@@ -36,6 +39,9 @@ export interface TopBarProps {
   readonly onOpenAutoCorrection?: () => void;
   readonly onOpenProofAutomation?: () => void;
   readonly onOpenBlueprint?: () => void;
+  readonly onOpenMcpTools?: () => void;
+  readonly onOpenSecrets?: () => void;
+  readonly onOpenFemev?: () => void;
   readonly onImportZipClick?: () => void;
   readonly projectName?: string | null;
 }
@@ -57,6 +63,9 @@ export function TopBar({
   onOpenAutoCorrection,
   onOpenProofAutomation,
   onOpenBlueprint,
+  onOpenMcpTools,
+  onOpenSecrets,
+  onOpenFemev,
   onImportZipClick,
   projectName,
 }: TopBarProps): React.JSX.Element {
@@ -65,7 +74,7 @@ export function TopBar({
   const isRunning = executionState.kind === 'running';
 
   return (
-    <header className="flex items-center justify-between gap-4 px-4 py-2 bg-[#090d15] border-b border-neutral-800 text-slate-200 select-none">
+    <header className="flex items-center justify-between gap-2 sm:gap-4 px-2 sm:px-4 py-1.5 sm:py-2 bg-[#090d15] border-b border-neutral-800 text-slate-200 select-none overflow-x-auto shrink-0 max-w-full">
       {/* Zone 1: Wordmark and active project badge */}
       <div className="flex items-center gap-2.5 shrink-0">
         <a href="/" className="text-base font-bold tracking-tight text-white whitespace-nowrap hover:opacity-90">
@@ -208,6 +217,45 @@ export function TopBar({
           </button>
         )}
 
+        {/* Phase 10.2: Lean LSP MCP Tools Foundation button */}
+        {onOpenMcpTools && (
+          <button
+            type="button"
+            onClick={onOpenMcpTools}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-slate-300 hover:text-white transition-colors whitespace-nowrap"
+            title="Phase 10.2: Lean LSP Model Context Protocol (MCP) Tools Matrix"
+          >
+            <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+            <span>MCP Tools</span>
+          </button>
+        )}
+
+        {/* Phase 10.4: API & Secrets Manager button */}
+        {onOpenSecrets && (
+          <button
+            type="button"
+            onClick={onOpenSecrets}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-slate-300 hover:text-white transition-colors whitespace-nowrap"
+            title="Phase 10.4: API & Secret Vault (PBKDF2 + AES-GCM-256)"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+            <span>Vault</span>
+          </button>
+        )}
+
+        {/* Phase 10.5: FEMEV Epistemic Workflow & Multi-Kernel Paranoid Check button */}
+        {onOpenFemev && (
+          <button
+            type="button"
+            onClick={onOpenFemev}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-800/60 hover:bg-emerald-900/40 text-emerald-300 hover:text-white transition-colors whitespace-nowrap"
+            title="Phase 10.5: FEMEV Epistemic Workflow & 6-Kernel Soundness Paranoid Check"
+          >
+            <FlaskConical className="w-3.5 h-3.5 text-emerald-400" />
+            <span>FEMEV</span>
+          </button>
+        )}
+
         {/* Import ZIP button */}
         {onImportZipClick && (
           <button
@@ -310,7 +358,7 @@ export function TopBar({
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Python Runtime:</span>
-                  <span className="font-mono text-slate-300">Pyodide 314.0.1</span>
+                  <span className="font-mono text-slate-300">Pyodide 314.0.7</span>
                 </div>
               </div>
             </div>

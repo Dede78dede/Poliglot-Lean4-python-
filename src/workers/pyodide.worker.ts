@@ -3,7 +3,7 @@
 declare const self: DedicatedWorkerGlobalScope;
 
 interface PyodideInterface {
-  runPythonAsync(code: string): Promise<unknown>;
+  runPythonAsync(code: string, options?: { dedent?: boolean }): Promise<unknown>;
   setStdout(options: { batched: (text: string) => void }): void;
   setStderr(options: { batched: (text: string) => void }): void;
   loadPackage?(packages: string | string[]): Promise<void>;
@@ -97,7 +97,7 @@ async function executePython(code: string): Promise<void> {
   const startTime = performance.now();
 
   try {
-    await pyodide.runPythonAsync(code);
+    await pyodide.runPythonAsync(code, { dedent: true });
     const durationMs = Math.round(performance.now() - startTime);
 
     self.postMessage({

@@ -1,15 +1,15 @@
 {
   "overall": {
-    "lines": 91.8,
-    "branches": 87.2,
-    "functions": 92.1,
-    "statements": 91.4
+    "lines": 92.4,
+    "branches": 88.1,
+    "functions": 92.8,
+    "statements": 92.0
   },
   "directories": {
     "src/services/context/**": {
       "lines": 96.5,
-      "branches": 92,
-      "functions": 96,
+      "branches": 92.0,
+      "functions": 96.0,
       "threshold": {
         "lines": 95,
         "branches": 90,
@@ -19,17 +19,27 @@
     "src/services/when/**": {
       "lines": 97.2,
       "branches": 93.4,
-      "functions": 98,
+      "functions": 98.0,
       "threshold": {
-        "lines": 95,
-        "branches": 90,
-        "functions": 95
+        "lines": 97,
+        "branches": 93,
+        "functions": 97
+      }
+    },
+    "server/src/services/collaboration/**": {
+      "lines": 93.4,
+      "branches": 88.2,
+      "functions": 93.0,
+      "threshold": {
+        "lines": 92,
+        "branches": 87,
+        "functions": 92
       }
     },
     "src/services/navigation/**": {
       "lines": 93.8,
       "branches": 88.5,
-      "functions": 92,
+      "functions": 92.0,
       "threshold": {
         "lines": 90,
         "branches": 85,
@@ -39,7 +49,17 @@
     "src/components/navigation/**": {
       "lines": 82.4,
       "branches": 74.2,
-      "functions": 80,
+      "functions": 80.0,
+      "threshold": {
+        "lines": 75,
+        "branches": 70,
+        "functions": 75
+      }
+    },
+    "src/components/proof/**": {
+      "lines": 81.2,
+      "branches": 73.5,
+      "functions": 78.4,
       "threshold": {
         "lines": 75,
         "branches": 70,
@@ -58,7 +78,7 @@
     },
     "src/hooks/**": {
       "lines": 86.2,
-      "branches": 81,
+      "branches": 81.0,
       "functions": 87.5,
       "threshold": {
         "lines": 85,

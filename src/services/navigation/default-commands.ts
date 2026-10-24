@@ -24,6 +24,7 @@ export interface CommandActionHandlers {
   readonly onOpenBlueprint?: () => void;
   readonly onOpenDiscovery?: () => void;
   readonly onOpenProviders?: () => void;
+  readonly onOpenMcpTools?: () => void;
   readonly onOpenCommandPalette?: () => void;
   readonly onOpenShortcuts?: () => void;
   readonly onOpenDoc?: () => void;
@@ -33,6 +34,7 @@ export interface CommandActionHandlers {
   readonly onFind?: () => void;
   readonly onReplace?: () => void;
   readonly onGotoLine?: () => void;
+  readonly onOpenFemev?: () => void;
 }
 
 let activeHandlers: CommandActionHandlers = {};
@@ -714,6 +716,7 @@ export const DEFAULT_MENUS: readonly MenuDescriptor[] = [
       { id: 't-vault', label: 'Credential & Key Vault', commandId: 'tools.vault', keybinding: 'Ctrl+Shift+V' },
       { id: 't-cloud', label: 'Cloud State Sync', commandId: 'tools.cloudSync', keybinding: 'Ctrl+Shift+U' },
       { id: 't-gallery', label: 'Templates Gallery', commandId: 'tools.gallery', keybinding: 'Ctrl+Shift+G' },
+      { id: 't-mcp', label: 'Lean LSP MCP Inspector...', commandId: 'tools.mcpTools', keybinding: 'Ctrl+Alt+M' },
     ],
   },
   {
@@ -752,3 +755,58 @@ export function registerDefaultCommands(): Disposable {
     },
   };
 }
+
+/**
+ * Phase 10.2: Native Lean LSP MCP command and keybinding registration
+ */
+export const MCP_COMMAND: CommandRegistration = {
+  id: 'tools.mcpTools',
+  title: 'Lean LSP MCP Inspector',
+  category: 'Tools',
+  description: 'Inspect native Lean LSP Model Context Protocol tools, connection, and rate limits',
+  keybinding: 'Ctrl+Alt+m',
+  handler: () => activeHandlers.onOpenMcpTools?.(),
+};
+
+export function registerMcpCommands(): Disposable {
+  const cmdDisp = commandRegistry.registerCommand(MCP_COMMAND);
+  const kbDisp = keybindingResolver.registerKeybinding({
+    commandId: 'tools.mcpTools',
+    key: 'Control+Alt+m',
+  });
+
+  return {
+    dispose: () => {
+      cmdDisp.dispose();
+      kbDisp.dispose();
+    },
+  };
+}
+
+/**
+ * Phase 10.5: FEMEV Epistemic Workflow command and keybinding registration
+ */
+export const FEMEV_COMMAND: CommandRegistration = {
+  id: 'tools.femevWorkflow',
+  title: 'FEMEV Epistemic Workflow Drawer',
+  category: 'Tools',
+  description: 'Open 4-phase experimental-visual mathematics and multi-kernel paranoid check drawer',
+  keybinding: 'Ctrl+Alt+f',
+  handler: () => activeHandlers.onOpenFemev?.(),
+};
+
+export function registerFemevCommands(): Disposable {
+  const cmdDisp = commandRegistry.registerCommand(FEMEV_COMMAND);
+  const kbDisp = keybindingResolver.registerKeybinding({
+    commandId: 'tools.femevWorkflow',
+    key: 'Control+Alt+f',
+  });
+
+  return {
+    dispose: () => {
+      cmdDisp.dispose();
+      kbDisp.dispose();
+    },
+  };
+}
+

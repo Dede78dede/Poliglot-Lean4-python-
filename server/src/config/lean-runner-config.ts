@@ -4,8 +4,12 @@ export type LeanRunnerMode = (typeof LEAN_RUNNER_MODES)[number];
 export const AVAILABLE_LEAN_TOOLCHAINS = Object.freeze([
   'v4.28.0',
   'v4.31.0',
+  'v4.31.0-rc2',
+  'v4.32.2',
   'v4.33.1',
+  'v4.34.1',
   'v4.35.0-rc4',
+  'v4.35.0',
 ] as const);
 
 export type AvailableLeanToolchain = (typeof AVAILABLE_LEAN_TOOLCHAINS)[number];

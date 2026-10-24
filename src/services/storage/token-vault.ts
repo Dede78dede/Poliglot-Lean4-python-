@@ -1,9 +1,34 @@
 import type { EncryptedVaultPayload } from '../../types/storage';
 
-const VAULT_STORAGE_KEY = 'polyglot_token_vault_v1';
+export const VAULT_STORAGE_KEY = 'polyglot_token_vault_v1';
+export const MULTI_SECRET_STORAGE_KEY = 'polyglot_multi_secrets_vault_v1';
+export const SECRET_AUDIT_LOG_KEY = 'polyglot_secret_audit_log_v1';
+
 const PBKDF2_ITERATIONS = 100_000;
 const SALT_BYTE_LENGTH = 16;
 const IV_BYTE_LENGTH = 12;
+
+export interface SecretMetadata {
+  readonly id: string;
+  readonly providerId: string;
+  readonly label: string;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+  readonly lastAccessedAt?: number;
+}
+
+export interface SecretAuditEntry {
+  readonly timestamp: number;
+  readonly secretId: string;
+  readonly providerId: string;
+  readonly action: 'store' | 'access' | 'rotate' | 'delete';
+  readonly success: boolean;
+}
+
+export interface StoredEncryptedSecret {
+  readonly metadata: SecretMetadata;
+  readonly payload: EncryptedVaultPayload;
+}
 
 function bufToHex(buffer: ArrayBuffer | Uint8Array): string {
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
@@ -25,10 +50,6 @@ function hexToBuf(hex: string): Uint8Array {
   return bytes;
 }
 
-/**
- * Derives an AES-GCM 256-bit CryptoKey from a user passphrase and salt
- * using PBKDF2 with 100,000 iterations and SHA-256.
- */
 async function deriveAesKey(
   passphrase: string,
   salt: Uint8Array,
@@ -66,7 +87,6 @@ function getSubtleCrypto(): SubtleCrypto {
   if (typeof window !== 'undefined' && window.crypto?.subtle) {
     return window.crypto.subtle;
   }
-  // Node.js fallback (Web Crypto available on global crypto)
   if (typeof crypto !== 'undefined' && crypto.subtle) {
     return crypto.subtle;
   }
@@ -75,10 +95,10 @@ function getSubtleCrypto(): SubtleCrypto {
 
 function getRandomValues(array: Uint8Array): Uint8Array {
   if (typeof window !== 'undefined' && window.crypto) {
-    return window.crypto.getRandomValues(array as any) as Uint8Array;
+    return (window.crypto.getRandomValues as (arr: Uint8Array) => Uint8Array)(array);
   }
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    return crypto.getRandomValues(array as any) as Uint8Array;
+    return (crypto.getRandomValues as (arr: Uint8Array) => Uint8Array)(array);
   }
   throw new Error('crypto.getRandomValues is not available');
 }
@@ -86,10 +106,62 @@ function getRandomValues(array: Uint8Array): Uint8Array {
 export class TokenVault {
   // Ephemeral in-memory decrypted token cache during active session
   private activeToken: string | null = null;
+  // Multi-secret store in-memory (mirrored to localStorage when available)
+  private readonly secretStore = new Map<string, StoredEncryptedSecret>();
+  // Local audit log (never transmitted over network)
+  private readonly auditLog: SecretAuditEntry[] = [];
+
+  constructor() {
+    this.loadFromStorage();
+  }
+
+  private loadFromStorage(): void {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(MULTI_SECRET_STORAGE_KEY);
+        if (raw) {
+          const list: StoredEncryptedSecret[] = JSON.parse(raw);
+          for (const item of list) {
+            this.secretStore.set(item.metadata.id, item);
+          }
+        }
+      } catch {
+        // ignore parse error
+      }
+    }
+  }
+
+  private persistMultiSecrets(): void {
+    if (typeof localStorage !== 'undefined') {
+      const list = Array.from(this.secretStore.values());
+      localStorage.setItem(MULTI_SECRET_STORAGE_KEY, JSON.stringify(list));
+    }
+  }
+
+  private recordAudit(secretId: string, providerId: string, action: SecretAuditEntry['action'], success: boolean): void {
+    const entry: SecretAuditEntry = {
+      timestamp: Date.now(),
+      secretId,
+      providerId,
+      action,
+      success,
+    };
+    this.auditLog.push(entry);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(SECRET_AUDIT_LOG_KEY, JSON.stringify(this.auditLog.slice(-100)));
+      } catch {
+        // storage overflow guard
+      }
+    }
+  }
+
+  public getAuditLog(): readonly SecretAuditEntry[] {
+    return [...this.auditLog];
+  }
 
   /**
-   * Encrypts a sensitive string (e.g. GitHub PAT or OAuth token)
-   * using PBKDF2-derived AES-GCM-256.
+   * Encrypts a sensitive string using PBKDF2-derived AES-GCM-256.
    */
   async encrypt(secret: string, passphrase: string): Promise<EncryptedVaultPayload> {
     if (!passphrase || passphrase.length < 4) {
@@ -126,7 +198,6 @@ export class TokenVault {
 
   /**
    * Decrypts an encrypted payload using the provided passphrase.
-   * Throws if passphrase is wrong or payload is corrupted.
    */
   async decrypt(payload: EncryptedVaultPayload, passphrase: string): Promise<string> {
     const subtle = getSubtleCrypto();
@@ -151,18 +222,137 @@ export class TokenVault {
     }
   }
 
+  // --- Extended Multi-Secret Support (Phase 10.4) ---
+
   /**
-   * Saves encrypted payload to local storage.
+   * Stores a named secret for a provider, encrypted with PBKDF2 + AES-GCM-256.
    */
+  async storeSecret(
+    providerId: string,
+    secret: string,
+    passphrase: string,
+    label?: string,
+  ): Promise<string> {
+    const id = `sec_${providerId}_${Date.now()}`;
+    const payload = await this.encrypt(secret, passphrase);
+
+    const metadata: SecretMetadata = {
+      id,
+      providerId,
+      label: label ?? `${providerId} API Key`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    this.secretStore.set(id, { metadata, payload });
+    this.persistMultiSecrets();
+    this.recordAudit(id, providerId, 'store', true);
+    return id;
+  }
+
+  /**
+   * Returns metadata only for all configured secrets (NO plaintext).
+   */
+  listSecrets(): readonly SecretMetadata[] {
+    return Array.from(this.secretStore.values()).map((s) => ({ ...s.metadata }));
+  }
+
+  /**
+   * Retrieves and decrypts a secret by its secret ID or provider ID.
+   */
+  async getSecret(idOrProviderId: string, passphrase: string): Promise<string> {
+    let entry = this.secretStore.get(idOrProviderId);
+    if (!entry) {
+      entry = Array.from(this.secretStore.values()).find(
+        (s) => s.metadata.providerId === idOrProviderId,
+      );
+    }
+
+    if (!entry) {
+      this.recordAudit(idOrProviderId, idOrProviderId, 'access', false);
+      throw new Error(`Secret not found: ${idOrProviderId}`);
+    }
+
+    try {
+      const plain = await this.decrypt(entry.payload, passphrase);
+      // update lastAccessedAt in metadata
+      const updatedMeta: SecretMetadata = {
+        ...entry.metadata,
+        lastAccessedAt: Date.now(),
+      };
+      this.secretStore.set(entry.metadata.id, {
+        metadata: updatedMeta,
+        payload: entry.payload,
+      });
+      this.persistMultiSecrets();
+      this.recordAudit(entry.metadata.id, entry.metadata.providerId, 'access', true);
+      return plain;
+    } catch (err) {
+      this.recordAudit(entry.metadata.id, entry.metadata.providerId, 'access', false);
+      throw err;
+    }
+  }
+
+  /**
+   * Rotates a secret's value with new plaintext and re-encrypts it.
+   */
+  async rotateSecret(idOrProviderId: string, newSecret: string, passphrase: string): Promise<void> {
+    let entry = this.secretStore.get(idOrProviderId);
+    if (!entry) {
+      entry = Array.from(this.secretStore.values()).find(
+        (s) => s.metadata.providerId === idOrProviderId,
+      );
+    }
+
+    if (!entry) {
+      this.recordAudit(idOrProviderId, idOrProviderId, 'rotate', false);
+      throw new Error(`Secret not found: ${idOrProviderId}`);
+    }
+
+    const newPayload = await this.encrypt(newSecret, passphrase);
+    const updatedMeta: SecretMetadata = {
+      ...entry.metadata,
+      updatedAt: Date.now(),
+    };
+
+    this.secretStore.set(entry.metadata.id, {
+      metadata: updatedMeta,
+      payload: newPayload,
+    });
+    this.persistMultiSecrets();
+    this.recordAudit(entry.metadata.id, entry.metadata.providerId, 'rotate', true);
+  }
+
+  /**
+   * Deletes a secret from storage.
+   */
+  async deleteSecret(idOrProviderId: string): Promise<boolean> {
+    let targetId = idOrProviderId;
+    if (!this.secretStore.has(idOrProviderId)) {
+      const found = Array.from(this.secretStore.values()).find(
+        (s) => s.metadata.providerId === idOrProviderId,
+      );
+      if (found) targetId = found.metadata.id;
+    }
+
+    const existed = this.secretStore.delete(targetId);
+    if (existed) {
+      this.persistMultiSecrets();
+      this.recordAudit(targetId, idOrProviderId, 'delete', true);
+    } else {
+      this.recordAudit(idOrProviderId, idOrProviderId, 'delete', false);
+    }
+    return existed;
+  }
+
+  // --- Original Single-Token Legacy Compat Methods ---
+
   saveEncryptedPayload(payload: EncryptedVaultPayload): void {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(payload));
     }
   }
 
-  /**
-   * Retrieves encrypted payload from local storage if one exists.
-   */
   getStoredPayload(): EncryptedVaultPayload | null {
     if (typeof localStorage === 'undefined') return null;
     const raw = localStorage.getItem(VAULT_STORAGE_KEY);
@@ -178,41 +368,30 @@ export class TokenVault {
     }
   }
 
-  /**
-   * Checks whether an encrypted vault currently exists on disk/localStorage.
-   */
   hasStoredVault(): boolean {
-    return this.getStoredPayload() !== null;
+    return this.getStoredPayload() !== null || this.secretStore.size > 0;
   }
 
-  /**
-   * Checks if an active token is currently cached in memory for this session.
-   */
   getActiveToken(): string | null {
     return this.activeToken;
   }
 
-  /**
-   * Sets in-memory active token (session-only).
-   */
   setActiveToken(token: string | null): void {
     this.activeToken = token;
   }
 
-  /**
-   * Locks the vault: clears in-memory decrypted token.
-   */
   lock(): void {
     this.activeToken = null;
   }
 
-  /**
-   * Completely clears both local storage vault and in-memory cache.
-   */
   clear(): void {
     this.activeToken = null;
+    this.secretStore.clear();
+    this.auditLog.length = 0;
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(VAULT_STORAGE_KEY);
+      localStorage.removeItem(MULTI_SECRET_STORAGE_KEY);
+      localStorage.removeItem(SECRET_AUDIT_LOG_KEY);
     }
   }
 }

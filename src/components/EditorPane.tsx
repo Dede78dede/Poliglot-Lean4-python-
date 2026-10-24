@@ -80,7 +80,10 @@ export function EditorPane({
         onRunRequested?.();
       });
 
-      editor.focus();
+      // Only auto-focus on desktop viewports to prevent unwanted virtual keyboard popping on mobile
+      if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+        editor.focus();
+      }
     },
     [language, onCursorChange, onMonacoInitState, onRunRequested],
   );

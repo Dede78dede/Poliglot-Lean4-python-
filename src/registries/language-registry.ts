@@ -4,7 +4,7 @@ export const LANGUAGE_REGISTRY: Readonly<Record<SupportedLanguage, LanguageInfo>
   python: Object.freeze({
     id: 'python',
     displayName: 'Python',
-    versionLabel: '3.14 (Pyodide 314.0.1)',
+    versionLabel: '3.14 (Pyodide 314.0.7)',
     monacoId: 'python',
     fileExtension: '.py',
     defaultTabSize: 4,

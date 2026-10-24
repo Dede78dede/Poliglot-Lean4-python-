@@ -36,10 +36,18 @@ export function usePyodide(): UsePyodideReturn {
     setStatus('loading');
     setError(null);
 
-    const worker = new Worker(
-      new URL('../workers/pyodide.worker.ts', import.meta.url),
-      { type: 'module' },
-    );
+    let worker: Worker;
+    try {
+      worker = new Worker(
+        new URL('../workers/pyodide.worker.ts', import.meta.url),
+        { type: 'module' },
+      );
+    } catch (err: unknown) {
+      console.warn('[usePyodide] Failed to start Web Worker:', err);
+      setStatus('error');
+      setError('Web Workers or Module Workers are not permitted in this browser context.');
+      return;
+    }
 
     worker.onmessage = (event: MessageEvent) => {
       const data = event.data;

@@ -1,5 +1,5 @@
 import type { StorageResult } from '../../../../src/types/storage';
-import { validateProofSearchQuery } from '../../routes/interact';
+import { validateProofSearchQuery } from '../../../../src/services/proof/proof-search-validator';
 
 export interface AiSuggestionRequest {
   readonly goal: string;           // sanitized: max 10k, no control chars, balanced brackets
@@ -258,25 +258,41 @@ export class AxleAiProvider implements AiProvider {
   }
 }
 
+export type LeanstralProfile = 'vllm' | 'ollama';
+
 /**
  * 3. LeanstralLocalProvider (Leanstral 1.5 - Local MoE)
  * Local provider communicating with vLLM / Ollama instance on local network.
- * Zero external network access required.
+ * Supports dual profiles:
+ * - vLLM: High-throughput 4-way tensor parallelism, 200K context, MARLIN NvFp4 backend.
+ * - Ollama: Local workstation quantized GGUF endpoint.
  */
 export class LeanstralLocalProvider implements AiProvider {
   readonly id = 'leanstral';
   readonly name = 'Leanstral 1.5 (Local vLLM / Ollama MoE)';
   private readonly endpoint: string;
+  private readonly profile: LeanstralProfile;
 
-  constructor(endpoint = process.env['LEANSTRAL_ENDPOINT'] || 'http://localhost:11434/api/generate') {
+  constructor(
+    endpoint = process.env['LEANSTRAL_ENDPOINT'] || 'http://localhost:11434/api/generate',
+    profile?: LeanstralProfile,
+  ) {
     this.endpoint = endpoint;
+    this.profile = profile ?? (endpoint.includes('/v1/') ? 'vllm' : 'ollama');
+  }
+
+  getProfile(): LeanstralProfile {
+    return this.profile;
   }
 
   async isAvailable(): Promise<boolean> {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 1000);
-      const res = await fetch(this.endpoint.replace(/\/generate$/, '/tags'), { signal: controller.signal });
+      const pingUrl = this.profile === 'vllm'
+        ? this.endpoint.replace(/\/chat\/completions$|\/completions$/, '/models')
+        : this.endpoint.replace(/\/generate$/, '/tags');
+      const res = await fetch(pingUrl, { signal: controller.signal });
       clearTimeout(timeout);
       return res.ok;
     } catch {
@@ -298,18 +314,27 @@ export class LeanstralLocalProvider implements AiProvider {
 
     try {
       const prompt = `[LEAN 4 PROVER]\nGoal: ${request.goal}\nContext: ${request.context ?? ''}\nSuggest next tactical step:`;
+      const body = this.profile === 'vllm'
+        ? JSON.stringify({
+            model: 'leanstral-1.5',
+            prompt,
+            max_tokens: request.maxTokens ?? 512,
+            temperature: 0.1,
+          })
+        : JSON.stringify({
+            model: 'leanstral-1.5:q4_k_m',
+            prompt,
+            stream: false,
+            options: {
+              num_predict: request.maxTokens ?? 512,
+              temperature: 0.1,
+            },
+          });
+
       const res = await fetch(this.endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'leanstral-1.5:q4_k_m',
-          prompt,
-          stream: false,
-          options: {
-            num_predict: request.maxTokens ?? 512,
-            temperature: 0.1,
-          },
-        }),
+        body,
       });
 
       if (!res.ok) {
@@ -319,8 +344,13 @@ export class LeanstralLocalProvider implements AiProvider {
         };
       }
 
-      const json = (await res.json()) as { response?: string };
-      const rawText = json.response?.trim() ?? 'rfl';
+      const json = (await res.json()) as { response?: string; choices?: readonly { text?: string }[] };
+      let rawText = '';
+      if (this.profile === 'vllm' && json.choices && json.choices.length > 0) {
+        rawText = json.choices[0]?.text?.trim() ?? 'rfl';
+      } else {
+        rawText = json.response?.trim() ?? 'rfl';
+      }
       const tactic = rawText.split('\n')[0]?.replace(/^by\s+/, '') ?? 'rfl';
 
       return {
@@ -330,7 +360,7 @@ export class LeanstralLocalProvider implements AiProvider {
             tactic,
             confidence: 'high',
             provider: this.id,
-            explanation: 'Synthesized by Leanstral 1.5 local MoE model',
+            explanation: `Synthesized by Leanstral 1.5 local MoE (${this.profile.toUpperCase()} profile)`,
           },
         ],
       };
@@ -346,21 +376,37 @@ export class LeanstralLocalProvider implements AiProvider {
   }
 }
 
+export type AiProviderId = 'no-ai' | 'leanstral' | 'axle';
+
+/**
+ * Task P1: Leanstral-First Policy Resolver
+ * If LEANSTRAL_ENDPOINT is configured, LeanstralLocalProvider becomes the default.
+ * If AXLE_API_KEY is configured (and no Leanstral endpoint), Axle becomes default.
+ * NoAiProvider remains the default only when no endpoint is configured.
+ */
+export function resolveDefaultProvider(env: NodeJS.ProcessEnv = process.env): AiProviderId {
+  if (env['LEANSTRAL_ENDPOINT']) return 'leanstral';
+  if (env['AXLE_API_KEY']) return 'axle';
+  return 'no-ai';
+}
+
 /**
  * AI Provider Registry & Active Provider Manager
  */
 export class AiProviderRegistry {
   private readonly providers = new Map<string, AiProvider>();
-  private activeProviderId = 'no-ai';
+  private activeProviderId: string;
 
-  constructor() {
+  constructor(env: NodeJS.ProcessEnv = process.env) {
     this.register(new NoAiProvider());
     this.register(new AxleAiProvider());
     this.register(new LeanstralLocalProvider());
 
-    const envProvider = process.env['AI_PROOF_PROVIDER'];
-    if (envProvider && this.providers.has(envProvider)) {
-      this.activeProviderId = envProvider;
+    const explicitProvider = env['AI_PROOF_PROVIDER'];
+    if (explicitProvider && this.providers.has(explicitProvider)) {
+      this.activeProviderId = explicitProvider;
+    } else {
+      this.activeProviderId = resolveDefaultProvider(env);
     }
   }
 

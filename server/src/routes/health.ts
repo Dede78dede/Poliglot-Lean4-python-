@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import type { KiminaClientProxy } from '../services/kimina-client-proxy';
+import { healthService } from '../../../src/services/health/health-service';
 
 export function createHealthRouter(proxy: KiminaClientProxy) {
   return async (_req: Request, res: Response): Promise<void> => {
@@ -25,5 +26,13 @@ export function createHealthRouter(proxy: KiminaClientProxy) {
       kiminaConnected,
       version: '1.0.0',
     });
+  };
+}
+
+export function createReadinessRouter() {
+  return async (_req: Request, res: Response): Promise<void> => {
+    const report = await healthService.checkAll();
+    const statusCode = report.overall === 'not_ready' ? 503 : 200;
+    res.status(statusCode).json(report);
   };
 }

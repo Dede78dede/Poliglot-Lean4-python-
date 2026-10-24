@@ -4,14 +4,27 @@ import type {
   Disposable,
 } from '../../types/navigation';
 
-export class StatusBarRegistry {
+import { ExternalStoreBase } from '../stores/external-store-base';
+
+export class StatusBarRegistry extends ExternalStoreBase<readonly StatusBarItemDescriptor[]> {
   private items = new Map<string, StatusBarItemDescriptor>();
-  private listeners = new Set<() => void>();
-  private cachedSnapshot: readonly StatusBarItemDescriptor[] | null = null;
+
+  constructor() {
+    super({ id: 'statusBarRegistry', multiTabSync: true });
+  }
 
   public add(item: StatusBarItemDescriptor): Disposable {
+    const existing = this.items.get(item.id);
+    if (existing) {
+      this.update(item.id, item);
+      return {
+        dispose: () => {
+          this.remove(item.id);
+        },
+      };
+    }
+
     this.items.set(item.id, { visible: true, ...item });
-    this.cachedSnapshot = null;
     this.notify();
 
     return {
@@ -25,14 +38,22 @@ export class StatusBarRegistry {
     const existing = this.items.get(id);
     if (!existing) return;
 
+    // Check if any property actually changed
+    let hasChange = false;
+    for (const [key, val] of Object.entries(partial)) {
+      if ((existing as unknown as Record<string, unknown>)[key] !== val) {
+        hasChange = true;
+        break;
+      }
+    }
+    if (!hasChange) return;
+
     this.items.set(id, { ...existing, ...partial });
-    this.cachedSnapshot = null;
     this.notify();
   }
 
   public remove(id: string): void {
     if (this.items.delete(id)) {
-      this.cachedSnapshot = null;
       this.notify();
     }
   }
@@ -47,40 +68,18 @@ export class StatusBarRegistry {
     return all.filter((item) => item.alignment === alignment);
   }
 
-  public getSnapshot = (): readonly StatusBarItemDescriptor[] => {
-    if (this.cachedSnapshot) {
-      return this.cachedSnapshot;
-    }
-
+  protected computeSnapshot(): readonly StatusBarItemDescriptor[] {
     const list = Array.from(this.items.values())
       .filter((i) => i.visible !== false)
       .sort((a, b) => b.priority - a.priority);
 
-    this.cachedSnapshot = Object.freeze(list);
-    return this.cachedSnapshot;
-  };
-
-  public subscribe = (listener: () => void): (() => void) => {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
-  };
-
-  public reset(): void {
-    this.items.clear();
-    this.cachedSnapshot = null;
-    this.notify();
+    return Object.freeze(list);
   }
 
-  private notify(): void {
-    for (const listener of this.listeners) {
-      try {
-        listener();
-      } catch (err) {
-        console.error('[StatusBarRegistry] Listener error', err);
-      }
-    }
+  public reset(): void {
+    if (this.items.size === 0) return;
+    this.items.clear();
+    this.notify();
   }
 }
 

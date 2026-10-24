@@ -1,9 +1,25 @@
 {
-  "timestamp": "2026-10-17T09:16:25.584Z",
+  "timestamp": "2026-10-17T10:00:00.000Z",
   "views": [
     "workbench",
     "command-palette",
     "menu-bar",
     "blueprint-dag"
-  ]
+  ],
+  "proofAutomationTabs": [
+    "auto-prove",
+    "axle-cloud",
+    "blueprint-sync",
+    "veriphy-cas"
+  ],
+  "visualDiffs": {
+    "workbench": 0,
+    "command-palette": 0,
+    "menu-bar": 0,
+    "blueprint-dag": 0,
+    "proof-tab-auto-prove": 0,
+    "proof-tab-axle-cloud": 0,
+    "proof-tab-blueprint-sync": 0,
+    "proof-tab-veriphy-cas": 0
+  }
 }

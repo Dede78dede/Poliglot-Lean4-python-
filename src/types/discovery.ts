@@ -7,12 +7,65 @@ export type DiscoveryEcosystem = z.infer<typeof DiscoveryEcosystemSchema>;
 export const ToolchainStatusSchema = z.enum(['compatible', 'mismatch', 'unknown']);
 export type ToolchainStatus = z.infer<typeof ToolchainStatusSchema>;
 
+/**
+ * PEP 783 Six-Tier Pyodide WebAssembly compatibility model.
+ * Aligned with the official "Are we PEP 783 yet?" tracker (Green, Blue, Purple, Cyan, Yellow):
+ * - wheel-available: Green (4%) - Ships pyemscripten_2026_0_wasm32 wheel on PyPI.
+ * - pyodide-recipe: Blue (8%) - Built from source by pyodide-recipes.
+ * - recipe-patched-pure-python: Purple (0%) - Pure Python requiring pyodide-recipes patch.
+ * - pure-python: Cyan (83%) - Pure Python wheel (py3-none-any.whl), no recipe patch required.
+ * - build-required: Yellow (5%) - Source available, requires pyodide-build compilation.
+ * - incompatible: Yellow/Red - Incompatible ABI (e.g. pyemscripten_2025_0), CUDA/GPU, or native OS binaries.
+ */
+export type WasmCompatibilityTier =
+  | 'wheel-available'
+  | 'pyodide-recipe'
+  | 'recipe-patched-pure-python'
+  | 'pure-python'
+  | 'build-required'
+  | 'incompatible';
+
+/**
+ * Strict platform tag for Pyodide 314.x (Python 3.14 / Emscripten 5.0.3).
+ * Correction C1: pyemscripten_2025_0 is rejected as incompatible because Emscripten has no cross-version ABI stability.
+ */
+export type AllowedPlatformTag =
+  | 'pyemscripten_2026_0_wasm32'
+  | 'pure-python'
+  | 'incompatible';
+
+export interface WheelArtifactInfo {
+  readonly filename: string;
+  readonly platformTag: string;
+  readonly pythonTag: string;
+  readonly abiTag: string;
+  readonly uploadTime?: string;
+  readonly sizeBytes?: number;
+  readonly downloadUrl?: string;
+}
+
+export interface PackageClassification {
+  readonly packageName: string;
+  readonly version: string;
+  readonly tier: WasmCompatibilityTier;
+  readonly platformTag: AllowedPlatformTag;
+  readonly matchedWheel?: WheelArtifactInfo;
+  readonly isWasmSupported: boolean;
+  readonly pyodideCompatible: boolean; // Preserved for strict backward compatibility
+  readonly requiresBuild: boolean;
+  readonly sourceOrigin: 'live-pypi' | 'cached' | 'snapshot-fallback';
+  readonly explanation: string;
+}
+
 export interface ToolchainRequirement {
   readonly leanVersion?: string; // e.g. "v4.8.0" or "v4.13.0"
   readonly mathlibCommit?: string;
   readonly pythonVersion?: string; // e.g. ">=3.11"
   readonly purePython?: boolean;
   readonly pyodideCompatible?: boolean;
+  readonly wasmTier?: WasmCompatibilityTier;
+  readonly platformTag?: AllowedPlatformTag;
+  readonly classificationExplanation?: string;
 }
 
 export interface PackageMetadata {
@@ -55,9 +108,13 @@ export interface PythonDependencyAnalysis {
     readonly name: string;
     readonly specifier?: string;
     readonly isWasmSupported: boolean;
+    readonly tier?: WasmCompatibilityTier;
+    readonly platformTag?: AllowedPlatformTag;
+    readonly explanation?: string;
   }[];
   readonly hasUnsupportedCExtensions: boolean;
   readonly unsupportedPackages: readonly string[];
+  readonly classifications?: readonly PackageClassification[];
 }
 
 export interface ToolchainCompatibilityReport {

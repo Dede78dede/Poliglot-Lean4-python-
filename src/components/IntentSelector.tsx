@@ -65,7 +65,7 @@ export function IntentSelector({
             Learn Python
           </h2>
           <p className="text-xs text-slate-400 leading-relaxed mb-4 flex-1">
-            Client-side WebAssembly execution with Pyodide 314.0.1, NumPy linear algebra, FFT analysis, and dynamic `micropip` packages.
+            Client-side WebAssembly execution with Pyodide 314.0.7, NumPy linear algebra, FFT analysis, and dynamic `micropip` packages.
           </p>
           <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400 group-hover:translate-x-0.5 transition-transform">
             <span>Start 6 Python Steps</span>

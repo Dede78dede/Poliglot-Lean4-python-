@@ -1,172 +1,156 @@
-# Sprint 9.4.1 — Technical Debt Quick-Wins
+# Phase 10.9 — Consolidation, Protocol Unification & Architectural Coherence
 
-Resolving high-priority technical debt identified in the Phase 9.4 Comprehensive Quality Audit: modularizing high-complexity dispatch hotspots, splitting collaboration services into a clean service-facade architecture, removing redundant PostCSS dependencies in favor of Tailwind v4 Lightning CSS, adding Playwright E2E coverage for navigation, executing ts-prune audit, and adding Suite 27 verification.
+This phase consolidates Polyglot Code Studio's architecture following eight phases of rapid capability expansion (Phases 10.2–10.8). Operating under a strict **"no new runtime feature, no new container, no new dependency"** contract, Phase 10.9 eliminates structural debt, unifies core protocols, and establishes a regression-proof baseline across all subsystems to prepare the codebase for Phase 11. The sole new endpoint introduced is `GET /api/v1/health/ready`.
+
+***
+
+## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> **Confirmed Decisions from Clarification:**
-> - **ts-prune Integration**: Executing ts-prune audit in Sprint 9.4.1 and recording dead export findings in `reports/sprint-9.4.1-summary.md` and `reports/dead-code-decisions.md`.
-> - **PostCSS Configuration**: Removing redundant `postcss.config` since Tailwind CSS v4 handles vendor prefixing directly via Lightning CSS.
-> - **E2E Browser Matrix**: Running Chromium during local iterative development, and validating all three browser engines (Chromium, Firefox, WebKit) in the comprehensive verification suite.
-> - **Scope Guard**: TD-03 (`ProofAutomationPanel.tsx` decomposition) remains deferred to Phase 9.5 as established in the Phase 9.4 audit report.
+> Based on your Phase 1 clarifications, the implementation enforces:
+> 1. **Subtle Status Bar Health Indicator with Diagnostic Popover**: Real-time aggregate readiness (`ready`, `degraded`, `not_ready`) surfaced via an unboxed monospace status indicator in the bottom bar, expanding into a container-level latency and toolchain health popover.
+> 2. **Expandable RFC 9457 Problem Details for Verification Diagnostics**: User-friendly alerts with expandable technical details (RFC 9457 problem type URI, correlation ID, retryable status, and diagnostic trace) on bridge or kernel errors.
+> 3. **Tab-Local Feature Flag Overrides with IndexedDB Persistence**: The unified `FeatureFlagRegistry` maintains tab-local experiment isolation by default, persists user toggles into `polyglot-feature-flags` IndexedDB, and exposes an instant reset-to-defaults control.
 
----
+***
 
-### 1. Overview & Core Concept
+## 1. Overview & Core Concept
 
-- **What It Delivers**: A focused technical debt reduction sprint targeting the "4% of code causing 72% of complexity defects". It eliminates cyclomatic and cognitive complexity hotspots without any functional regressions or breaking API changes.
-- **Target Audience**: Core engineering team, mathematicians, and developers relying on robust navigation, state evaluation, and multi-user workspace synchronization.
-- **Key Value**:
-  - Drops cyclomatic complexity (CC) in `when-clause` from 18 to ≤ 10, cognitive complexity from 24 to ≤ 15.
-  - Drops `workspace-store` from a monolithic 1,011 LOC to a compact facade (≤ 150 LOC) with 3 specialized sub-services (each ≤ 400 LOC).
-  - Eliminates `autoprefixer` devDependency and confirms clean native Lightning CSS prefixing.
-  - Establishes robust, role-based Playwright E2E coverage for MenuBar and CommandPalette.
-  - Adds Suite 27 to `scripts/verify-all.ts` with 10 sub-tests ensuring 100% pass rate.
+- **What It Delivers**:
+  - **Authoritative Pre-Consolidation Baseline (`reports/phase-10.9-baseline.json`)**: Formally typed Zod/TypeScript snapshot capturing all 9 containers, 11 Lean toolchains, 26 feature flags, 12 bridge services, 10 external stores, and 6 IndexedDB databases.
+  - **Unified Feature Flag Registry (`FeatureFlagRegistry`)**: Single source of truth consolidating 26 scattered flags across runtime, tooling, experiment, and policy categories with tab-local state and IndexedDB persistence.
+  - **Unified RFC 9457 Error Taxonomy (`ERROR_REGISTRY` & `BridgeError`)**: Typed catalog of 30 error codes mapped to HTTP status codes, URI problem types, and user messages. All 12 bridge services standardized to throw `BridgeError` with correlation IDs.
+  - **Unified External Store Base (`ExternalStoreBase<TSnapshot>`)**: Shared foundational class for all 10 `useSyncExternalStore` registries with opt-in `BroadcastChannel` multi-tab synchronization (enabled for global command/server registries, disabled for tab-local token budgets).
+  - **Unified Container Readiness (`GET /api/v1/health/ready`)**: Aggregate health orchestrator monitoring critical (`femev-runner`, `kimina`, `pantograph`) and non-critical containers with standardized `/healthz` and `/readyz` probes.
+  - **Formal Toolchain Policy (`TOOLCHAIN_POLICY`)**: Rigorous matrix documenting all 11 pinned Lean toolchain bindings and upstream commit hashes.
+  - **Consolidated ZIP Security Matrix (`ZIP_LIMITS`)**: Single immutable constants definition and an 11-test security suite covering path traversal (CVE-2018-1002200), zombie ZIPs (CVE-2026-0866), and decompression bombs.
+  - **IndexedDB Schema Migration Framework**: Version tracking (`DATABASE_VERSIONS`) across 6 browser databases with ordered `MigrationStep` execution and automated rollback hooks.
+  - **System Lifecycle & Structured Logging**: Coordinated graceful shutdown handling (SIGTERM/SIGINT) with work checkpointing, and structured JSON logging with pervasive correlation ID tracking.
+  - **Bundle Budget CI Gate & Migration Guide**: Automated bundle size threshold enforcement (+10% main chunk gate) and detailed rollback instructions (`docs/phase-10.9-migration.md`).
+- **Target Users**: Mathematicians and formal verification engineers requiring rock-solid stability, deterministic reproducibility, and zero silent failures.
+- **Key Value**: Guarantees architectural integrity, eliminates cross-service protocol drift, and ensures all 40+ verification test suites remain passing.
 
----
+***
 
-### 2. User Experience & Visual Design
+## 2. User Experience & Visual Design
 
-This sprint focuses on internal code quality, architecture, and testing. It strictly preserves existing visual styling, behavior, and design tokens:
-- **Design Tokens Maintained**: Base `#0B0F17`, panels `#111827`, borders `#1E293B`, telemetry cyan `#06b6d4`.
-- **Zero-Pill Discipline & JetBrains Mono Typography**: Unchanged.
-- **WAI-ARIA Accessibility**: Maintained and strengthened through dedicated E2E verification (`getByRole('menubar')`, `getByRole('dialog')`, `getByRole('combobox')`, `getByRole('status')`).
-- **Visual Regression Baseline**: Diff = 0 verified via Playwright screenshot comparisons after removing `autoprefixer`.
+Adhering strictly to the **Science, Space & Biotech** visual design constitution and zero-pill discipline:
+- **Palette**: Deep space obsidian canvas (`#070A0F`), structural slate panels (`#0E1420`), crisp hairline borders (`#1E293B`), laser cyan accents (`#06B6D4`), telemetry emerald (`#10B981`), and warning amber (`#F59E0B`).
+- **Typographic System**: Neo-grotesque interface labels (`Plus Jakarta Sans`) paired with strict tabular monospace figures (`font-mono tabular-nums`, `JetBrains Mono`) for all latencies, timestamps, error codes, and correlation IDs.
+- **Aggregate Readiness Status Bar Indicator**:
+  - Embedded in the persistent bottom status bar.
+  - Displays state: `● SYSTEM READY` (emerald), `▲ SYSTEM DEGRADED (1 non-critical down)` (amber), or `■ SYSTEM NOT READY` (rose).
+  - Clicking opens an unboxed diagnostic popover detailing individual container latencies, active toolchains, and restart policies.
+- **RFC 9457 Error Diagnostic View**:
+  - Plain, unboxed warning banner with a clear human-readable explanation.
+  - Expandable `[TECHNICAL DETAILS]` tray revealing problem type URI, machine error code, HTTP status, and correlation ID with one-click copy.
+- **Feature Flag Manager Drawer**:
+  - Tabular layout with category filters (`Runtime`, `Tooling`, `Search`, `Blueprint`, `Infrastructure`, `Policy`).
+  - Distinctive toggle switches, phase badges, and a `[RESET ALL TO DEFAULTS]` action.
 
----
+***
 
-### 3. Key Product Decisions & Trade-Offs
+## 3. Key Product Decisions & Trade-Offs
 
-- **TD-01 Dispatch Dictionary vs. Switch / Object Literal**:
-  - *Chosen Approach*: `ReadonlyMap<OperatorToken, OperatorHandler>` with explicit `has()` check and defensive error handling.
-  - *Why*: Object literals inherit from `Object.prototype`, creating prototype-pollution risks (`constructor`, `__proto__`, `toString`). A `Map` guarantees clean key isolation, deterministic O(1) dispatch, and testable boundary conditions.
-  - *Alternatives Considered*: Retaining the switch statement (rejected due to cyclomatic complexity 18 and high cognitive nesting).
+- **Decision 1: Typed Baseline JSON Contract (Refinement R1)**:
+  - *Chosen Approach*: Emit `reports/phase-10.9-baseline.json` validated against TypeScript interface `Phase109Baseline`.
+  - *Why*: Establishes an unforgeable baseline contract so any unplanned structural drift is detected and rejected.
+- **Decision 2: Opt-In Multi-Tab Sync via BroadcastChannel (Refinement R2)**:
+  - *Chosen Approach*: `ExternalStoreBase` supports `multiTabSync: boolean`. Global registries (`CommandRegistry`, `McpServerRegistry`, `StatusBarRegistry`) set `true`; experiment-specific stores (`TokenBudgetManager`, `AiProviderRegistry`) set `false`.
+  - *Why*: Prevents cross-tab interference during simultaneous exploratory proving sessions while keeping global UI state consistent.
+- **Decision 3: Consolidated ZIP Matrix & Security Hardening (Refinement R3)**:
+  - *Chosen Approach*: Consolidate all upload constraints into `ZIP_LIMITS` and test against a comprehensive 11-point threat matrix.
+  - *Why*: Protects self-hosted instances from malicious archives without fragmenting quota definitions across frontend and backend.
+- **Decision 4: Explicit Rollback Plans in Migration Documentation (Refinement R4)**:
+  - *Chosen Approach*: Author `docs/phase-10.9-migration.md` providing step-by-step rollback strategies for every refactored service.
+  - *Why*: Guarantees zero regression risk across 10 store migrations and 12 bridge updates.
 
-- **TD-02 Service-Facade Decomposition vs. Deep Layering**:
-  - *Chosen Approach*: Service-Facade pattern with 3 sub-services (`workspace-ledger-service`, `workspace-lease-service`, `workspace-milestone-service`) orchestrated by a lightweight facade (`workspace-store.ts` ≤ 150 LOC).
-  - *Why*: Keeps the exact public API unchanged for WebSocket routes, REST controllers, and test suites while ensuring each sub-service has a single well-defined responsibility under 400 LOC.
-  - *Alternatives Considered*: Full microservice split (rejected: premature distribution overhead for self-hosted single-container deployment).
+***
 
-- **TD-04 Removal of Autoprefixer**:
-  - *Chosen Approach*: Remove `autoprefixer` from `package.json` devDependencies and rely on `@tailwindcss/vite` native Lightning CSS prefixing.
-  - *Why*: Tailwind CSS v4 integrates Lightning CSS, which automatically injects vendor prefixes based on the modern browserlist target without PostCSS overhead.
-  - *Verification*: Confirm `-webkit-` prefixes in production bundle output.
-
-- **TD-05 Playwright Fixtures over Loose Page Objects**:
-  - *Chosen Approach*: Lazy fixture extension (`test.extend<{ commandPalette, menuBar }>()`) with lifecycle callbacks.
-  - *Why*: Avoids module-level mutable state, isolates browser contexts, ensures automatic teardown, and strictly utilizes accessibility locators (`getByRole`, `getByLabel`).
-
----
-
-### 4. Technical Architecture & Component Structure
+## 4. Technical Architecture & System Layout
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                              Polyglot Code Studio                            │
-├──────────────────────────────────────┬───────────────────────────────────────┤
-│ Frontend Navigation Subsystem        │ Backend Collaboration Subsystem       │
-│                                      │                                       │
-│  src/services/when/                  │  server/src/services/collaboration/   │
-│  ├── when-parser.ts                  │  ├── workspace-store.ts (Facade ≤150) │
-│  │   └─ Tokenizer + Descent Parser   │  │   ├── WorkspaceStore               │
-│  ├── when-evaluator.ts               │  ├── workspace-ledger-service.ts      │
-│  │   └─ AST Context Evaluator        │  │   └─ Event log, hash chain, replay │
-│  ├── when-operators.ts               │  ├── workspace-lease-service.ts       │
-│  │   └─ Map<Op, Handler> Dispatch    │  │   └─ Claims, TTL, crash recovery   │
-│  └── when-clause.ts (Facade API)     │  ├── workspace-milestone-service.ts   │
-│      └─ Re-exports parse/evaluate    │  │   └─ Roadmaps, DAG progress        │
-│                                      │  └── workspace-store.types.ts         │
-│                                      │      └─ Internal shared interfaces    │
-├──────────────────────────────────────┴───────────────────────────────────────┤
-│ Verification & Test Infrastructure                                           │
-│                                                                              │
-│  tests/fixtures/                     tests/e2e/                              │
-│  ├── command-palette.fixture.ts      └── navigation.spec.ts (10 tests)       │
-│  ├── menu-bar.fixture.ts                                                     │
-│  └── index.ts (Extended Test Runner) scripts/verify-all.ts                   │
-│                                      └── Suite 27 (10 sub-tests)             │
-│                                                                              │
-│  reports/                                                                    │
-│  └── sprint-9.4.1-summary.md (LOC, CC, Cognitive, E2E & ts-prune metrics)   │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          POLYGLOT CODE STUDIO                               │
+│       Phase 10.9: Consolidation, Protocol Unification & Coherence          │
+├──────────────────────────────────────┬──────────────────────────────────────┤
+│  Top Ribbon: Feature Flag Drawer     │  Bottom Status Bar: Health Popover   │
+└──────────────────┬───────────────────┴───────────────────▲──────────────────┘
+                   │                                       │
+                   │ State & Health Queries                │ GET /api/v1/health/ready
+                   ▼                                       │
+┌──────────────────────────────────────────────┐           │
+│           CORE PROTOCOL REGISTRIES           │           │
+│  - FeatureFlagRegistry (26 flags + IDB)      ├───────────┤
+│  - ERROR_REGISTRY (30 codes, RFC 9457)       │           │
+│  - TOOLCHAIN_POLICY (11 pinned versions)     │           │
+│  - ExternalStoreBase (Opt-in BroadcastSync)  │           │
+└──────────────────────┬───────────────────────┘           │
+                       │                                   │
+                       │ Correlation ID & Error Handling   │
+                       ▼                                   │
+┌──────────────────────────────────────────────┐           │
+│            12 BRIDGE SERVICES                │           │
+│  (FEMEV, PastaLean, Lungo, LeanFlow,         │           │
+│   leanscreen, LeanCert, Heron, LSpec,        ├───────────┘
+│   doc-gen4, Verso, LeanArchitect, CRAMF)     │
+│   All throw BridgeError with correlation IDs │
+└──────────────────────┬───────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│           CONTAINER ORCHESTRATION            │
+│  9 Containers with /healthz & /readyz probes │
+│  Standardized docker-compose depends_on      │
+└──────────────────────────────────────────────┘
 ```
 
----
+### Components to Implement:
 
-### 5. Detailed Task Execution Plan
-
-#### Task 1: TD-01 Refactor `when-clause.ts` into `src/services/when/`
-1. Create `src/services/when/when-operators.ts`:
-   - Define `OperatorToken` closed literal union and `OperatorHandler` function type.
-   - Implement `OPERATOR_HANDLERS` as `ReadonlyMap<OperatorToken, OperatorHandler>`.
-   - Export `dispatchOperator(token, value, operand, flags)`.
-2. Create `src/services/when/when-parser.ts`:
-   - Extract `WhenTokenizer` and `WhenParser` classes with precedence-climbing methods.
-   - Keep cyclomatic complexity ≤ 8 per method.
-3. Create `src/services/when/when-evaluator.ts`:
-   - Extract pure evaluation logic, logical `!`, `&&`, `||` guard clauses, and context value resolution.
-4. Update `src/services/when/when-clause.ts`:
-   - Facade re-exporting `parseWhenClause` and `evaluateWhenClause`.
-   - Ensure backward compatibility path `src/services/navigation/when-clause.ts` forwards to `src/services/when/when-clause.ts`.
-5. Add 8 new unit tests covering operator boundaries and dispatch errors.
-6. Verify Suite 25.2 (20 tests) passes unchanged.
-
-#### Task 2: TD-02 Split `workspace-store.ts` into Service-Facade
-1. Create `server/src/services/collaboration/workspace-store.types.ts`:
-   - Extract internal options, hash computation helpers, and sub-service communication contracts.
-2. Create `server/src/services/collaboration/workspace-ledger-service.ts` (≤ 400 LOC):
-   - Event append, hash chain calculation (`computeLedgerEntryHash`), reconciliation (`sinceSeq`), event replay.
-3. Create `server/src/services/collaboration/workspace-lease-service.ts` (≤ 400 LOC):
-   - Claim node, release claim, renew claim, TTL check, crash recovery, conflict code generation (`CONFLICT_ALREADY_CLAIMED`).
-4. Create `server/src/services/collaboration/workspace-milestone-service.ts` (≤ 400 LOC):
-   - Milestone progress computation, topological ordering, certificate status checks.
-5. Refactor `server/src/services/collaboration/workspace-store.ts` (≤ 150 LOC):
-   - Retain full public API, instantiate sub-services in constructor, delegate calls, orchestrate multi-service workflows.
-6. Verify Suite 23 (8 sub-tests) passes unchanged.
-7. Verify zero circular dependencies via internal module import check.
-
-#### Task 3: TD-04 Remove `autoprefixer` & Verify Lightning CSS
-1. Remove `autoprefixer` from `package.json` devDependencies.
-2. Delete any lingering postcss config if present.
-3. Run `npm install` or update lockfile cleanly.
-4. Run production build (`npm run build`).
-5. Verify vendor prefixes in CSS bundle output (`dist/assets/*.css`).
-6. Run visual regression check against baseline screenshots (diff = 0).
-
-#### Task 4: TD-05 Playwright E2E for Navigation
-1. Create `tests/fixtures/command-palette.fixture.ts` with `CommandPaletteFixture` class.
-2. Create `tests/fixtures/menu-bar.fixture.ts` with `MenuBarFixture` class.
-3. Create `tests/fixtures/index.ts` exporting extended `test` and `expect`.
-4. Create `tests/e2e/navigation.spec.ts` with the 10 required test cases:
-   - 1. Command Palette opens via `Ctrl+K`.
-   - 2. Filters commands dynamically on search input.
-   - 3. Executes command on `Enter`.
-   - 4. Recent commands surface at top of list.
-   - 5. Menu Bar renders top-level menus with correct WAI-ARIA roles.
-   - 6. Menu Bar keyboard navigation (arrows, Home/End, Escape).
-   - 7. Menu Bar items disabled reactively via when-clauses.
-   - 8. Status Bar renders runtime engine status items.
-   - 9. Status Bar item click executes registered command.
-   - 10. Keybinding chord resolves correctly.
-5. Verify test pass with zero flakiness.
-
-#### Task 5: ts-prune Audit Execution & Dead Code Verification
-1. Run `npx ts-prune` across the codebase.
-2. Filter intentional public exports (e.g., API boundaries, tests, library entry points).
-3. Document findings in `reports/sprint-9.4.1-summary.md` and append to `reports/dead-code-decisions.md`.
-
-#### Task 6: Test Suite 27 Implementation & Verification
-1. Add Suite 27 to `scripts/verify-all.ts` with 10 sub-tests (27.1 to 27.10):
-   - 27.1: `when-clause` modularized, public API preserved, Suite 25.2 passes.
-   - 27.2: Operator dispatch uses `Map`, unknown token throws.
-   - 27.3: Cyclomatic complexity ≤ 10, cognitive ≤ 15 in `src/services/when/**`.
-   - 27.4: `workspace-store` split into facade + 3 sub-services, Suite 23 passes.
-   - 27.5: Each sub-service ≤ 400 LOC, facade ≤ 150 LOC.
-   - 27.6: Zero circular imports in `server/src/services/collaboration/`.
-   - 27.7: `autoprefixer` absent from dependencies.
-   - 27.8: Visual regression diff = 0.
-   - 27.9: `tests/e2e/navigation.spec.ts` exists with 10 tests passing.
-   - 27.10: Zero flaky tests on repeat execution.
-2. Execute `npm run test:verify` and confirm all 27 suites pass (100%).
-
-#### Task 7: Summary Report Generation
-1. Generate `reports/sprint-9.4.1-summary.md` documenting all before/after complexity metrics, LOC deltas, E2E test results, and audit confirmations.
+1. **Baseline Snapshot (Section 0)**:
+   - `src/types/phase-10.9-baseline.ts`: Zod-validated baseline interfaces.
+   - `reports/phase-10.9-baseline.json`: Authoritative pre-consolidation snapshot.
+2. **Unified Feature Flags (Section 1)**:
+   - `src/services/flags/feature-flag-registry.ts`: Typed registry with 26 flags, env reading, IndexedDB persistence, and `useSyncExternalStore`.
+   - `.env.example`: Regenerated single source of truth.
+3. **Unified Error Taxonomy (Section 2)**:
+   - `src/services/errors/error-registry.ts`: 30 typed error codes with RFC 9457 problem types.
+   - `src/services/errors/bridge-error.ts`: Base `BridgeError` with correlation ID and freeze details.
+   - `docs/reference/error-codes.md`: Generated error documentation.
+4. **Unified External Store Base (Section 3)**:
+   - `src/services/stores/external-store-base.ts`: Base class with memoized snapshot caching and opt-in `BroadcastChannel` synchronization.
+   - Migration of 10 external stores to extend `ExternalStoreBase`.
+5. **Unified Health & Readiness (Section 4)**:
+   - `src/services/health/health-service.ts`: Container readiness checking service.
+   - `server/src/routes/health.ts`: `GET /api/v1/health/ready` aggregate endpoint.
+   - `docker-compose.yml`: Standardized healthchecks (`/healthz`, `/readyz`) and `depends_on: { condition: service_healthy }`.
+6. **Unified Toolchain Policy (Section 5)**:
+   - `src/services/toolchains/toolchain-policy.ts`: Definition of all 11 toolchain bindings.
+   - `docs/architecture/toolchain-matrix.md`: Canonical toolchain matrix documentation.
+7. **Consolidated ZIP Security Matrix (Section 6)**:
+   - `src/registries/constants.ts` & `src/services/archive/zip-validator.ts`: Immutable `ZIP_LIMITS` reference.
+   - `tests/phase-10.9/zip-validator-matrix.test.ts`: Complete 11-test security suite.
+8. **IndexedDB Schema Versioning (Section 7)**:
+   - `src/services/storage/schema-migration.ts`: Migration runner supporting 6 databases and rollback definitions.
+   - `docs/architecture/indexeddb-migrations.md`: Phase 11 forward migration strategy.
+9. **Nomenclature, Lifecycle & Structured Logging (Section 8)**:
+   - `docs/architecture/nomenclature.md`: Canonical casing rules and alias cleanup.
+   - `src/services/lifecycle/graceful-shutdown.ts`: SIGTERM/SIGINT handlers with timeout management.
+   - `src/services/logging/logger.ts`: Structured JSON logger with correlation ID injection.
+10. **Bundle Budget & Migration Guide (Sections 9 & 10)**:
+    - `.github/workflows/ci.yml`: Bundle visualizer and budget gate (+10% main chunk cap).
+    - `docs/phase-10.9-migration.md`: Per-section rollback guide.
+    - `docs/phase-11-deferred.md`: Explicitly deferred items for Phase 11.
+11. **Verification Test Suites 74–83 (Appendices A1 & A2)**:
+    - Suite 74: Unified Feature Flag Registry (5 sub-tests)
+    - Suite 75: Unified Error Taxonomy (5 sub-tests)
+    - Suite 76: Unified External Store Base (4 sub-tests)
+    - Suite 77: Unified Container Health (4 sub-tests)
+    - Suite 78: Unified Toolchain Policy (3 sub-tests)
+    - Suite 79: ZipValidator Matrix (5 sub-tests)
+    - Suite 80: IndexedDB Schema Versioning (4 sub-tests)
+    - Suite 81: Nomenclature, Shutdown & Logging (4 sub-tests)
+    - Suite 82: Bundle Budget & Env Regeneration (3 sub-tests)
+    - Suite 83: Migration Guide & Rollback (3 sub-tests)
+    - Integrated into `scripts/verify-all.ts` (50 total suites).
+    - Summary report in `reports/phase-10.9-summary.md`.

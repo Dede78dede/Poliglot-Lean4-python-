@@ -8,13 +8,14 @@ import { CONTEXT_KEYS } from '../../types/navigation';
 
 export type ContextListener = () => void;
 
-export class ContextKeyService {
+import { ExternalStoreBase } from '../stores/external-store-base';
+
+export class ContextKeyService extends ExternalStoreBase<ContextSnapshot> {
   private values = new Map<ContextKey, ContextValue>();
   private readonly parent?: ContextKeyService;
-  private readonly listeners = new Set<ContextListener>();
-  private cachedSnapshot: ContextSnapshot | null = null;
 
   constructor(parent?: ContextKeyService) {
+    super({ id: 'contextKeyService', multiTabSync: true });
     this.parent = parent;
     if (!parent) {
       this.initDefaults();
@@ -29,7 +30,6 @@ export class ContextKeyService {
     this.values.set('editorLangId', 'lean4');
     this.values.set('presenceCount', 0);
     this.values.set('drawerTab', undefined);
-    this.cachedSnapshot = null;
   }
 
   public getKey(key: ContextKey): ContextValue {
@@ -47,7 +47,6 @@ export class ContextKeyService {
     if (existing === value) return;
 
     this.values.set(key, value);
-    this.cachedSnapshot = null;
     this.notify();
   }
 
@@ -60,16 +59,11 @@ export class ContextKeyService {
       }
     }
     if (changed) {
-      this.cachedSnapshot = null;
       this.notify();
     }
   }
 
-  public getSnapshot = (): ContextSnapshot => {
-    if (this.cachedSnapshot) {
-      return this.cachedSnapshot;
-    }
-
+  protected computeSnapshot(): ContextSnapshot {
     const parentSnap = this.parent ? this.parent.getSnapshot() : ({} as Record<ContextKey, ContextValue>);
     const result = { ...parentSnap };
 
@@ -81,19 +75,8 @@ export class ContextKeyService {
       }
     }
 
-    this.cachedSnapshot = Object.freeze(result) as ContextSnapshot;
-    return this.cachedSnapshot;
-  };
-
-  public subscribe = (listener: ContextListener): (() => void) => {
-    this.listeners.add(listener);
-    const parentUnsub = this.parent?.subscribe(listener);
-
-    return () => {
-      this.listeners.delete(listener);
-      parentUnsub?.();
-    };
-  };
+    return Object.freeze(result) as ContextSnapshot;
+  }
 
   public createScoped(): ContextKeyService {
     return new ContextKeyService(this);
@@ -104,18 +87,7 @@ export class ContextKeyService {
     if (!this.parent) {
       this.initDefaults();
     }
-    this.cachedSnapshot = null;
     this.notify();
-  }
-
-  private notify(): void {
-    for (const listener of this.listeners) {
-      try {
-        listener();
-      } catch (err) {
-        console.error('[ContextKeyService] Listener error', err);
-      }
-    }
   }
 }
 

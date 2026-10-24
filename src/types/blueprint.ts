@@ -43,15 +43,39 @@ export interface NodeClaim {
   readonly notes?: string;
 }
 
+export interface MultiKernelStatus {
+  readonly kernelName: 'leanchecker' | 'nanoda' | 'lean4lean' | 'con-leche' | 'con-ron' | 'leanchecker-hardened';
+  readonly status: 'passed' | 'failed' | 'skipped' | 'timeout';
+  readonly language: 'cpp' | 'lean4' | 'rust' | 'haskell';
+  readonly executionTimeMs: number;
+  readonly details?: string;
+}
+
 export interface KernelVerificationCertificate {
-  readonly verifiedAt: number;
-  readonly contentHash: string; // SHA-256 seal of declaration and proof
-  readonly kernelTermsChecked: number;
-  readonly durationMs: number;
-  readonly toolchain: string;
-  readonly zeroSorryVerified: boolean;
-  readonly strictGoalsTerm: boolean;
-  readonly signatureSeal: string;
+  readonly seal?: 'SEAL_KERNEL_VERIFIED_TIER5';
+  readonly tier?: 'SEAL_KERNEL_VERIFIED_TIER5';
+  readonly verifiedAt: number | string;
+  readonly contentHash?: string; // SHA-256 seal of declaration and proof
+  readonly declarationHash?: string;
+  readonly certificateHash?: string;
+  readonly kernelTermsChecked?: number;
+  readonly durationMs?: number;
+  readonly toolchain?: string;
+  readonly toolchainVersion?: string;
+  readonly zeroSorryVerified?: boolean;
+  readonly sorriesFound?: 0;
+  readonly strictGoalsTerm?: boolean;
+  readonly signatureSeal?: string;
+  readonly axiomsUsed?: readonly string[];
+  readonly signerIdentity?: string;
+  // Phase 10.5 Soundness Extensions:
+  readonly multiKernelStatus?: 'consensus' | 'disagreement' | 'unverified';
+  readonly kernelCheckPassed?: boolean;
+  readonly paranoidCheckPassed?: boolean;
+  readonly kernelsUsed?: readonly string[];          // 6 configurations on v4.35.0
+  readonly kernelDisagreements?: readonly string[];  // empty if all agree
+  readonly cve2026_72844Status?: 'fixed-by-version' | 'mitigated-by-paranoid-check' | 'not-applicable' | 'not_affected' | 'patched' | 'vulnerable';
+  readonly kernelDetails?: readonly MultiKernelStatus[];
 }
 
 export interface EmpiricalValidationCertificate {

@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@mcp-b/webmcp-polyfill": "^6.0.3",
     "@monaco-editor/react": "^4.7.0",
     "@szhsin/react-menu": "^4.5.2",
     "@tailwindcss/vite": "^4.3.3",
@@ -51,6 +52,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/ws": "^8.18.2",
+    "clawcontainer": "^1.1.0",
     "esbuild": "^0.28.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",

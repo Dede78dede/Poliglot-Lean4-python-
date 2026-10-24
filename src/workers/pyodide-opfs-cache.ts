@@ -8,7 +8,7 @@
  * - Measures and logs load duration (target second load: < 500 ms).
  */
 
-export const PYODIDE_VERSION = '314.0.1';
+export const PYODIDE_VERSION = '314.0.7';
 export const OPFS_PYODIDE_DIR = `pyodide_assets_v${PYODIDE_VERSION}`;
 export const CACHE_API_NAME = `polyglot_pyodide_cache_v${PYODIDE_VERSION}`;
 

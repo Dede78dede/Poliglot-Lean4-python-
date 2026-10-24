@@ -371,7 +371,51 @@ print("Costo totale del cammino:", path_length)
     ],
   },
 
-  // PYTHON: 8. Unsupported C/CUDA Extension Package (PyTorch -> Triggers Mismatch Warning)
+  // PYTHON: 8. PEP 783 Native WebAssembly Wheel (Pydantic Core - WASM Ready)
+  {
+    id: 'pydantic-core-wasm-sample',
+    name: 'pydantic-core-wasm-sample',
+    description: 'Validazione ad alte prestazioni con pydantic-core compilato per pyemscripten_2026_0_wasm32.',
+    author: 'pydantic',
+    repositoryUrl: 'https://github.com/pydantic/pydantic-core',
+    stars: 5400,
+    license: 'MIT',
+    ecosystem: 'python',
+    version: '2.27.2',
+    tags: ['validation', 'rust', 'wasm', 'pep783', 'pydantic'],
+    category: 'algorithms',
+    toolchain: {
+      pythonVersion: '>=3.14',
+      purePython: false,
+      pyodideCompatible: true,
+      wasmTier: 'wheel-available',
+      platformTag: 'pyemscripten_2026_0_wasm32',
+      classificationExplanation: 'Ships native PEP 783 pyemscripten_2026_0_wasm32 wheel directly on PyPI.',
+    },
+    files: [
+      {
+        path: 'requirements.txt',
+        content: `pydantic_core>=2.27.0\n`,
+        language: 'text',
+      },
+      {
+        path: 'main.py',
+        content: `from pydantic_core import SchemaValidator, core_schema
+
+schema = core_schema.typed_dict_schema({
+    'title': core_schema.typed_dict_field(core_schema.str_schema()),
+    'count': core_schema.typed_dict_field(core_schema.int_schema()),
+})
+v = SchemaValidator(schema)
+validated = v.validate_python({'title': 'PEP 783 WASM Wheel', 'count': 42})
+print("Validated via Rust WASM Core:", validated)
+`,
+        language: 'python',
+      },
+    ],
+  },
+
+  // PYTHON: 9. Unsupported C/CUDA Extension Package (PyTorch -> Triggers Mismatch Warning)
   {
     id: 'pytorch-deep-neural-sim',
     name: 'pytorch-deep-neural-sim',
@@ -388,6 +432,9 @@ print("Costo totale del cammino:", path_length)
       pythonVersion: '>=3.11',
       purePython: false,
       pyodideCompatible: false,
+      wasmTier: 'incompatible',
+      platformTag: 'incompatible',
+      classificationExplanation: 'Heavy native C++/CUDA binaries and multi-GB shared libraries cannot run in browser WebAssembly.',
     },
     files: [
       {

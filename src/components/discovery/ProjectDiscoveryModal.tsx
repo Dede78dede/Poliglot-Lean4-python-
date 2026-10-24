@@ -23,6 +23,9 @@ import {
   CURATED_PACKAGES,
   discoveryEngine,
 } from '../../services/discovery/DiscoveryEngine';
+import { packageTierClassifier } from '../../services/discovery/package-tier-classifier';
+import { pyodideBuildService } from '../../services/discovery/pyodide-build-service';
+import { PyodideBuildConfirmationModal } from './PyodideBuildConfirmationModal';
 import type { Project, ProjectFile } from '../../types/projects';
 
 export interface ProjectDiscoveryModalProps {
@@ -42,6 +45,7 @@ export function ProjectDiscoveryModal({
   const [packages, setPackages] = useState<readonly PackageMetadata[]>(CURATED_PACKAGES);
   const [loading, setLoading] = useState(false);
   const [expandedPackageId, setExpandedPackageId] = useState<string | null>(null);
+  const [buildModalPackage, setBuildModalPackage] = useState<{ name: string; version?: string } | null>(null);
 
   // Close on Escape
   useEffect(() => {
@@ -316,22 +320,43 @@ export function ProjectDiscoveryModal({
 
                   {/* Compatibility Badge Preview */}
                   <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-neutral-800/60 text-xs">
-                    {report.status === 'compatible' ? (
+                    {pkg.ecosystem === 'python' ? (() => {
+                      const tier = pkg.toolchain.wasmTier ?? (report.status === 'compatible' ? 'pure-python' : 'incompatible');
+                      const platformTag = pkg.toolchain.platformTag ?? (report.status === 'compatible' ? 'pure-python' : 'incompatible');
+                      const tierBadge = packageTierClassifier.getTierBadgeInfo(tier, platformTag);
+                      return (
+                        <div className="flex items-center gap-2">
+                          <div className={`flex items-center gap-1.5 px-2 py-0.5 border font-mono text-[11px] ${tierBadge.borderClass} ${tierBadge.colorClass}`}>
+                            {report.status === 'compatible' ? (
+                              <CheckCircle2 className="w-3 h-3" />
+                            ) : (
+                              <AlertTriangle className="w-3 h-3" />
+                            )}
+                            <span className="font-semibold">{tierBadge.label}</span>
+                          </div>
+                          {tier === 'build-required' && pyodideBuildService.isFeatureEnabled() && (
+                            <button
+                              type="button"
+                              onClick={() => setBuildModalPackage({ name: pkg.name, version: pkg.version })}
+                              className="px-2 py-0.5 text-[10px] font-mono bg-amber-950/40 border border-amber-700/60 text-amber-300 hover:bg-amber-900/50 transition-colors"
+                            >
+                              Richiedi pyodide-build
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })() : report.status === 'compatible' ? (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/50 border border-emerald-800/80 text-emerald-300">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                         <span className="font-medium">
-                          {pkg.ecosystem === 'lean4'
-                            ? `Compatibile (Lean ${report.currentVersion})`
-                            : 'WASM Ready (Pyodide in-browser)'}
+                          {`Compatibile (Lean ${report.currentVersion})`}
                         </span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-950/60 border border-amber-800/80 text-amber-300">
                         <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                         <span className="font-medium">
-                          {pkg.ecosystem === 'lean4'
-                            ? `Toolchain non allineata (Richiede ${report.requiredVersion}, ambiente attuale ${report.currentVersion})`
-                            : 'Pacchetti C/CUDA non supportati in WASM'}
+                          {`Toolchain non allineata (Richiede ${report.requiredVersion}, ambiente attuale ${report.currentVersion})`}
                         </span>
                       </div>
                     )}
@@ -408,6 +433,16 @@ export function ProjectDiscoveryModal({
           </button>
         </div>
       </div>
+
+      {buildModalPackage && pyodideBuildService.isFeatureEnabled() && (
+        <PyodideBuildConfirmationModal
+          isOpen={true}
+          packageName={buildModalPackage.name}
+          version={buildModalPackage.version}
+          onClose={() => setBuildModalPackage(null)}
+          onBuildComplete={() => setBuildModalPackage(null)}
+        />
+      )}
     </div>
   );
 }

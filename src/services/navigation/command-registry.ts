@@ -9,9 +9,14 @@ import type {
 import { evaluateWhenClause } from './when-clause';
 import { contextKeyService, type ContextKeyService } from './context-key-service';
 
-export class CommandRegistry {
+import { ExternalStoreBase } from '../stores/external-store-base';
+
+export class CommandRegistry extends ExternalStoreBase<readonly CommandRegistration[]> {
   private commands = new Map<string, CommandRegistration>();
-  private listeners = new Set<() => void>();
+
+  constructor() {
+    super({ id: 'commandRegistry', multiTabSync: true });
+  }
 
   public registerCommand(command: CommandRegistration): Disposable {
     this.commands.set(command.id, command);
@@ -43,7 +48,7 @@ export class CommandRegistry {
   }
 
   public getAllCommands(): readonly CommandRegistration[] {
-    return Array.from(this.commands.values());
+    return this.getSnapshot();
   }
 
   public getCommandsForCategory(category: CommandCategory): readonly CommandRegistration[] {
@@ -98,28 +103,13 @@ export class CommandRegistry {
     }
   }
 
-  public subscribe(listener: () => void): Disposable {
-    this.listeners.add(listener);
-    return {
-      dispose: () => {
-        this.listeners.delete(listener);
-      },
-    };
+  protected computeSnapshot(): readonly CommandRegistration[] {
+    return Object.freeze(Array.from(this.commands.values()));
   }
 
   public reset(): void {
     this.commands.clear();
     this.notify();
-  }
-
-  private notify(): void {
-    for (const listener of this.listeners) {
-      try {
-        listener();
-      } catch (err) {
-        console.error('[CommandRegistry] Listener error', err);
-      }
-    }
   }
 }
 

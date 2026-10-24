@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { resolveKiminaConfig } from './server/src/config/kimina-config';
 import { KiminaClientProxy } from './server/src/services/kimina-client-proxy';
 import { createLeanRouter } from './server/src/routes/lean';
-import { createHealthRouter } from './server/src/routes/health';
+import { createHealthRouter, createReadinessRouter } from './server/src/routes/health';
 
 import { resolveLeanRunnerConfig } from './server/src/config/lean-runner-config';
 import { LeanProjectRunner } from './server/src/services/lean-project-runner';
@@ -22,6 +22,8 @@ import { ProofCoordinator } from './server/src/services/proof/proof-coordinator'
 import { AxleAdvancedService } from './server/src/services/proof/axle-advanced';
 import { BlueprintSyncService } from './server/src/services/proof/blueprint-sync';
 import { createProofAutomationRouter } from './server/src/routes/proof-automation';
+import { createMcpServerRouter } from './server/src/routes/mcp-server-router';
+import { createFemevRouter } from './server/src/routes/femev';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +41,9 @@ async function startServer(): Promise<void> {
   // API Routes
   app.post('/api/v1/lean/execute', createLeanRouter(kiminaProxy));
   app.get('/api/v1/health', createHealthRouter(kiminaProxy));
+  app.get('/api/v1/health/ready', createReadinessRouter());
+  app.get('/healthz', (_req, res) => { res.status(200).send('OK'); });
+  app.get('/readyz', createReadinessRouter());
   app.use('/api/v1/projects', createProjectsRouter(leanRunner));
   app.use('/api/v1', createInteractRouter(kiminaProxy));
   app.use('/proof', createInteractRouter(kiminaProxy));
@@ -59,6 +64,8 @@ async function startServer(): Promise<void> {
   app.use('/api/v1/autocorrect', createAutoCorrectRouter());
   app.use('/api/v1/workspaces', createWorkspacesRouter(workspaceStore));
   app.use('/api/v1/proof', createProofAutomationRouter(proofCoordinator, axleAdvanced, blueprintSync, workspaceStore));
+  app.use('/api/v1/femev', createFemevRouter());
+  app.use('/mcp', createMcpServerRouter());
 
   const isProduction = process.env.NODE_ENV === 'production';
   // In dev, AI Studio's supervisor proxies ingress traffic to port 3000.

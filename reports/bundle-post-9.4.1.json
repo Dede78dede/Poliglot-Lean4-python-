@@ -1,0 +1,17 @@
+{
+  "bundler": "Vite 8.3 (Rolldown Rust engine)",
+  "baselinePhase94GzipKb": 290.09,
+  "postSprint941GzipKb": 290.09,
+  "deltaGzipKb": 0.0,
+  "maxAllowedDeltaKb": 2.0,
+  "withinBudget": true,
+  "autoprefixerRemoved": true,
+  "cssGzipKb": 12.76,
+  "cssRawKb": 76.90,
+  "prefixingEngine": "Tailwind CSS v4 with Lightning CSS",
+  "verifiedVendorPrefixes": [
+    "-webkit-user-select",
+    "-webkit-appearance",
+    "-webkit-backdrop-filter"
+  ]
+}

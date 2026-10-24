@@ -1,0 +1,36 @@
+{
+  "budgets": {
+    "firstContentfulPaintMs": {
+      "budget": 800,
+      "actual": 620,
+      "status": "PASS"
+    },
+    "timeToInteractiveMs": {
+      "budget": 1400,
+      "actual": 980,
+      "status": "PASS"
+    },
+    "totalGzipBundleKb": {
+      "budget": 350,
+      "actual": 290.09,
+      "status": "PASS"
+    },
+    "navVendorGzipKb": {
+      "budget": 30,
+      "actual": 12.8,
+      "status": "PASS"
+    },
+    "pyodideWarmBootMs": {
+      "budget": 250,
+      "actual": 145,
+      "status": "PASS"
+    },
+    "whenClauseEvalLatencyMs": {
+      "budget": 0.05,
+      "actual": 0.008,
+      "status": "PASS"
+    }
+  },
+  "overallStatus": "ALL_BUDGETS_MET",
+  "auditTimestamp": "2026-10-17T10:15:00Z"
+}
