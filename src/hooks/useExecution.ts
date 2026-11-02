@@ -1,53 +1,22 @@
-import { useCallback, useReducer } from 'react';
-import type { ExecutionRequest, ExecutionResult, ExecutionState } from '../types/execution';
+import { useCallback } from 'react';
+import type { ExecutionRequest, ExecutionResult } from '../types/execution';
 import { ExecutionError } from '../types/execution';
 import { executeCode } from '../services/execution-orchestrator';
 import { usePyodideContext } from '../context/PyodideContext';
-
-type ExecutionAction =
-  | { type: 'EXECUTE_START'; language: ExecutionRequest['language'] }
-  | { type: 'EXECUTE_SUCCESS'; result: ExecutionResult; language: ExecutionRequest['language'] }
-  | { type: 'EXECUTE_ERROR'; error: ExecutionError; language: ExecutionRequest['language'] }
-  | { type: 'RESET' };
-
-function executionReducer(state: ExecutionState, action: ExecutionAction): ExecutionState {
-  switch (action.type) {
-    case 'EXECUTE_START':
-      return {
-        kind: 'running',
-        startedAt: Date.now(),
-        language: action.language,
-      };
-    case 'EXECUTE_SUCCESS':
-      return {
-        kind: 'completed',
-        result: action.result,
-        language: action.language,
-      };
-    case 'EXECUTE_ERROR':
-      return {
-        kind: 'failed',
-        error: action.error,
-        language: action.language,
-      };
-    case 'RESET':
-      return { kind: 'idle' };
-    default:
-      return state;
-  }
-}
+import { executionStore } from '../services/execution/execution-store';
+import { useStoreSelector } from '../services/stores/use-store-selector';
 
 export function useExecution() {
-  const [state, dispatch] = useReducer(executionReducer, { kind: 'idle' });
+  const state = useStoreSelector(executionStore, (s) => s);
   const pyodide = usePyodideContext();
 
   const runCode = useCallback(
     async (request: ExecutionRequest): Promise<ExecutionResult> => {
-      dispatch({ type: 'EXECUTE_START', language: request.language });
+      executionStore.startExecution(request.language);
 
       try {
         const result = await executeCode(request, pyodide);
-        dispatch({ type: 'EXECUTE_SUCCESS', result, language: request.language });
+        executionStore.completeExecution(result, request.language);
         return result;
       } catch (err: unknown) {
         const error =
@@ -58,7 +27,7 @@ export function useExecution() {
                 err instanceof Error ? err.message : String(err),
               );
 
-        dispatch({ type: 'EXECUTE_ERROR', error, language: request.language });
+        executionStore.failExecution(error, request.language);
         throw error;
       }
     },
@@ -66,7 +35,7 @@ export function useExecution() {
   );
 
   const reset = useCallback(() => {
-    dispatch({ type: 'RESET' });
+    executionStore.reset();
   }, []);
 
   return {

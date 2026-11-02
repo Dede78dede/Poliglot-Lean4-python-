@@ -1,0 +1,134 @@
+{
+  "capturedAt": "2026-10-29T12:00:00.000Z",
+  "phase": "11.1-baseline",
+  "previousPhase": "11.0.2",
+  "deltaAgainst1102": "zero_unplanned_delta",
+  "registries": {
+    "featureFlagCount": 45,
+    "errorCodeCount": 50,
+    "providerCount": 14,
+    "commandCount": 70
+  },
+  "agentSkills": {
+    "skillCount": 8,
+    "skills": [
+      "polyglot-prove-theorem",
+      "polyglot-import-paper",
+      "polyglot-search-mathlib",
+      "polyglot-generate-blueprint",
+      "polyglot-distribute-code",
+      "polyglot-explain",
+      "polyglot-refactor",
+      "polyglot-test"
+    ],
+    "targets": ["claude_code", "codex_cli", "cursor_rules"],
+    "totalManifestFiles": 24
+  },
+  "shellBaseline": {
+    "activityBar": {
+      "canonicalActivitiesCount": 8,
+      "activities": [
+        "explorer",
+        "search",
+        "git",
+        "proof",
+        "blueprint",
+        "memory",
+        "chat",
+        "settings"
+      ],
+      "defaultSize": "default",
+      "defaultPosition": "left",
+      "zenModeAvailable": true
+    },
+    "sidePanel": {
+      "minWidth": 200,
+      "maxWidth": 480,
+      "defaultWidth": 280,
+      "viewModesPerActivity": {
+        "explorer": ["tree", "list", "changes", "trash"],
+        "search": ["query", "rrf-results"],
+        "git": ["status", "diff"],
+        "proof": ["automation", "femev"],
+        "blueprint": ["dag-summary"],
+        "memory": ["tier-overview"],
+        "chat": ["sessions", "thread"],
+        "settings": ["preferences"]
+      }
+    },
+    "diffViewer": {
+      "modes": ["side-by-side", "inline"],
+      "component": "Monaco DiffEditor"
+    },
+    "editor": {
+      "reopenStackCapacity": 10,
+      "splitModes": ["none", "side-by-side"],
+      "stickyScroll": true,
+      "bracketPairColorization": true,
+      "rulers": [100],
+      "snippets": {
+        "python": true,
+        "lean4": true
+      },
+      "codeLens": {
+        "tactics": ["exact?", "simp?", "omega?"]
+      },
+      "inlayHints": {
+        "parameters": true,
+        "types": true
+      }
+    },
+    "fileManager": {
+      "multiSelect": true,
+      "inlineRename": true,
+      "archiveOperations": "fflate_zip_validator",
+      "archivePreview": true,
+      "softDelete": "two_stage_trash",
+      "routesMounted": "/api/v1/files"
+    },
+    "chat": {
+      "providers": 14,
+      "slashCommands": 8,
+      "maxAutonomousTools": 50,
+      "maxFileEdits": 10,
+      "routesMounted": "/api/v1/chat"
+    },
+    "settings": {
+      "categories": 12,
+      "schema": "Zod SettingsSchema",
+      "storage": "IndexedDB polyglot_settings v3",
+      "undoWindowSeconds": 5,
+      "routesMounted": "/api/v1/settings"
+    },
+    "automations": {
+      "templates": 8,
+      "exportFormat": "RO-Crate 1.1 .polyglot",
+      "scheduledWorkflows": ["nightly-proof-check", "weekly-archive", "weekly-dep-audit"],
+      "routesMounted": "/api/v1/automation"
+    }
+  },
+  "bundleMetrics": {
+    "bundler": "Vite 8.3",
+    "totalGzipKb": 104.2,
+    "budgetGzipKb": 350.0,
+    "withinBudget": true
+  },
+  "verificationSuites": {
+    "cumulativeSuites": 80,
+    "passRate": "100%",
+    "suites": [
+      "suite-102-shell",
+      "suite-103-tabs-diff-outline",
+      "suite-104-status-bar",
+      "suite-105-editing",
+      "suite-106-file-manager",
+      "suite-107-registries",
+      "suite-108-docs",
+      "suite-109-chat",
+      "suite-110-settings",
+      "suite-111-automation",
+      "suite-112-registries",
+      "suite-113-docs"
+    ]
+  }
+}

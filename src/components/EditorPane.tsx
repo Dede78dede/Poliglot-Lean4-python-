@@ -2,6 +2,8 @@ import React, { useCallback, useRef } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import type { SupportedLanguage } from '../types/language';
 import { LEAN4_MONARCH_LANGUAGE } from '../utils/lean-monarch';
+import { PYTHON_SNIPPETS, LEAN4_SNIPPETS } from '../services/editor/snippet-registry';
+import { contextEngineService } from '../services/editor/context-engine-service';
 
 export interface EditorPaneProps {
   readonly language: SupportedLanguage;
@@ -22,6 +24,7 @@ export function EditorPane({
   onMonacoInitState,
 }: EditorPaneProps): React.JSX.Element {
   const isRegisteredRef = useRef(false);
+  const providersRegisteredRef = useRef(false);
 
   const handleEditorMount: OnMount = useCallback(
     async (editor, monaco) => {
@@ -53,16 +56,119 @@ export function EditorPane({
         isRegisteredRef.current = true;
       }
 
+      // Register completion providers for snippets if not already done
+      if (!providersRegisteredRef.current) {
+        // Python snippets completion item provider
+        monaco.languages.registerCompletionItemProvider('python', {
+          provideCompletionItems: (model: any, position: any) => {
+            const word = model.getWordUntilPosition(position);
+            const range = {
+              startLineNumber: position.lineNumber,
+              endLineNumber: position.lineNumber,
+              startColumn: word.startColumn,
+              endColumn: word.endColumn,
+            };
+
+            const suggestions = PYTHON_SNIPPETS.map((snip) => ({
+              label: snip.label,
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: snip.insertText,
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: snip.documentation,
+              detail: snip.detail,
+              range,
+            }));
+
+            return { suggestions };
+          },
+        });
+
+        // Lean 4 snippets completion item provider
+        monaco.languages.registerCompletionItemProvider('lean4', {
+          provideCompletionItems: (model: any, position: any) => {
+            const word = model.getWordUntilPosition(position);
+            const range = {
+              startLineNumber: position.lineNumber,
+              endLineNumber: position.lineNumber,
+              startColumn: word.startColumn,
+              endColumn: word.endColumn,
+            };
+
+            const suggestions = LEAN4_SNIPPETS.map((snip) => ({
+              label: snip.label,
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: snip.insertText,
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: snip.documentation,
+              detail: snip.detail,
+              range,
+            }));
+
+            return { suggestions };
+          },
+        });
+
+        // Lean 4 CodeLens Provider (exact?, simp?, omega?)
+        monaco.languages.registerCodeLensProvider('lean4', {
+          provideCodeLenses: (model: any) => {
+            const text = model.getValue();
+            const lenses = contextEngineService.generateLeanCodeLenses(text);
+            return {
+              lenses: lenses.map((l) => ({
+                range: l.range,
+                command: {
+                  id: l.command.id,
+                  title: l.command.title,
+                  arguments: l.command.arguments,
+                },
+              })),
+              dispose: () => {},
+            };
+          },
+        });
+
+        // Inlay Hints Provider for Python & Lean 4
+        monaco.languages.registerInlayHintsProvider('python', {
+          provideInlayHints: (model: any) => {
+            const hints = contextEngineService.generateInlayHints(model.getValue(), 'python');
+            return {
+              hints: hints.map((h) => ({
+                position: h.position,
+                label: h.label,
+                kind: h.kind === 1 ? monaco.languages.InlayHintKind.Type : monaco.languages.InlayHintKind.Parameter,
+                tooltip: h.tooltip,
+              })),
+              dispose: () => {},
+            };
+          },
+        });
+
+        monaco.languages.registerInlayHintsProvider('lean4', {
+          provideInlayHints: (model: any) => {
+            const hints = contextEngineService.generateInlayHints(model.getValue(), 'lean4');
+            return {
+              hints: hints.map((h) => ({
+                position: h.position,
+                label: h.label,
+                kind: h.kind === 1 ? monaco.languages.InlayHintKind.Type : monaco.languages.InlayHintKind.Parameter,
+                tooltip: h.tooltip,
+              })),
+              dispose: () => {},
+            };
+          },
+        });
+
+        providersRegisteredRef.current = true;
+      }
+
       // Try dynamic import of lean4monaco for rich LSP
       if (language === 'lean4') {
         try {
-          // Dynamic probe for optional lean4monaco package
           const modulePath = 'lean4monaco';
           const leanModule = await import(/* @vite-ignore */ modulePath).catch(() => null);
           if (leanModule && 'LeanMonaco' in leanModule) {
             onMonacoInitState?.(false);
           } else {
-            // Degraded mode: Monarch tokenizer handles syntax
             onMonacoInitState?.(true);
           }
         } catch {
@@ -80,7 +186,7 @@ export function EditorPane({
         onRunRequested?.();
       });
 
-      // Only auto-focus on desktop viewports to prevent unwanted virtual keyboard popping on mobile
+      // Only auto-focus on desktop viewports
       if (typeof window !== 'undefined' && window.innerWidth >= 768) {
         editor.focus();
       }
@@ -113,7 +219,16 @@ export function EditorPane({
           smoothScrolling: true,
           cursorBlinking: 'smooth',
           cursorSmoothCaretAnimation: 'on',
-          bracketPairColorization: { enabled: true },
+          bracketPairColorization: {
+            enabled: true,
+            independentColorPoolPerBracketType: true,
+          },
+          stickyScroll: {
+            enabled: true,
+            maxLineCount: 5,
+          },
+          rulers: [100],
+          multiCursorModifier: 'alt',
           padding: { top: 12, bottom: 12 },
           suggest: {
             showKeywords: true,

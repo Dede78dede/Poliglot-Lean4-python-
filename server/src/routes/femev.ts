@@ -6,11 +6,11 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import { featureFlagRegistry } from '../../src/services/flags/feature-flag-registry';
-import { paperproofClient } from '../../src/services/femev/paperproof-client';
-import { BridgeError } from '../../src/services/errors/bridge-error';
-import { ERROR_REGISTRY, createProblemDetails } from '../../src/services/errors/error-registry';
-import { StructuredLogger } from '../../src/services/logging/logger';
+import { featureFlagRegistry } from '../../../src/services/flags/feature-flag-registry';
+import { paperproofClient } from '../../../src/services/femev/paperproof-client';
+import { BridgeError } from '../../../src/services/errors/bridge-error';
+import { ERROR_REGISTRY, createProblemDetails } from '../../../src/services/errors/error-registry';
+import { StructuredLogger } from '../../../src/services/logging/logger';
 
 export function createFemevRouter(): Router {
   const router = Router();

@@ -36,6 +36,8 @@ export const ZIP_LIMITS = Object.freeze({
     '.pdf',
     '.yml',
     '.yaml',
+    '.yjs',
+    '.polyglot',
   ]),
 } as const);
 

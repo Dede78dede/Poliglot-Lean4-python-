@@ -1,45 +1,31 @@
 /**
- * Unified External Store Base (Phase 10.9, Task S1)
+ * ExternalStoreBase (Phase 10.9 & Phase 11.3)
  *
- * Base class for all useSyncExternalStore compatible stores.
- * Enforces reference stability on getSnapshot, deterministic notify(),
- * and opt-in multiTabSync via BroadcastChannel (Refinement R2).
+ * Abstract base class providing useSyncExternalStore compatible subscription,
+ * snapshot caching, multiTabSync via BroadcastChannel, and persistence hooks.
  */
 
 export interface ExternalStoreOptions {
   readonly id: string;
-  readonly multiTabSync?: boolean;         // default false
-  readonly persistToIndexedDb?: boolean;   // default false
+  readonly multiTabSync?: boolean;
+  readonly persistToIndexedDb?: boolean;
 }
 
-export abstract class ExternalStoreBase<TSnapshot> {
-  protected readonly options: Required<ExternalStoreOptions>;
-  private cachedSnapshot: TSnapshot | null = null;
-  private readonly listeners: Set<() => void> = new Set();
+export abstract class ExternalStoreBase<TState> {
+  protected readonly options: ExternalStoreOptions;
+  private readonly listeners = new Set<() => void>();
   private broadcastChannel: BroadcastChannel | null = null;
+  private cachedSnapshot: TState | null = null;
 
-  protected constructor(options: ExternalStoreOptions) {
-    this.options = {
-      id: options.id,
-      multiTabSync: options.multiTabSync ?? false,
-      persistToIndexedDb: options.persistToIndexedDb ?? false,
-    };
+  constructor(options: ExternalStoreOptions) {
+    this.options = options;
 
-    if (this.options.multiTabSync) {
-      this.initBroadcastChannel();
-    }
-  }
-
-  private initBroadcastChannel(): void {
-    if (typeof window !== 'undefined' && typeof window.BroadcastChannel !== 'undefined') {
+    if (options.multiTabSync && typeof BroadcastChannel !== 'undefined') {
       try {
-        this.broadcastChannel = new window.BroadcastChannel(`polyglot-store-${this.options.id}`);
-        this.broadcastChannel.onmessage = (event: MessageEvent) => {
-          if (event.data?.id === this.options.id && event.data?.type === 'invalidated') {
-            this.cachedSnapshot = null;
-            for (const listener of this.listeners) {
-              listener();
-            }
+        this.broadcastChannel = new BroadcastChannel(`polyglot.store.${options.id}`);
+        this.broadcastChannel.onmessage = (event) => {
+          if (event.data?.type === 'STORE_SYNC') {
+            this.handleRemoteSync(event.data.state);
           }
         };
       } catch {
@@ -48,68 +34,47 @@ export abstract class ExternalStoreBase<TSnapshot> {
     }
   }
 
-  public subscribe = (listener: () => void): (() => void) & { dispose: () => void } => {
-    this.listeners.add(listener);
-    const unsub = () => {
-      this.listeners.delete(listener);
-    };
-    const disposableUnsub = Object.assign(unsub, { dispose: unsub });
-    return disposableUnsub;
-  };
+  protected abstract computeSnapshot(): TState;
 
-  public getSnapshot = (): TSnapshot => {
+  public getSnapshot = (): TState => {
     if (this.cachedSnapshot === null) {
       this.cachedSnapshot = this.computeSnapshot();
     }
     return this.cachedSnapshot;
   };
 
+  public subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  };
+
   protected notify(): void {
-    this.cachedSnapshot = null;
+    this.cachedSnapshot = this.computeSnapshot();
     for (const listener of this.listeners) {
       listener();
     }
-    if (this.options.multiTabSync && this.broadcastChannel) {
+
+    if (this.broadcastChannel && this.options.multiTabSync) {
       try {
-        this.broadcastChannel.postMessage({ id: this.options.id, type: 'invalidated' });
+        this.broadcastChannel.postMessage({
+          type: 'STORE_SYNC',
+          state: this.cachedSnapshot,
+        });
       } catch {
-        // Non-blocking channel message error
+        // Message serialization or transmission failure ignored
       }
     }
   }
 
-  public getListenerCount(): number {
-    return this.listeners.size;
-  }
-
-  public isMultiTabSyncEnabled(): boolean {
-    return this.options.multiTabSync;
-  }
-
-  public getId(): string {
-    return this.options.id;
-  }
-
-  /**
-   * For testing: simulate remote BroadcastChannel invalidation
-   */
-  public simulateRemoteInvalidation(): void {
-    this.cachedSnapshot = null;
-    for (const listener of this.listeners) {
-      listener();
-    }
+  protected handleRemoteSync(_state: unknown): void {
+    this.notify();
   }
 
   public destroy(): void {
-    if (this.broadcastChannel) {
-      this.broadcastChannel.close();
-      this.broadcastChannel = null;
-    }
     this.listeners.clear();
+    this.broadcastChannel?.close();
+    this.broadcastChannel = null;
   }
-
-  /**
-   * Derived classes implement this to construct the immutable snapshot.
-   */
-  protected abstract computeSnapshot(): TSnapshot;
 }

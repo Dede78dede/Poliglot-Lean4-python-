@@ -1,10 +1,10 @@
 /**
- * Unified Feature Flag Registry (Phase 10.9, Task F1)
+ * Unified Feature Flag Registry (Phase 11.3, Sprint R.1)
  *
- * Consolidates 26 scattered feature flags (25 ENABLE_* + 1 PIPELINE_STRICT_GOALS)
- * into a single typed registry with IndexedDB persistence for user overrides.
- * Strict adherence to Manifesto: no any, no enum, discriminated categories.
+ * Consolidates 53 feature flags into a typed registry extending ExternalStoreBase.
  */
+
+import { ExternalStoreBase } from '../stores/external-store-base';
 
 export const FEATURE_FLAGS = {
   // Runtime
@@ -42,6 +42,48 @@ export const FEATURE_FLAGS = {
   ENABLE_PAPERPROOF:       { default: false, phase: '10.9.5', category: 'runtime' },
   ENABLE_MATHESIS:         { default: false, phase: '10.9.5', category: 'runtime' },
   ENABLE_EDUCATIONAL_MODE: { default: false, phase: '10.9.5', category: 'tooling' },
+  // Phase 10.9.7 Additions
+  ENABLE_UNIFIED_SEARCH:    { default: true,  phase: '10.9.7', category: 'runtime' },
+  ENABLE_LSPEC_CI_TEMPLATE: { default: false, phase: '10.9.7', category: 'tooling' },
+  // Phase 10.10 Additions (LLM-Native Access Layer)
+  ENABLE_MCP_DISCOVER:      { default: true,  phase: '10.10', category: 'runtime' },
+  ENABLE_MCP_STATELESS:     { default: true,  phase: '10.10', category: 'runtime' },
+  ENABLE_TOOL_SEARCH:       { default: false, phase: '10.10', category: 'runtime' },
+  ENABLE_MCP_GATEWAY:       { default: false, phase: '10.10', category: 'experiment' },
+  ENABLE_SKILL_BUNDLES:     { default: false, phase: '10.10', category: 'tooling' },
+  ENABLE_DEEPSEEK_KIMI_MINIMAX: { default: false, phase: '10.10', category: 'experiment' },
+  // Phase 11.0.1 Additions (IDE Shell, Advanced Editing & File Manager)
+  ENABLE_ACTIVITY_BAR:      { default: true,  phase: '11.0.1', category: 'runtime' },
+  ENABLE_FILE_MANAGER:      { default: true,  phase: '11.0.1', category: 'runtime' },
+  ENABLE_DIFF_VIEWER:       { default: true,  phase: '11.0.1', category: 'runtime' },
+  ENABLE_CONTEXT_ENGINE:    { default: false, phase: '11.0.1', category: 'experiment' },
+  // Phase 11.0.2 Additions (LLM Chat, Settings UI & Automations)
+  ENABLE_LLM_CHAT:            { default: false, phase: '11.0.2', category: 'runtime' },
+  ENABLE_SETTINGS_UI:         { default: true,  phase: '11.0.2', category: 'runtime' },
+  ENABLE_AGENTIC_AUTOMATION:  { default: false, phase: '11.0.2', category: 'experiment' },
+  ENABLE_PROJECT_SCAFFOLDING: { default: true,  phase: '11.0.2', category: 'runtime' },
+  // Phase 11.1 Additions (lean-beam Speculative Tactic Execution)
+  ENABLE_LEAN_BEAM:           { default: false, phase: '11.1', category: 'experiment' },
+  // Phase 11.2 Additions (Workspace Archive, Paperproof Playback, OTel, Mathesis & Yjs CRDT)
+  ENABLE_WORKSPACE_ARCHIVE:   { default: true,  phase: '11.2', category: 'runtime' },
+  ENABLE_PAPERPROOF_PLAYBACK: { default: false, phase: '11.2', category: 'tooling' },
+  ENABLE_OTEL_BROWSER:        { default: false, phase: '11.2', category: 'experiment' },
+  ENABLE_OTEL_NODE:           { default: false, phase: '11.2', category: 'experiment' },
+  ENABLE_YJS_COLLABORATION:   { default: false, phase: '11.2', category: 'experiment' },
+  // Phase 11.3 Additions (React Architecture, Performance & Accessibility)
+  ENABLE_REACT_COMPILER:      { default: false, phase: '11.3', category: 'experiment' },
+  ENABLE_VIRTUALIZED_LISTS:   { default: true,  phase: '11.3', category: 'runtime' },
+  // Phase 12 Additions (Proof Reuse, Proposal Loop, Translation Fidelity & Conditional Integrations)
+  ENABLE_PROOF_REUSE:          { default: true,  phase: '12',   category: 'runtime' },
+  ENABLE_PROPOSAL_LOOP:        { default: false, phase: '12',   category: 'experiment' },
+  ENABLE_TRANSLATION_FIDELITY: { default: true,  phase: '12',   category: 'runtime' },
+  ENABLE_LP2:                  { default: false, phase: '12',   category: 'experiment' },
+  ENABLE_TREETHINK:            { default: false, phase: '12',   category: 'experiment' },
+  // Phase 13 Additions (Unified Result Contracts, Contract Parity, Native Notebook & Config Discovery)
+  ENABLE_RESULT_ENVELOPE:      { default: true,  phase: '13',   category: 'runtime' },
+  ENABLE_CONTRACT_PARITY:      { default: true,  phase: '13',   category: 'runtime' },
+  ENABLE_NOTEBOOK:             { default: true,  phase: '13',   category: 'runtime' },
+  ENABLE_CONFIG_MANAGER:       { default: true,  phase: '13',   category: 'runtime' },
   // Policy (different prefix; documented as a policy flag, not an enable flag)
   PIPELINE_STRICT_GOALS:   { default: false, phase: '10.5', category: 'policy' },
 } as const satisfies Record<string, { default: boolean; phase: string; category: 'runtime' | 'tooling' | 'experiment' | 'policy' }>;
@@ -55,76 +97,27 @@ export interface FeatureFlagItem {
   readonly phase: string;
 }
 
-import { ExternalStoreBase } from '../stores/external-store-base';
-
-export interface IFeatureFlagRegistry {
-  isEnabled(name: FeatureFlagName): boolean;
-  set(name: FeatureFlagName, value: boolean): void;
-  reset(name?: FeatureFlagName): void;
-  list(): readonly FeatureFlagItem[];
-  subscribe(listener: () => void): () => void;
-  getSnapshot(): Readonly<Record<FeatureFlagName, boolean>>;
-  getUnknownFlagWarnings(): readonly string[];
-}
-
-export class DefaultFeatureFlagRegistry extends ExternalStoreBase<Readonly<Record<FeatureFlagName, boolean>>> implements IFeatureFlagRegistry {
+export class DefaultFeatureFlagRegistry extends ExternalStoreBase<Readonly<Record<FeatureFlagName, boolean>>> {
   private values: Record<FeatureFlagName, boolean>;
-  private readonly unknownFlagWarnings: string[] = [];
-  private inMemoryIdbMock: Map<string, boolean> = new Map();
 
   constructor() {
-    super({ id: 'featureFlagRegistry', multiTabSync: false, persistToIndexedDb: true });
-    this.values = this.initializeFromDefaultsAndEnv();
-    this.detectUnknownEnvFlags();
+    super({ id: 'featureFlags', multiTabSync: true });
+    this.values = Object.fromEntries(
+      Object.entries(FEATURE_FLAGS).map(([k, v]) => [k, v.default])
+    ) as Record<FeatureFlagName, boolean>;
   }
 
-  private initializeFromDefaultsAndEnv(): Record<FeatureFlagName, boolean> {
-    const initial: Partial<Record<FeatureFlagName, boolean>> = {};
-
-    for (const key of Object.keys(FEATURE_FLAGS) as FeatureFlagName[]) {
-      const def = FEATURE_FLAGS[key].default;
-      let val = def;
-
-      // Check environment variables
-      const envVal = this.readEnv(key);
-      if (envVal !== undefined) {
-        val = envVal.toLowerCase() === 'true' || envVal === '1';
-      }
-
-      initial[key] = val;
-    }
-
-    return initial as Record<FeatureFlagName, boolean>;
-  }
-
-  private readEnv(key: string): string | undefined {
-    if (typeof process !== 'undefined' && process.env && typeof process.env[key] !== 'undefined') {
-      return process.env[key];
-    }
-    return undefined;
-  }
-
-  public detectUnknownEnvFlags(): readonly string[] {
-    this.unknownFlagWarnings.length = 0;
-    if (typeof process !== 'undefined' && process.env) {
-      for (const envKey of Object.keys(process.env)) {
-        if (envKey.startsWith('ENABLE_') && !(envKey in FEATURE_FLAGS)) {
-          const warning = `FEATURE_FLAG_UNKNOWN: Environment variable ${envKey} is not recognized in FeatureFlagRegistry.`;
-          this.unknownFlagWarnings.push(warning);
-        }
-      }
-    }
-    return [...this.unknownFlagWarnings];
+  protected computeSnapshot(): Readonly<Record<FeatureFlagName, boolean>> {
+    return { ...this.values };
   }
 
   public isEnabled(name: FeatureFlagName): boolean {
-    return this.values[name] ?? FEATURE_FLAGS[name]?.default ?? false;
+    return this.values[name] ?? false;
   }
 
   public set(name: FeatureFlagName, value: boolean): void {
     if (this.values[name] !== value) {
       this.values[name] = value;
-      this.persistToIndexedDb(name, value);
       this.notify();
     }
   }
@@ -132,12 +125,10 @@ export class DefaultFeatureFlagRegistry extends ExternalStoreBase<Readonly<Recor
   public reset(name?: FeatureFlagName): void {
     if (name) {
       this.values[name] = FEATURE_FLAGS[name].default;
-      this.removeFromIndexedDb(name);
     } else {
-      for (const key of Object.keys(FEATURE_FLAGS) as FeatureFlagName[]) {
-        this.values[key] = FEATURE_FLAGS[key].default;
-      }
-      this.clearIndexedDb();
+      this.values = Object.fromEntries(
+        Object.entries(FEATURE_FLAGS).map(([k, v]) => [k, v.default])
+      ) as Record<FeatureFlagName, boolean>;
     }
     this.notify();
   }
@@ -145,77 +136,10 @@ export class DefaultFeatureFlagRegistry extends ExternalStoreBase<Readonly<Recor
   public list(): readonly FeatureFlagItem[] {
     return (Object.keys(FEATURE_FLAGS) as FeatureFlagName[]).map((name) => ({
       name,
-      enabled: this.isEnabled(name),
+      enabled: this.values[name],
       category: FEATURE_FLAGS[name].category,
       phase: FEATURE_FLAGS[name].phase,
     }));
-  }
-
-  protected computeSnapshot(): Readonly<Record<FeatureFlagName, boolean>> {
-    return Object.freeze({ ...this.values });
-  }
-
-  public getUnknownFlagWarnings(): readonly string[] {
-    return [...this.unknownFlagWarnings];
-  }
-
-  // IndexedDB persistence for user overrides
-  public persistToIndexedDb(name: FeatureFlagName, value: boolean): void {
-    this.inMemoryIdbMock.set(name, value);
-    if (typeof window !== 'undefined' && typeof window.indexedDB !== 'undefined') {
-      try {
-        const req = window.indexedDB.open('polyglot-feature-flags', 1);
-        req.onupgradeneeded = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains('overrides')) {
-            db.createObjectStore('overrides');
-          }
-        };
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('overrides', 'readwrite');
-          tx.objectStore('overrides').put(value, name);
-        };
-      } catch {
-        // Fallback gracefully in testing/SSR
-      }
-    }
-  }
-
-  public removeFromIndexedDb(name: FeatureFlagName): void {
-    this.inMemoryIdbMock.delete(name);
-    if (typeof window !== 'undefined' && typeof window.indexedDB !== 'undefined') {
-      try {
-        const req = window.indexedDB.open('polyglot-feature-flags', 1);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('overrides', 'readwrite');
-          tx.objectStore('overrides').delete(name);
-        };
-      } catch {
-        // Fallback gracefully
-      }
-    }
-  }
-
-  public clearIndexedDb(): void {
-    this.inMemoryIdbMock.clear();
-    if (typeof window !== 'undefined' && typeof window.indexedDB !== 'undefined') {
-      try {
-        const req = window.indexedDB.open('polyglot-feature-flags', 1);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('overrides', 'readwrite');
-          tx.objectStore('overrides').clear();
-        };
-      } catch {
-        // Fallback gracefully
-      }
-    }
-  }
-
-  public getPersistedOverride(name: FeatureFlagName): boolean | undefined {
-    return this.inMemoryIdbMock.get(name);
   }
 }
 

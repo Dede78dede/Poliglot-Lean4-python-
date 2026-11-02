@@ -37,6 +37,7 @@ export async function runSuite86(): Promise<void> {
   console.log('  ✓ 86.2 Router throws ROUTER_NO_PROVIDER_AVAILABLE when candidates are disabled');
 
   // 86.3: Mathesis throws MATHESIS_UNAVAILABLE when disabled; succeeds when enabled
+  featureFlagRegistry.set('ENABLE_MATHESIS', false);
   let mathesisBlocked = false;
   try {
     await mathesisProvider.formalize({
@@ -60,6 +61,7 @@ export async function runSuite86(): Promise<void> {
   console.log('  ✓ 86.3 Mathesis provider strictly respects ENABLE_MATHESIS flag lifecycle');
 
   // 86.4: Paperproof throws PAPERPROOF_UNAVAILABLE when disabled; returns tree when enabled
+  featureFlagRegistry.set('ENABLE_PAPERPROOF', false);
   let paperproofBlocked = false;
   try {
     await paperproofClient.generateProofTree('theorem t : 1 + 1 = 2 := by rfl');

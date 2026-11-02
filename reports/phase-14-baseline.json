@@ -1,0 +1,55 @@
+{
+  "baselinePhase": "14",
+  "generatedAt": "2026-11-02T12:50:00Z",
+  "precedingPhase": "13",
+  "testSuites": {
+    "totalSuites": 155,
+    "totalSubTests": 186,
+    "phase11SubTests": 33,
+    "phase12SubTests": 36,
+    "phase13SubTests": 38,
+    "passRate": 1.0
+  },
+  "registries": {
+    "featureFlags": 62,
+    "errorCodesRfc9457": 82,
+    "bridgeAdapters": 18,
+    "toolchainsSupported": 12,
+    "toolchainRange": "v4.28.0 - v4.35.0"
+  },
+  "contracts": {
+    "resultEnvelopeDiscriminator": "ok: boolean",
+    "pydanticParity": "extra='forbid', Discriminator('ok')",
+    "exportedJsonSchemas": 11
+  },
+  "notebook": {
+    "runtime": "Pyodide in-memory persistent kernel",
+    "worker": "src/workers/notebook.worker.ts",
+    "exportFormat": "Jupyter nbformat v4 + .polyglot-notebook",
+    "timeoutStrategy": "abort cell without kernel reset or variable loss"
+  },
+  "configDiscovery": {
+    "signals": ["hardware", "usage", "benchmark"],
+    "maxProposals": 3,
+    "confirmationRequired": true,
+    "dismissalCooldownDays": 90
+  },
+  "searchAndDiff": {
+    "searchEngine": "MiniSearch",
+    "corporaIndexed": ["files", "evidence", "proofs", "chat", "notebooks"],
+    "queryLatencyMs": "< 1.0",
+    "structuralDiff": "Lean 4 AST declaration parser (signature vs proof change)"
+  },
+  "bundleMetricsGzip": {
+    "mainEntryKb": 159.3,
+    "totalJsKb": 223.17,
+    "cssKb": 16.16
+  },
+  "deferredItems": [
+    {
+      "item": "proof-state snapshotting (A2DR1/Lean_Snapshot)",
+      "targetPhase": "14",
+      "condition": "Open-source release of upstream patched Lean 4 binary"
+    }
+  ]
+}

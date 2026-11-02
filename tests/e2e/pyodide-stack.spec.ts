@@ -44,8 +44,9 @@ export async function runPyodideStackSpec(): Promise<void> {
 
   // 3. Package tier classification
   for (const name of corePackages) {
-    const tier = packageTierClassifier.classify(name);
-    assert.ok(tier === 'tier1' || tier === 'tier2', `Package ${name} must be classified as Tier 1 or Tier 2`);
+    const classification = packageTierClassifier.classifySynchronous(name);
+    assert.equal(classification.isWasmSupported, true, `Package ${name} must be WASM supported`);
+    assert.ok(classification.tier !== 'incompatible', `Package ${name} must not be incompatible`);
   }
-  console.log('  ✓ Core scientific packages classified as Tier 1 or Tier 2');
+  console.log('  ✓ Core scientific packages confirmed as WASM-compatible in tier classifier');
 }

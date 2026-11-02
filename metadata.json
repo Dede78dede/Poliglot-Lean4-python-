@@ -1,6 +1,6 @@
 {
   "name": "Polyglot Code Studio",
-  "description": "A browser-based, dual-runtime code editor and formal verification studio for Python 3.14 and Lean 4.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "description": "A browser-based dual-runtime code editor and formal verification studio for Python 3.14 and Lean 4.",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

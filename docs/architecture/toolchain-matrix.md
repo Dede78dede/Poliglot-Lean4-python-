@@ -7,7 +7,7 @@
 
 ## 1. Overview
 
-To support legacy algorithms, upstream forks, and modern formalization tools without cross-contaminating the primary paranoid verification engine (`femev-runner` at `v4.35.0`), Polyglot Code Studio operates an explicit 11-toolchain matrix across isolated runner containers.
+To support legacy algorithms, upstream forks, and modern formalization tools without cross-contaminating the primary paranoid verification engine (`femev-runner` at `v4.35.0`), Polyglot Code Studio operates an explicit 12-toolchain matrix across isolated runner containers.
 
 ### Binding Matrix
 
@@ -20,10 +20,13 @@ To support legacy algorithms, upstream forks, and modern formalization tools wit
 | `v4.32.2` | `femev-runner` | LeanInteract v0.11.5 interaction engine | `stable` | — |
 | `v4.33.0` | `leanflow-runner` | Verso Blueprint v4.33.0 graph generation | `stable` | `api/graph.mjs` |
 | `v4.33.1` | `pantograph` | Pantograph v0.3.19 tactic exploration bridge | `stable` | — |
+| `v4.34.0-rc1` | `femev-runner` | lean-beam speculative tactic execution (validated) | `rc` | leanprover/lean-beam v0.1.0 |
 | `v4.34.1` | `femev-runner` | Lungo v1.86.160 multi-language compiler & claims | `stable` | `lungo-cli` v1.86.160 |
 | `v4.35.0-rc2` | `leanflow-runner` | doc-gen4 documentation compilation | `rc` | `docbuild/lakefile.toml` |
 | `v4.35.0-rc4` | `kimina` | Kimina latest release candidate prover | `rc` | — |
 | `v4.35.0` | `femev-runner` | 6-kernel paranoid verification, Veriphy, LeanFlow default | `stable` | `SEAL_KERNEL_VERIFIED_TIER5` |
+
+*Last verified: 2026-10-29*
 
 ---
 

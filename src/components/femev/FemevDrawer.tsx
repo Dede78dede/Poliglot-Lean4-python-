@@ -53,6 +53,7 @@ import {
   type LeanCertVerifyResult,
 } from '../../../server/src/services/leancert/leancert-bridge';
 import { PaperproofPanel } from './PaperproofPanel';
+import { EvidenceTimelinePanel } from './EvidenceTimelinePanel';
 import { EPISTEMIC_PALETTE, type EpistemicStatus } from '../../types/epistemic-status';
 import { femevOrchestrator } from '../../services/femev/femev-orchestrator';
 
@@ -67,7 +68,7 @@ export function FemevDrawer({
   onClose,
   onApplyCodeToEditor,
 }: FemevDrawerProps): React.JSX.Element | null {
-  const [activeTab, setActiveTab] = useState<'workflow' | 'leanflow' | 'pastalean' | 'numeric' | 'paperproof' | 'kernels'>('workflow');
+  const [activeTab, setActiveTab] = useState<'workflow' | 'leanflow' | 'pastalean' | 'numeric' | 'paperproof' | 'timeline' | 'kernels'>('workflow');
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [isLungoModalOpen, setIsLungoModalOpen] = useState(false);
 
@@ -337,6 +338,15 @@ Every integer $n > 1$ has at least one prime divisor.
                 }`}
               >
                 Paperproof
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('timeline')}
+                className={`px-2 py-1 text-[11px] font-mono transition-colors ${
+                  activeTab === 'timeline' ? 'bg-[#1E293B] text-cyan-300 font-medium' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Timeline
               </button>
               <button
                 type="button"
@@ -1127,6 +1137,13 @@ Every integer $n > 1$ has at least one prime divisor.
               }
               theoremName="feigenbaum_delta_universal_bound"
             />
+          )}
+
+          {/* TAB: Evidence Timeline Audit Trail */}
+          {activeTab === 'timeline' && (
+            <div className="h-[550px]">
+              <EvidenceTimelinePanel declarationId="feigenbaum-delta-bound" />
+            </div>
           )}
 
           {/* TAB 5: 6-Kernel Soundness Status */}

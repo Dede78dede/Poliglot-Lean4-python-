@@ -1,0 +1,99 @@
+{
+  "capturedAt": "2026-10-27T12:30:00.000Z",
+  "phase": "11.0.2-baseline",
+  "previousPhase": "11.0.1",
+  "deltaAgainst1101": "zero_unplanned_delta",
+  "registries": {
+    "featureFlagCount": 41,
+    "errorCodeCount": 46,
+    "providerCount": 14,
+    "commandCount": 62
+  },
+  "agentSkills": {
+    "skillCount": 5,
+    "targets": ["claude_code", "codex_cli", "cursor_rules"],
+    "totalManifestFiles": 15
+  },
+  "shellBaseline": {
+    "activityBar": {
+      "canonicalActivitiesCount": 8,
+      "activities": [
+        "explorer",
+        "search",
+        "git",
+        "proof",
+        "blueprint",
+        "memory",
+        "chat",
+        "settings"
+      ],
+      "defaultSize": "default",
+      "defaultPosition": "left",
+      "zenModeAvailable": true
+    },
+    "sidePanel": {
+      "minWidth": 200,
+      "maxWidth": 480,
+      "defaultWidth": 280,
+      "viewModesPerActivity": {
+        "explorer": ["tree", "list", "changes", "trash"],
+        "search": ["query", "rrf-results"],
+        "git": ["status", "diff"],
+        "proof": ["automation", "femev"],
+        "blueprint": ["dag-summary"],
+        "memory": ["tier-overview"],
+        "chat": ["sessions", "thread"],
+        "settings": ["preferences"]
+      }
+    },
+    "diffViewer": {
+      "modes": ["side-by-side", "inline"],
+      "component": "Monaco DiffEditor"
+    },
+    "editor": {
+      "reopenStackCapacity": 10,
+      "splitModes": ["none", "side-by-side"],
+      "stickyScroll": true,
+      "bracketPairColorization": true,
+      "rulers": [100],
+      "snippets": {
+        "python": true,
+        "lean4": true
+      },
+      "codeLens": {
+        "tactics": ["exact?", "simp?", "omega?"]
+      },
+      "inlayHints": {
+        "parameters": true,
+        "types": true
+      }
+    },
+    "fileManager": {
+      "multiSelect": true,
+      "inlineRename": true,
+      "archiveOperations": "fflate_zip_validator",
+      "archivePreview": true,
+      "softDelete": "two_stage_trash",
+      "routesMounted": "/api/v1/files"
+    }
+  },
+  "bundleMetrics": {
+    "bundler": "Vite 8.3",
+    "totalGzipKb": 97.1,
+    "budgetGzipKb": 120.0,
+    "withinBudget": true
+  },
+  "verificationSuites": {
+    "cumulativeSuites": 75,
+    "passRate": "100%",
+    "suites": [
+      "suite-102-shell",
+      "suite-103-tabs-diff-outline",
+      "suite-104-status-bar",
+      "suite-105-editing",
+      "suite-106-file-manager",
+      "suite-107-registries",
+      "suite-108-docs"
+    ]
+  }
+}

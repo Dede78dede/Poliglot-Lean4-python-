@@ -1,0 +1,153 @@
+{
+  "capturedAt": "2026-10-29T20:00:00.000Z",
+  "phase": "11.2-baseline",
+  "previousPhase": "11.1",
+  "deltaAgainst111": "zero_unplanned_delta",
+  "registries": {
+    "featureFlagCount": 46,
+    "errorCodeCount": 52,
+    "toolchainCount": 12,
+    "providerCount": 14,
+    "slashCommandsCount": 9
+  },
+  "leanBeam": {
+    "version": "0.1.0",
+    "status": "integrated_mcp_client",
+    "mcpProtocolVersion": "2026-07-28",
+    "curatedToolsCount": 5,
+    "projectedToolsCount": 74,
+    "totalToolsCount": 79,
+    "validatedToolchain": "leanprover/lean4:v4.34.0-rc1",
+    "upstreamToolchainConflict": {
+      "changelog": "v4.33.0",
+      "reservoir": "v4.36.0-rc1",
+      "polyglotOperationalChoice": "v4.34.0-rc1"
+    },
+    "maxWorkspaces": 3,
+    "routesMounted": [
+      "POST /api/v1/proof/probe"
+    ]
+  },
+  "agentSkills": {
+    "skillCount": 9,
+    "skills": [
+      "polyglot-prove-theorem",
+      "polyglot-import-paper",
+      "polyglot-search-mathlib",
+      "polyglot-generate-blueprint",
+      "polyglot-distribute-code",
+      "polyglot-explain",
+      "polyglot-refactor",
+      "polyglot-test",
+      "polyglot-probe-tactic"
+    ],
+    "targets": ["claude_code", "codex_cli", "cursor_rules"],
+    "totalManifestFiles": 27
+  },
+  "shellBaseline": {
+    "activityBar": {
+      "canonicalActivitiesCount": 8,
+      "activities": [
+        "explorer",
+        "search",
+        "git",
+        "proof",
+        "blueprint",
+        "memory",
+        "chat",
+        "settings"
+      ],
+      "defaultSize": "default",
+      "defaultPosition": "left",
+      "zenModeAvailable": true
+    },
+    "sidePanel": {
+      "minWidth": 200,
+      "maxWidth": 480,
+      "defaultWidth": 280,
+      "viewModesPerActivity": {
+        "explorer": ["tree", "list", "changes", "trash"],
+        "search": ["query", "rrf-results"],
+        "git": ["status", "diff"],
+        "proof": ["automation", "femev"],
+        "blueprint": ["dag-summary"],
+        "memory": ["tier-overview"],
+        "chat": ["sessions", "thread"],
+        "settings": ["preferences"]
+      }
+    },
+    "diffViewer": {
+      "modes": ["side-by-side", "inline"],
+      "component": "Monaco DiffEditor"
+    },
+    "editor": {
+      "reopenStackCapacity": 10,
+      "splitModes": ["none", "side-by-side"],
+      "stickyScroll": true,
+      "bracketPairColorization": true,
+      "rulers": [100],
+      "snippets": {
+        "python": true,
+        "lean4": true
+      },
+      "codeLens": {
+        "tactics": ["exact?", "simp?", "omega?"]
+      },
+      "inlayHints": {
+        "parameters": true,
+        "types": true
+      }
+    },
+    "fileManager": {
+      "multiSelect": true,
+      "inlineRename": true,
+      "archiveOperations": "fflate_zip_validator",
+      "archivePreview": true,
+      "softDelete": "two_stage_trash",
+      "routesMounted": "/api/v1/files"
+    },
+    "chat": {
+      "providers": 14,
+      "slashCommands": 9,
+      "maxAutonomousTools": 50,
+      "maxFileEdits": 10,
+      "routesMounted": "/api/v1/chat"
+    },
+    "settings": {
+      "categories": 12,
+      "schema": "Zod SettingsSchema",
+      "storage": "IndexedDB polyglot_settings v3",
+      "undoWindowSeconds": 5,
+      "routesMounted": "/api/v1/settings"
+    },
+    "automations": {
+      "templates": 8,
+      "exportFormat": "RO-Crate 1.1 .polyglot",
+      "scheduledWorkflows": ["nightly-proof-check", "weekly-archive", "weekly-dep-audit"],
+      "routesMounted": "/api/v1/automation"
+    }
+  },
+  "bundleMetrics": {
+    "bundler": "Vite 8.3",
+    "totalGzipKb": 388.09,
+    "budgetGzipKb": 385.0,
+    "withinBudget": false,
+    "warningDocumented": true,
+    "warningNote": "388.09 KB exceeds 385 KB budget by 3.09 KB (+0.8%). Documented in docs/limitations.md; Phase 11.2 code-splitting scheduled."
+  },
+  "verificationSuites": {
+    "cumulativeSuites": 89,
+    "passRate": "100%",
+    "phase111Suites": [
+      "suite-114-installation",
+      "suite-115-client",
+      "suite-116-mcp-tools",
+      "suite-117-chat-probe",
+      "suite-118-skills",
+      "suite-119-registries",
+      "suite-120-docs",
+      "suite-121-mobile",
+      "suite-122-context-engine"
+    ]
+  }
+}

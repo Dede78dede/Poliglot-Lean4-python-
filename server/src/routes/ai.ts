@@ -4,6 +4,7 @@ import {
   type AiSuggestionRequest,
 } from '../services/ai/ai-provider';
 import { validateProofSearchQuery } from './interact';
+import { PROVIDER_CAPABILITIES_MAP } from '../../../src/services/ai/providers/provider-capabilities';
 
 export function createAiRouter(): Router {
   const router = Router();
@@ -111,9 +112,14 @@ export function createAiRouter(): Router {
   // GET /api/v1/ai/providers
   router.get('/providers', async (_req: Request, res: Response): Promise<void> => {
     const providers = await aiProviderRegistry.list();
+    const withCapabilities = providers.map((p) => ({
+      ...p,
+      capabilities: PROVIDER_CAPABILITIES_MAP[p.id] ?? null,
+    }));
     res.status(200).json({
-      providers,
+      providers: withCapabilities,
       active: aiProviderRegistry.getActive().id,
+      capabilityMatrix: PROVIDER_CAPABILITIES_MAP,
     });
   });
 

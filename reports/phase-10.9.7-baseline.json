@@ -1,0 +1,47 @@
+{
+  "phase": "10.9.7-baseline",
+  "generatedAt": "2026-10-25T11:43:00Z",
+  "registries": {
+    "featureFlagCount": 29,
+    "errorCodeCount": 34,
+    "epistemicStates": [
+      "conjecture",
+      "heuristically-validated",
+      "faithfulness-screened",
+      "numerically-verified",
+      "formally-proven",
+      "refuted"
+    ]
+  },
+  "search": {
+    "registeredProviders": [
+      "lean-finder",
+      "leansearch",
+      "leanexplore"
+    ],
+    "unifiedSearchEnabled": false
+  },
+  "blueprint": {
+    "totalNodes": 12,
+    "formalizedNodes": 5,
+    "unformalizedNodes": 7,
+    "stubGenerationEnabled": false
+  },
+  "femev": {
+    "evidenceTypes": [
+      "empirical-orbit",
+      "heuristic-interval",
+      "numeric-certificate",
+      "kernel-proof"
+    ],
+    "timelineSupported": false
+  },
+  "lspec": {
+    "version": "2.0.0",
+    "ciTemplateGenerated": false
+  },
+  "verificationSuites": {
+    "cumulativeSuites": 55,
+    "passRate": "100%"
+  }
+}

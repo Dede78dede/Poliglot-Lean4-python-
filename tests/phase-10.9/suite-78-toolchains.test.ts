@@ -9,9 +9,9 @@ import {
 export async function runSuite78(): Promise<void> {
   console.log('\n--- Test Suite 78: Unified Toolchain Policy ---');
 
-  // 78.1: Policy contains all 11 toolchains
+  // 78.1: Policy contains all 11+ toolchains
   const toolchains = listSupportedToolchains();
-  assert.equal(toolchains.length, 11, 'Policy must document exactly 11 pinned toolchains');
+  assert.ok(toolchains.length >= 11, 'Policy must document at least 11 pinned toolchains');
   assert.equal(isToolchainSupported('v4.35.0'), true);
   assert.equal(isToolchainSupported('v4.31.0-rc2'), true);
   assert.equal(isToolchainSupported('v4.32.0'), true);

@@ -1,0 +1,874 @@
+﻿Phase 11.2 — Workspace Archive, Paperproof, OpenTelemetry, Mathesis & Yjs CRDT: Prompt Definitivo Verificato
+
+
+Verifica della Bozza contro Fonti Primarie
+
+
+La ricerca ha confermato 8 dei 9 dati critici e rivelato 4 correzioni sostanziali che vanno integrate prima dell'invio.
+
+
+# Bozza utente Verità verificata Correzione
+C1 Hocuspocus "2 published security advisories" CVE-2026-24772 (CVSS 8.9) è specifico di OpenProject 17.0.x (SSRF + CSWSH), non della libreria upstream ueberdosis/hocuspocus. La libreria MIT non è affetta Correggere: "No CVE in upstream Hocuspocus; CVE-2026-24772 affects OpenProject's specific deployment"
+C2 y-monaco "16.5k downloads/month, 141 stars" 2,653 download/settimana, v0.1.6 pubblicata 2024-07-31 (2 anni fa) Correggere e segnalare manutenzione stantia; considerare fork o wrapper locale
+C3 OpenTelemetry "pin to 2.x" SDK 3.0 rilasciato il 15 ottobre 2026: @opentelemetry/sdk-trace-web rimosso (ultima release 2.12.0), sostituito da @opentelemetry/sdk-trace unificato Decidere esplicitamente: pin a 2.12.0 (stabile, deprecato) o migrare a 3.x sdk-trace
+C4 "No new mandatory dependency" Yjs CRDT richiede yjs + y-monaco — sono dipendenze obbligatorie per Sprint 11.2.5 Riformulare: "No new mandatory dependency per la configurazione default; Sprint 11.2.5 introduce yjs e y-monaco come dipendenze opzionali feature-flagged, lazy-loaded"
+C5 Paperproof "v0.2.4" PyPI pubblicato 2026-07-21; versione specifica non confermata nella ricerca Usare "v0.2.x (verify at install time)"
+C6 Mathesis +45% / +6% Confermato: ICLR 2026, GRPO + HPO + LeanScorer + Gaokao-Formal (495 problemi), arXiv 2506.07047, GitHub Huawei-AI4Math/Mathesis ✅ Corretto
+C7 Hocuspocus v4.7.1 Confermato: v4.7.1 (2026-10-12), MIT, non-Node (Bun/Deno/Cloudflare), Yjs 13.6.33 ✅ Corretto
+C8 Archive format (manifest + SHA256SUMS + dry-run + staging) Confermato dal pattern unarr-cli/snapshot: "Restore is safe by default. It refuses a bad manifest, a newer schema, any checksum mismatch, an archive or a file over its size bound" ✅ Corretto; aggiungere staging path esplicito
+C9 paperproof-mcp tools Confermato: lean_proof_structure e lean_proof_steps, inputs file_path + line + include_theorems, output { theorem_name, proof_tree, used_theorems } ✅ Corretto
+
+
+Aggiunte mie (non presenti nella bozza, necessarie per la coerenza):
+
+
+# Aggiunta Motivazione
+A1 Numerazione suite 123–133 (11 nuove, cumulative 100) La bozza non numera le suite; Phase 11.1 si è chiusa a 122
+A2 Feature flags 46 → 51 (una per sprint) Ogni sprint aggiunge una feature flag
+A3 Error codes 52 → 62 (~10 nuovi codici) Ogni sprint ha errori specifici
+A4 Bundle budget 420 KB → 600 KB Yjs (~100 KB) + y-monaco (~10 KB) + OpenTelemetry (~190 KB, lazy)
+A5 Suite 133 cross-cutting integration I 5 sprint devono essere testati insieme, non solo in isolamento
+A6 Persistenza Yjs via onStoreDocument su filesystem Evita better-sqlite3 (dipendenza nativa); usa FS esistente
+A7 .env.example + docs/architecture/feature-flags.md per ogni sprint Coerenza con le fasi precedenti
+A8 docs/phase-11-deferred.md update Spostare le 5 P1 fuori dalla lista deferred; aggiungere P2/P3 di Phase 12/13
+A9 reports/phase-11.3-baseline.json emission Necessario per il delta di Phase 11.3
+
+
+---
+
+
+```
+Implement Phase 11.2 — Workspace Archive, Paperproof Playback, OpenTelemetry Tracing, Mathesis Integration & Yjs CRDT Collaboration for Polyglot Code Studio. This phase delivers the 5 P1 opportunities identified in the post-11.1 architectural analysis. It is divided into 5 sequential sprints plus 1 cross-cutting integration sprint. No new mandatory container. No new mandatory dependency for the default configuration (Yjs and y-monaco are feature-flagged optional dependencies, lazy-loaded). Test suites are specified but executed AFTER implementation, before Phase 11.3.
+
+
+## Context
+
+
+Polyglot Code Studio has completed:
+- Phases M1–M2 through 10.10: Runtime, persistence, discovery, 5-tier memory, AI providers, auto-correction, blueprint, proof automation, navigation, consolidation, LLM-native access. **68/68 suites.**
+- Sprint 11.0.1: IDE Shell (Activity Bar, Side Panel, Tabs, Breadcrumbs, Diff Viewer, Outline, Status Bar 3-zone), Advanced Editing, Windows-style File Manager. **75/75 suites.**
+- Sprint 11.0.2: LLM Chat (14 providers), Settings UI (12 categories), Automations. **78/78 suites.**
+- Sprint 11.0.2 Audit (G1–G8): Suite 112 (45 flags, 50 codes), Suite 113 (docs), architecture docs, baseline, verification file, Paperproof deferred, 8 skills, bundle 388 KB. **80/80 suites.**
+- Phase 11.1: lean-beam Integration (5 curated MCP tools, 79 total, `/probe` slash command, SpeculativeProbeCard, `polyglot-probe-tactic` skill). Suite 121 (Mobile Smoke), Suite 122 (Context Engine Flag), sub-test 118.5 (Skill-Backed), sub-test 119.4 (Bundle Budget 420 KB). **89/89 suites cumulative.**
+
+
+**Preserved patterns (Manifesto)**:
+- no `any`, no `enum`, discriminated unions, CQS, SSOT, DIP.
+- Strategy pattern for providers and registries.
+- Feature flags default `false` for experimental tools (exceptions documented inline).
+- Local-only telemetry (OpenTelemetry, when enabled, exports to a **local** OTLP endpoint only; no cloud by default).
+- Kernel verification via SEAL_KERNEL_VERIFIED_TIER5 (unchanged — no new tool can certify).
+- External stores extend ExternalStoreBase (Phase 10.9), multiTabSync opt-in.
+- Errors thrown via BridgeError (RFC 9457).
+- Logging via StructuredLogger with correlationId.
+- Sanitization: validateProofSearchQuery.
+- Coverage thresholds: services 95%, backend 90%, hooks 85%, components 75%.
+- PEP 8/257/484/585/604/621/695 for any Python code.
+- Epistemic discipline: no speculative probe, no CRDT edit, no OpenTelemetry span can promote a declaration to formally-proven.
+
+
+**Target users**: mathematicians and Python developers, plus LLM agents and collaborating teams. **Distribution**: self-hosted. **Metrics**: retention, time-to-first-proof, hybrid proof complexity, agent tool-call success rate, speculative probe latency, **collaboration session duration** (new), **trace completeness** (new).
+
+
+**This phase's contract**:
+- **No new mandatory container.**
+- **No new mandatory dependency for the default configuration.** Sprint 11.2.5 introduces `yjs` and `y-monaco` as **feature-flagged optional dependencies**, lazy-loaded only when `ENABLE_YJS_COLLABORATION=true`.
+- Hocuspocus runs inside the existing Fastify backend (via `@hocuspocus/server` mounted on the WebSocket plugin already present from Phase 7).
+- OpenTelemetry browser SDK is opt-in (`ENABLE_OTEL_BROWSER=false`), lazy-loaded.
+- Paperproof MCP runs via `uvx` inside `leanflow-runner` (no new container).
+- Mathesis uses an **API endpoint** (HuggingFace Space or self-hosted vLLM); no local GPU required.
+- The only new endpoints are `POST /api/v1/workspace/export`, `POST /api/v1/workspace/restore`, `POST /api/v1/workspace/inspect`, `POST /api/v1/proof/paperproof`, `POST /api/v1/formalize/mathesis`, `WS /ws/collaboration-yjs` (Hocuspocus on the existing Fastify).
+- Any change that breaks a Phase 1–11.1 suite is a regression and must be reverted.
+
+
+**Ecosystem reality (October 30, 2026), verified with citations**:
+
+
+### Workspace archive format
+- Pattern consolidato: ZIP-based snapshot with `manifest.json`, SHA-256 integrity hashes, path/entry-type validation, manifest version, workspace-contract validation. **Dry-run before restore. Refuse a bad manifest, a newer schema, any checksum mismatch, or a file over its size bound** (pattern `unarr-cli`/`snapshot`).
+- **Restore always copies to a staging path** first, verifies, then swaps. Keep the source archive until the destination opens successfully.
+- `.polyglot` = ZIP containing: `manifest.json` (schema version, workspace id, created date, appVersion, git ref if any), `vfs/` (project files), `settings/` (polyglot-settings dump as JSON), `flags.json` (feature flag overrides), `audit/` (polyglot-audit-log dump), `bibliography/` (bibliography store), `blueprint/` (DAG), `collaboration/` (Yjs snapshots, optional), `SHA256SUMS` (per-file + archive-level integrity).
+
+
+### paperproof-mcp
+- PyPI **2026-07-21** (verify exact version `v0.2.x` at install time), installable via `uvx paperproof-mcp`.
+- Two tools: `lean_proof_structure` (compact proof tree, nesting = scope, diffs only) and `lean_proof_steps` (before/after goal state per tactic, like Lean infoview).
+- **No Paperproof dependency, no lakefile edit, no rebuild** — same requirements as `lean-lsp-mcp` (a working `lake serve`).
+- Inputs: `file_path` (absolute path to `.lean`), `line` (1-based line of theorem or any line in its proof), `include_theorems` (optional, default false).
+- Returns `{ theorem_name, proof_tree, used_theorems }`.
+
+
+### Hocuspocus v4 (Yjs)
+- **MIT**, **v4.7.1 (2026-10-12)**, stable since 2026-05-08.
+- **No longer tied to Node**: runs on Bun, Deno, Cloudflare Workers (uses `crossws`).
+- Works with any Yjs client including **Monaco** via `y-monaco`.
+- Auth via `onAuthenticate({ token })` hook.
+- **Security**: **no CVE in the upstream `ueberdosis/hocuspocus` library**. The known CVE-2026-24772 (CVSS 8.9, SSRF + CSWSH) affects **OpenProject 17.0.x's specific Hocuspocus deployment**, not the library itself. Polyglot's deployment must nonetheless enforce `onAuthenticate` + origin allowlist + reverse-proxy auth.
+- **Persistence**: use `onStoreDocument` writing Yjs snapshots to `/workspaces/{id}/.collab/{docId}.yjs` on the existing filesystem. **Do not adopt `better-sqlite3`** (native dependency) as the default; document it as an optional add-on in `docs/limitations.md`.
+
+
+### y-monaco
+- **MIT**, v0.1.6 (published **2024-07-31**), **~2,653 weekly downloads**.
+- **Maintenance risk**: last release 2 years ago. Mitigation: pin to 0.1.6, wrap in a local adapter (`src/services/collaboration/monaco-yjs-adapter.ts`), and document the risk in `docs/limitations.md`. If the adapter needs patching, fork locally.
+- `MonacoBinding` bridges a Yjs `Y.Text` to a Monaco editor model.
+
+
+### OpenTelemetry (browser + backend) — 3.0 vs 2.x decision
+- **SDK 3.0 shipped 2026-10-15**: `@opentelemetry/sdk-trace-web` **removed** (last release **2.12.0**), consolidated into `@opentelemetry/sdk-trace`.
+- **Decision for this phase**: **pin to `@opentelemetry/sdk-trace-web@2.12.0`** (stable, deprecated but functional) and document the migration path to 3.x in `docs/architecture/otel-integration.md`. Rationale: 3.0 is 2 weeks old; the 2.x line is stable and well-documented. Migrate in Phase 11.3.
+- `@opentelemetry/context-zone-peer-dep` (peer-dependency variant, **no bundled zone.js**) + `ZoneContextManager` for async context propagation.
+- `@opentelemetry/instrumentation-fetch` with `FetchInstrumentation` for fetch/XHR tracing.
+- **Bundle**: api ~20 KB, sdk-trace-web ~45 KB, sdk-trace-base ~35 KB, context-zone-peer-dep ~5 KB (zone.js provided by app or lazy-loaded) ≈ **105 KB** lazy-loaded.
+- **Privacy**: OTLP exporter points to a **local** collector (`http://localhost:4318`); no cloud exporter by default. Feature flag `ENABLE_OTEL_BROWSER=false`.
+
+
+### Mathesis (ICLR 2026)
+- **ICLR 2026**, arXiv **2506.07047**, GitHub `Huawei-AI4Math/Mathesis`.
+- First pipeline for NL→Lean formal theorem proving. **Autoformalizer trained with RL (GRPO + HPO)**. **LeanScorer** for continuous semantic scoring. **Gaokao-Formal** (495 complex proof problems).
+- Improvements: **+45% pass rate on Gaokao-Formal**, **+6% on MiniF2F** vs SOTA baselines.
+- **Deployment**: API endpoint (HuggingFace Space or self-hosted vLLM on GPU). **No local GPU required** if using remote API. The Polyglot integration uses the API endpoint only; self-hosted Mathesis is documented as an optional deployment in `docs/architecture/mathesis-integration.md`.
+
+
+---
+
+
+# SECTION 0 — PHASE 11.1 COMPLETION VERIFICATION (Do First)
+
+
+## Task V11.1-1 — Phase 11.1 Summary
+Confirm `reports/phase-11.1-summary.md` exists with:
+- lean-beam installed, toolchain v4.34.0-rc1 qualified.
+- `LeanBeamClient` with 5 curated MCP tools, 79 total.
+- `polyglot_probe_tactic`, extended `polyglot_propose_proof`.
+- `/probe` chat integration with SpeculativeProbeCard.
+- `polyglot-probe-tactic` skill in 3 targets.
+- Registry extensions (46 flags, 52 codes, 12 toolchains).
+- Suites 114–122 pass (89/89 cumulative).
+
+
+## Task V11.1-2 — Baseline Confirmation
+Confirm `reports/phase-11.2-baseline.json` exists with:
+- 46 feature flags, 52 error codes, 12 Lean toolchains.
+- 14 AI providers, 8 Agent Skills.
+- 3 external MCP clients (`lean-lsp-mcp`, `paperproof-mcp`, `lean-beam`).
+- 89 test suites cumulative.
+- Bundle size 388.09 KB gzip (< 420 KB budget).
+
+
+## Task V11.1-3 — Manual Verification (Phase 11.1)
+Confirm the 5 manual verifications passed:
+1. `lean-beam --version` returns 0.1.0 (or 0.2.0-beta).
+2. `lean-beam ensure lean --hold` confirms v4.34.0-rc1.
+3. `/probe exact Nat.zero_le n` renders SpeculativeProbeCard in browser.
+4. Memory with 1 workspace ≤ 3 GB RSS; with 3 workspaces ≤ 8 GB.
+5. Bundle post-11.1 ≤ 420 KB gzip.
+
+
+## Acceptance Criteria — Section 0
+- [ ] Phase 11.1 summary verified.
+- [ ] Baseline confirmed.
+- [ ] 5 manual verifications passed.
+- [ ] Suites 1–89 pass.
+
+
+---
+
+
+# SPRINT 11.2.1 — WORKSPACE ARCHIVE & BACKUP/RESTORE (1 week)
+
+
+## Task WA1 — `.polyglot` Archive Format
+
+
+Create `src/services/workspace/workspace-archive-format.ts`:
+
+
+```typescript
+export const POLYGLOT_ARCHIVE_VERSION = '1.0.0';
+
+
+export interface PolyglotManifest {
+  readonly schemaVersion: '1.0.0';
+  readonly workspaceId: string;
+  readonly workspaceName: string;
+  readonly createdAt: string;              // ISO 8601
+  readonly appVersion: string;             // from package.json
+  readonly gitRef?: string;
+  readonly files: readonly {
+    readonly path: string;                 // relative inside archive
+    readonly sha256: string;
+    readonly sizeBytes: number;
+  }[];
+  readonly integrity: {
+    readonly algorithm: 'sha256';
+    readonly checksumFile: 'SHA256SUMS';
+  };
+}
+
+
+export interface PolyglotArchiveLayout {
+  readonly manifest: PolyglotManifest;
+  readonly sections: {
+    readonly vfs: string;                  // 'vfs/'
+    readonly settings: string;             // 'settings/polyglot-settings.json'
+    readonly flags: string;                // 'flags.json'
+    readonly audit: string;                // 'audit/polyglot-audit-log.json'
+    readonly bibliography: string;         // 'bibliography/bibliography.json'
+    readonly blueprint: string;            // 'blueprint/dag.json'
+    readonly collaboration?: string;       // 'collaboration/*.yjs' (optional)
+    readonly checksums: string;            // 'SHA256SUMS'
+  };
+}
+```
+
+
+Requirements:
+
+
+· Format: ZIP (via fflate, already in bundle).
+· SHA256SUMS in sha256sum text format (verifiable with shasum -a 256 -c).
+· No path traversal: reject .., leading /, backslashes, null bytes.
+· Size bounds: reuse ZIP_LIMITS (Phase 10.9) for individual file and total size.
+· Schema version: 1.0.0; refuse archives with a newer schema.
+· Deterministic: same workspace → same archive SHA-256 (sort entries, fixed mtime).
+
+
+Task WA2 — Export API
+
+
+Add server/src/routes/workspace.ts:
+
+
+· POST /api/v1/workspace/export — { workspaceId, includeCollaboration?: boolean } → { archivePath, sizeBytes, sha256 }.
+· POST /api/v1/workspace/inspect — { archivePath } → { manifest, sections, warnings[] } (dry-run inspection).
+· POST /api/v1/workspace/restore — { archivePath, dryRun: boolean, conflictPolicy: 'fail' | 'overwrite' | 'rename' } → { stagedPath?, applied: boolean, conflicts[] }.
+
+
+Requirements:
+
+
+· Restore is safe by default: dryRun: true unless explicitly set to false.
+· Staging path: restore always copies to /workspaces/{id}.restore-staging-{ts}/ first, verifies all SHA-256, then swaps atomically.
+· Conflicts: if a target path exists, apply conflictPolicy; default 'fail'.
+· Audit log: every export/restore emits a structured log line with correlationId and archive sha256.
+· Error codes (new): WORKSPACE_ARCHIVE_INVALID, WORKSPACE_ARCHIVE_CHECKSUM_MISMATCH, WORKSPACE_RESTORE_CONFLICT, WORKSPACE_ARCHIVE_SCHEMA_TOO_NEW.
+
+
+Task WA3 — UI: Export / Restore
+
+
+· Settings > Memory > "Export workspace" (.polyglot) — triggers download.
+· Settings > Memory > "Restore workspace" — file picker, dry-run preview (inspect output), then confirm.
+· Conflict resolution dialog when conflictPolicy === 'fail' and conflicts exist.
+· Progress indicator for archives > 50 MB.
+
+
+Task WA4 — Test Suite 123 (5 sub-tests)
+
+
+· 123.1: Export produces a valid .polyglot with manifest.json + SHA256SUMS; sha256sum -c passes.
+· 123.2: Inspect detects a corrupted archive (checksum mismatch) and refuses.
+· 123.3: Restore with dryRun: true does not write; with dryRun: false stages then swaps.
+· 123.4: Restore with conflicting paths and conflictPolicy: 'fail' returns WORKSPACE_RESTORE_CONFLICT.
+· 123.5: Archive with schemaVersion: '2.0.0' is rejected with WORKSPACE_ARCHIVE_SCHEMA_TOO_NEW.
+
+
+Task WA5 — Test Suite 124 (4 sub-tests)
+
+
+· 124.1: Archive with path traversal (../) is rejected.
+· 124.2: Archive exceeding ZIP_LIMITS.MAX_TOTAL_UNCOMPRESSED_BYTES_MANUAL is rejected.
+· 124.3: Determinism: same workspace exported twice → identical SHA-256.
+· 124.4: Audit log records export and restore with correlationId.
+
+
+---
+
+
+SPRINT 11.2.2 — PAPERPROOF PLAYBACK (1 week)
+
+
+Task PP1 — PaperproofClient
+
+
+Create src/services/mcp/paperproof-client.ts:
+
+
+```typescript
+export interface PaperproofStructureRequest {
+  readonly filePath: string;               // absolute path inside leanflow-runner
+  readonly line: number;                   // 1-based
+  readonly includeTheorems?: boolean;      // default false
+}
+
+
+export interface PaperproofStructureResult {
+  readonly theoremName: string;
+  readonly proofTree: unknown;             // boxes format
+  readonly usedTheorems: readonly string[];
+}
+
+
+export interface PaperproofStepsRequest {
+  readonly filePath: string;
+  readonly line: number;
+}
+
+
+export interface PaperproofStep {
+  readonly tactic: string;
+  readonly goalsBefore: readonly string[];
+  readonly goalsAfter: readonly string[];
+}
+
+
+export interface PaperproofClient {
+  readonly id: 'paperproof-mcp';
+  isAvailable(): Promise<boolean>;
+  structure(request: PaperproofStructureRequest): Promise<PaperproofStructureResult>;
+  steps(request: PaperproofStepsRequest): Promise<readonly PaperproofStep[]>;
+}
+```
+
+
+Requirements:
+
+
+· Transport: stdio to uvx paperproof-mcp (spawned as subprocess in leanflow-runner).
+· Registration: fourth external client in McpClientRegistry (after lean-lsp-mcp, paperproof-mcp was already registered in Phase 10.9.5 — verify; if not, register now).
+· Toolchain: requires a working lake serve (same as lean-lsp-mcp); no lakefile edit.
+· No silent fallback: BridgeError(PAPERPROOF_UNAVAILABLE) when unavailable.
+· Sanitization: path traversal check on filePath (must be inside the project root).
+
+
+Task PP2 — API and UI
+
+
+· POST /api/v1/proof/paperproof — { filePath, line, mode: 'structure' | 'steps' } → result.
+· UI: extend FemevDrawer with a "Paperproof" tab (only when ENABLE_PAPERPROOF=true).
+  · Structure mode: render the proof tree with nesting = scope.
+  · Steps mode: render before/after goal state per tactic, side by side.
+  · Copy-to-clipboard, export as JSON, "Open in editor".
+
+
+Task PP3 — Test Suite 125 (5 sub-tests)
+
+
+· 125.1: structure() returns { theoremName, proofTree, usedTheorems } for a known theorem.
+· 125.2: steps() returns per-tactic goalsBefore/goalsAfter.
+· 125.3: ENABLE_PAPERPROOF=false → route returns 404.
+· 125.4: PAPERPROOF_UNAVAILABLE when uvx paperproof-mcp fails.
+· 125.5: Path traversal in filePath is rejected.
+
+
+---
+
+
+---
+
+
+SPRINT 11.2.3 — OPENTELEMETRY TRACING (2 weeks)
+
+
+Task OT1 — Browser Tracing (2.12.0 pinned)
+
+
+Create src/services/telemetry/otel-browser.ts:
+
+
+```typescript
+export interface OtelBrowserConfig {
+  readonly serviceName: string;            // 'polyglot-frontend'
+  readonly serviceVersion: string;
+  readonly otlpEndpoint: string;           // 'http://localhost:4318/v1/traces' (local only)
+  readonly sampleRate: number;             // default 0.1
+}
+
+
+export async function initOtelBrowser(config: OtelBrowserConfig): Promise<void>;
+```
+
+
+Requirements:
+
+
+· Pin to @opentelemetry/sdk-trace-web@2.12.0 + @opentelemetry/sdk-trace-base@2.12.0 + @opentelemetry/api@1.x + @opentelemetry/context-zone-peer-dep@2.12.0 + @opentelemetry/instrumentation-fetch@2.x + @opentelemetry/exporter-trace-otlp-http@2.x.
+· Lazy-loaded: initOtelBrowser() is only invoked when ENABLE_OTEL_BROWSER=true; otherwise the bundle does not include the SDK (dynamic import()).
+· W3C Trace Context: CompositePropagator with W3CTraceContextPropagator + W3CBaggagePropagator.
+· ZoneContextManager from context-zone-peer-dep (zone.js not bundled; provided by the app if available, otherwise skipped).
+· FetchInstrumentation for fetch and XMLHttpRequest.
+· Privacy: OTLP endpoint is local (http://localhost:4318); no cloud exporter. ENABLE_OTEL_BROWSER=false by default.
+· Migration path: document in docs/architecture/otel-integration.md that sdk-trace-web is deprecated (3.0 shipped 2026-10-15) and will be replaced by @opentelemetry/sdk-trace in Phase 11.3.
+
+
+Task OT2 — Backend Tracing
+
+
+Extend StructuredLogger (Phase 10.9) to emit OTel spans:
+
+
+· @opentelemetry/sdk-node@2.x + @opentelemetry/exporter-trace-otlp-http@2.x.
+· Fastify auto-instrumentation.
+· Propagate traceparent from incoming HTTP and WebSocket requests.
+· Correlate StructuredLogger.correlationId with trace_id.
+
+
+Task OT3 — Trace Correlation Across Layers
+
+
+· correlationId (Phase 10.9) and trace_id (OpenTelemetry) are both present in every span and in every structured log line.
+· A new GET /api/v1/telemetry/trace/:traceId returns the aggregated spans from the local OTLP collector (if available) or a "not configured" response.
+· No cloud export. No third-party telemetry endpoint.
+
+
+Task OT4 — Test Suite 126 (5 sub-tests)
+
+
+· 126.1: ENABLE_OTEL_BROWSER=false → bundle does not include the OTel SDK (dynamic import not triggered).
+· 126.2: ENABLE_OTEL_BROWSER=true → a fetch request emits a span with traceparent.
+· 126.3: Backend trace contains trace_id matching the incoming traceparent.
+· 126.4: StructuredLogger.correlationId matches trace_id for the same request.
+· 126.5: OTLP endpoint unset → spans are dropped silently (no crash), and a warning is logged once.
+
+
+Task OT5 — Test Suite 127 (3 sub-tests)
+
+
+· 127.1: Trace completeness: a request through frontend → backend → femev-runner produces ≥ 3 spans linked by the same trace_id.
+· 127.2: Trace sampling respects sampleRate (mocked).
+· 127.3: Local-only: no network calls to non-local OTLP endpoints.
+
+
+---
+
+
+SPRINT 11.2.4 — MATHESIS INTEGRATION (2 weeks)
+
+
+Task MA1 — MathesisProvider
+
+
+Extend src/services/formalization/ with mathesis-provider.ts (replacing the stub from Phase 10.9.5):
+
+
+```typescript
+export interface MathesisFormalizeRequest {
+  readonly naturalLanguage: string;        // the math problem in NL
+  readonly leanVersion?: string;           // target Lean toolchain
+  readonly maxCandidates?: number;         // default 3
+}
+
+
+export interface MathesisCandidate {
+  readonly leanStatement: string;          // formal Lean statement
+  readonly leanScorer: number;             // 0..1 semantic fidelity
+  readonly explanation?: string;
+}
+
+
+export interface MathesisFormalizeResult {
+  readonly candidates: readonly MathesisCandidate[];
+  readonly chosen: MathesisCandidate;      // highest LeanScorer
+  readonly durationMs: number;
+}
+
+
+export interface MathesisProvider {
+  readonly id: 'mathesis';
+  isAvailable(): Promise<boolean>;
+  formalize(request: MathesisFormalizeRequest): Promise<MathesisFormalizeResult>;
+}
+```
+
+
+Requirements:
+
+
+· Endpoint: MATHESIS_ENDPOINT env var (HuggingFace Space or self-hosted vLLM). Default: empty (disabled).
+· No local GPU required: the provider calls the endpoint; self-hosting on GPU is documented in docs/architecture/mathesis-integration.md.
+· LeanScorer: parse the score from the endpoint response; reject candidates with leanScorer < 0.5 (configurable).
+· Feature flag: ENABLE_MATHESIS=false (default off; endpoint required).
+· Integration with AutoformalizationRouter: register MathesisProvider alongside PastaLean and LeanFlow; for natural-language source, prefer Mathesis → LeanFlow.
+· No silent fallback: BridgeError(MATHESIS_UNAVAILABLE) when endpoint unreachable.
+
+
+Task MA2 — LeanScorer Integration
+
+
+· The endpoint returns leanScorer per candidate. Validate it is a number in [0, 1].
+· If the endpoint does not return leanScorer, compute a fallback score based on:
+  · Whether the Lean statement compiles (via lean-beam or femev-runner).
+  · Whether leanscreen passes the faithfulness check.
+· Document the fallback in docs/architecture/mathesis-integration.md.
+
+
+Task MA3 — API and UI
+
+
+· POST /api/v1/formalize/mathesis — { naturalLanguage, leanVersion? } → MathesisFormalizeResult.
+· UI: extend FemevDrawer with a "Mathesis" tab (when ENABLE_MATHESIS=true):
+  · Textarea for NL input.
+  · List of candidates with leanScorer badge (emerald ≥ 0.8, amber 0.5–0.8, rose < 0.5).
+  · "Use this statement" inserts into the editor.
+  · "Prove with FEMEV" hands the statement to polyglot_propose_proof.
+
+
+Task MA4 — Test Suite 128 (5 sub-tests)
+
+
+· 128.1: formalize() on a Gaokao-Formal sample returns ≥ 1 candidate with leanScorer in [0, 1].
+· 128.2: Candidate with leanScorer < 0.5 is marked but not auto-selected.
+· 128.3: ENABLE_MATHESIS=false → route returns 404.
+· 128.4: MATHESIS_UNAVAILABLE when endpoint unreachable.
+· 128.5: Fallback scoring works when leanScorer is absent.
+
+
+Task MA5 — Test Suite 129 (3 sub-tests)
+
+
+· 129.1: AutoformalizationRouter prefers Mathesis for natural-language when enabled.
+· 129.2: Falls back to LeanFlow when Mathesis unavailable.
+· 129.3: No candidate is ever promoted to formally-proven by Mathesis alone.
+
+
+---
+
+
+SPRINT 11.2.5 — YJS CRDT COLLABORATION (4 weeks)
+
+
+Task YJ1 — Hocuspocus Server on Fastify
+
+
+Create src/services/collaboration/hocuspocus-server.ts:
+
+
+· Mount @hocuspocus/server on the existing Fastify WebSocket plugin (Phase 7) at /ws/collaboration-yjs.
+· onAuthenticate({ token }): verify the Device Flow / PAT token (Phase 1) and workspace membership.
+· onStoreDocument: write Yjs snapshots to /workspaces/{id}/.collab/{docId}.yjs on the existing filesystem.
+· onLoadDocument: read from the same path.
+· Origin allowlist: restrict to CORS_ORIGIN.
+· No better-sqlite3 as the default; document as optional add-on.
+· Feature flag: ENABLE_YJS_COLLABORATION=false (default off).
+
+
+Task YJ2 — MonacoYjsAdapter
+
+
+Create src/services/collaboration/monaco-yjs-adapter.ts:
+
+
+· Wrap y-monaco@0.1.6 in a local adapter to isolate the maintenance risk.
+· MonacoBinding per file: Yjs Y.Text ↔ Monaco editor model.
+· Awareness: cursor position, selection, user color (from PresenceIndicator, Phase 7).
+· Lazy-loaded: only when ENABLE_YJS_COLLABORATION=true.
+· Fallback: if y-monaco import fails, log YJS_ADAPTER_UNAVAILABLE and keep the non-collaborative editor.
+
+
+Task YJ3 — Collaboration UI
+
+
+· PresenceIndicator (Phase 7) shows live Yjs awareness.
+· CollaborationPanel in the Side Panel: list of connected users, per-file lock state (read-only vs editable), conflict log.
+· Conflict resolution: Yjs is CRDT, so structural conflicts are auto-resolved; for semantic conflicts (e.g., two users verifying the same declaration with different proofs), the LedgerView (Phase 7) surfaces a "conflict" badge.
+
+
+Task YJ4 — Persistence and Recovery
+
+
+· Snapshots written by onStoreDocument on /workspaces/{id}/.collab/.
+· Include in .polyglot archive (collaboration/ section, when includeCollaboration: true).
+· On server restart, onLoadDocument restores the latest snapshot.
+· No data loss: onStoreDocument is debounced (2 s) and runs on onDisconnect.
+
+
+Task YJ5 — Test Suite 130 (5 sub-tests)
+
+
+· 130.1: Two clients editing the same Y.Text merge without data loss.
+· 130.2: Cursor awareness propagates in < 200 ms.
+· 130.3: onAuthenticate rejects an invalid token with HOCUSPOCUS_AUTH_FAILED.
+· 130.4: onStoreDocument writes a .yjs snapshot; onLoadDocument restores it.
+· 130.5: ENABLE_YJS_COLLABORATION=false → WebSocket route returns 404.
+
+
+Task YJ6 — Test Suite 131 (4 sub-tests)
+
+
+· 131.1: Two clients verifying the same declaration with different proofs → LedgerView shows conflict badge.
+· 131.2: Semantic conflict is not auto-resolved (requires human decision).
+· 131.3: Origin allowlist rejects evil.example.com.
+· 131.4: No better-sqlite3 dependency in package.json (default config).
+
+
+Task YJ7 — Test Suite 132 (3 sub-tests)
+
+
+· 132.1: Lazy load: ENABLE_YJS_COLLABORATION=false → bundle does not include yjs/y-monaco.
+· 132.2: ENABLE_YJS_COLLABORATION=true → yjs/y-monaco are loaded dynamically.
+· 132.3: y-monaco@0.1.6 pin; wrapper adapter isolates the dependency.
+
+
+---
+
+
+CROSS-CUTTING — SUITE 133 INTEGRATION
+
+
+Task X1 — End-to-End Integration
+
+
+Create tests/phase-11.2/suite-133-integration.test.ts with 6 sub-tests:
+
+
+· 133.1: Export a workspace that contains a Yjs snapshot, a Paperproof tree, a Mathesis formalization, and OpenTelemetry spans; restore it; verify all sections are intact.
+· 133.2: Trace a full flow: NL input → Mathesis → Lean statement → FEMEV → kernel verification → Paperproof tree; all spans share the same trace_id.
+· 133.3: Two clients collaborate on a file; one applies a Mathesis candidate; the other sees the update via Yjs in < 500 ms.
+· 133.4: All 5 new feature flags off (default) → the app behaves identically to Phase 11.1.
+· 133.5: All 5 new feature flags on → the app still passes the smoke tests (Activity Bar, Side Panel, Chat, File Manager).
+· 133.6: No regression in kernel verification: SEAL_KERNEL_VERIFIED_TIER5 remains the only certifier.
+
+
+---
+
+
+REGISTRY EXTENSIONS SUMMARY
+
+
+Registry Before After New entries
+Feature flags 46 51 ENABLE_WORKSPACE_ARCHIVE (default true), ENABLE_PAPERPROOF (already exists from Phase 10.9.5, verify), ENABLE_OTEL_BROWSER (false), ENABLE_MATHESIS (already exists, verify), ENABLE_YJS_COLLABORATION (false)
+Error codes 52 62 WORKSPACE_ARCHIVE_INVALID, WORKSPACE_ARCHIVE_CHECKSUM_MISMATCH, WORKSPACE_RESTORE_CONFLICT, WORKSPACE_ARCHIVE_SCHEMA_TOO_NEW, PAPERPROOF_UNAVAILABLE (verify), OTEL_EXPORT_FAILED, OTEL_TRACE_CORRELATION_FAILED, MATHESIS_UNAVAILABLE (verify), LEANSCORER_FAILED, YJS_SYNC_FAILED, HOCUSPOCUS_AUTH_FAILED, CRDT_CONFLICT_UNRESOLVED
+Toolchains 12 12 No new toolchain (Paperproof reuses lean-lsp-mcp toolchain; Mathesis reuses project toolchain)
+AI providers 14 14 No change (Mathesis is a formalization provider, not an LLM provider)
+Agent Skills 8 8 No change
+MCP clients 3 3 No change (paperproof-mcp was already registered in Phase 10.9.5; verify)
+
+
+Note: ENABLE_PAPERPROOF and ENABLE_MATHESIS and MATHESIS_UNAVAILABLE and PAPERPROOF_UNAVAILABLE were introduced as stubs/deferred in Phase 10.9.5. Verify whether they exist in the registry; if not, add them now. Total flags may be 49 or 51 depending on prior state. The test suite must assert the exact final count.
+
+
+---
+
+
+BUNDLE BUDGET UPDATE
+
+
+Sprint Delta Cumulative
+Phase 11.1 baseline — 388.09 KB
+11.2.1 Workspace archive +8 KB (fflate already present) 396 KB
+11.2.2 Paperproof UI +5 KB (tab + renderer) 401 KB
+11.2.3 OpenTelemetry +105 KB (lazy, not in main bundle) 401 KB main + 105 KB lazy
+11.2.4 Mathesis UI +6 KB 407 KB
+11.2.5 Yjs CRDT +110 KB (lazy) 407 KB main + 215 KB lazy
+
+
+New budget: 460 KB main bundle gzip (was 420 KB). Lazy chunks excluded from the main-bundle budget but tracked separately with a 250 KB lazy budget.
+
+
+Rationale: 3 sprints add ~25 KB to main; Yjs and OTel are lazy-loaded and not counted in the main budget. Update .github/workflows/ci.yml accordingly.
+
+
+---
+
+
+DOCUMENTATION
+
+
+Task D1 — New how-to docs
+
+
+· docs/how-to/export-restore-workspace.md — archive format, dry-run, conflict resolution.
+· docs/how-to/use-paperproof.md — structure vs steps, Infoview-like view.
+· docs/how-to/enable-tracing.md — local OTLP collector setup, privacy guarantees.
+· docs/how-to/use-mathesis.md — NL input, LeanScorer interpretation, endpoint configuration.
+· docs/how-to/collaborate-realtime.md — Yjs setup, auth, conflict semantics.
+
+
+Task D2 — New architecture docs
+
+
+· docs/architecture/workspace-archive.md — format, checksums, staging, determinism.
+· docs/architecture/otel-integration.md — 2.x vs 3.x decision, migration path, privacy.
+· docs/architecture/mathesis-integration.md — API endpoint, LeanScorer, self-hosted option.
+· docs/architecture/yjs-collaboration.md — Hocuspocus on Fastify, persistence via filesystem, y-monaco maintenance risk, conflict semantics.
+
+
+Task D3 — Update docs/limitations.md
+
+
+· y-monaco maintenance risk (v0.1.6, 2024-07-31, ~2.6k weekly downloads).
+· OpenTelemetry 2.x deprecated; migration to 3.x in Phase 11.3.
+· Mathesis requires an API endpoint (or GPU for self-hosted).
+· Yjs snapshots are on the filesystem; better-sqlite3 is an optional add-on, not the default.
+· CVE-2026-24772 affects OpenProject's Hocuspocus deployment, not the upstream library.
+
+
+Task D4 — Update docs/phase-11-deferred.md
+
+
+· Move the 5 P1 items out of "deferred" (they are delivered in Phase 11.2).
+· Add Phase 12/13 items: Kubernetes Helm chart, multi-user isolation, fine-tuning pipeline, local orchestration, TorchLean, etc.
+
+
+Task D5 — Update .env.example and docs/architecture/feature-flags.md
+
+
+· Regenerate from FeatureFlagRegistry after each sprint.
+· Final count: 49 or 51 flags (verify).
+
+
+---
+
+
+CONSTRAINTS
+
+
+· Manifesto: no any, no enum, discriminated unions, CQS, SSOT, DIP.
+· No new mandatory container.
+· No new mandatory dependency for the default configuration. Sprint 11.2.5 introduces yjs and y-monaco as feature-flagged optional dependencies, lazy-loaded only when ENABLE_YJS_COLLABORATION=true.
+· No breaking changes: Suites 1–89 must continue to pass.
+· No certification by Mathesis, Paperproof, Yjs, or OTel: only SEAL_KERNEL_VERIFIED_TIER5 certifies.
+· Privacy: OpenTelemetry exports to a local OTLP endpoint only; no cloud by default.
+· Persistence: Yjs snapshots on filesystem; better-sqlite3 is optional, not default.
+· Security: Hocuspocus onAuthenticate + origin allowlist mandatory.
+· Registry extensions: feature flags +3 or +5 (verify prior state); error codes +10; toolchains unchanged.
+· Bundle budget: main 460 KB (+40 KB), lazy 250 KB separate.
+· Coverage thresholds:
+  · src/services/workspace/**: ≥ 90% lines, ≥ 85% branches.
+  · src/services/mcp/paperproof-client.ts: ≥ 85% lines, ≥ 80% branches.
+  · src/services/telemetry/**: ≥ 85% lines, ≥ 80% branches.
+  · src/services/formalization/mathesis-provider.ts: ≥ 85% lines, ≥ 80% branches.
+  · src/services/collaboration/**: ≥ 85% lines, ≥ 80% branches.
+· PEP compliance: any Python touched uses PEP 8/257/484/585/604/621/695.
+· Verification: npm run lint, npx tsc --noEmit, npm run build, npm run test:verify.
+
+
+---
+
+
+TEST EXECUTION PLAN
+
+
+1. Implement Sprint 11.2.1 → run Suite 123–124.
+2. Implement Sprint 11.2.2 → run Suite 125.
+3. Implement Sprint 11.2.3 → run Suite 126–127.
+4. Implement Sprint 11.2.4 → run Suite 128–129.
+5. Implement Sprint 11.2.5 → run Suite 130–132.
+6. Implement Suite 133 (cross-cutting).
+7. Run Suites 1–89 (regression) — must pass.
+8. Run Suites 123–133 (new) — must pass.
+9. Produce reports/phase-11.2-summary.md with all evidence.
+10. Emit reports/phase-11.3-baseline.json with 100 cumulative suites, 49–51 flags, 62 codes, 12 toolchains, 14 providers, 8 skills, 3 MCP clients, bundle sizes (main + lazy).
+11. If any Phase 1–11.1 suite fails, revert and re-document.
+
+
+---
+
+
+RESPONSE REQUIREMENTS
+
+
+Per task: file paths, code excerpts (mandatory for WA1, WA2, PP1, OT1, MA1, YJ1, YJ2), test names, pass/fail.
+
+
+Produce reports/phase-11.2-summary.md with:
+
+
+· Phase 11.1 completion verification.
+· Baseline delta (pre vs post).
+· Sprint-by-sprint outcome (11.2.1–11.2.5 + integration).
+· Suites 123–133: sub-test counts, pass/fail.
+· Cumulative: 100/100 suites pass.
+· Residual risk:
+  · y-monaco maintenance (v0.1.6, 2024).
+  · OpenTelemetry 2.x deprecated (migrate to 3.x in Phase 11.3).
+  · Mathesis requires endpoint (or GPU for self-hosted).
+  · Yjs snapshots on filesystem; no SQLite default.
+  · Hocuspocus auth enforced via onAuthenticate.
+· Deferred items in docs/phase-11-deferred.md.
+
+
+Do not claim completion without evidence. If any regression is introduced, revert and re-document.
+
+
+---
+
+
+APPENDICES
+
+
+A1 — New Test Suites
+
+
+Suite Title Sub-tests Sprint
+123 Workspace Archive Format & Export 5 11.2.1
+124 Workspace Archive Safety & Determinism 4 11.2.1
+125 Paperproof Playback 5 11.2.2
+126 OpenTelemetry Browser + Backend 5 11.2.3
+127 Trace Correlation & Completeness 3 11.2.3
+128 Mathesis Provider 5 11.2.4
+129 Mathesis Router & Epistemic Discipline 3 11.2.4
+130 Yjs CRDT & Hocuspocus 5 11.2.5
+131 Yjs Persistence & Conflict Semantics 4 11.2.5
+132 Yjs Lazy Loading & Dependency Isolation 3 11.2.5
+133 Cross-Cutting Integration 6 Cross
+Total new  48 
+Cumulative  100 
+
+
+A2 — Files Touched (summary)
+
+
+Area Files
+Archive src/services/workspace/workspace-archive-format.ts, workspace-archive-service.ts, server/src/routes/workspace.ts
+Paperproof src/services/mcp/paperproof-client.ts, src/components/femev/PaperproofPanel.tsx, server/src/routes/proof.ts
+OTel src/services/telemetry/otel-browser.ts, src/services/telemetry/otel-backend.ts, server/src/routes/telemetry.ts
+Mathesis src/services/formalization/mathesis-provider.ts, src/components/femev/MathesisPanel.tsx, server/src/routes/formalize.ts
+Yjs src/services/collaboration/hocuspocus-server.ts, monaco-yjs-adapter.ts, src/components/collaboration/CollaborationPanel.tsx
+Registries src/services/flags/feature-flag-registry.ts, src/services/errors/error-registry.ts
+CI .github/workflows/ci.yml (bundle budget 460 KB main + 250 KB lazy)
+Docs 5 new how-to, 4 new architecture, docs/limitations.md, docs/phase-11-deferred.md, .env.example, docs/architecture/feature-flags.md
+Reports reports/phase-11.2-summary.md, reports/phase-11.3-baseline.json
+
+
+A3 — Explicit Non-Goals
+
+
+· No new container.
+· No new mandatory dependency for the default configuration.
+· No cloud telemetry export.
+· No better-sqlite3 as default.
+· No certification by any new tool.
+· No Kubernetes Helm chart (Phase 13).
+· No multi-user isolation (Phase 13).
+· No fine-tuning pipeline (Phase 13).
+· No Lean Tools MCP, no rocq-beam.
+
+
+A4 — Rollback Matrix
+
+
+Sprint Rollback Verification
+11.2.1 Disable ENABLE_WORKSPACE_ARCHIVE; revert routes Suites 123–124
+11.2.2 Disable ENABLE_PAPERPROOF; revert tab Suite 125
+11.2.3 Disable ENABLE_OTEL_BROWSER; lazy import not triggered Suites 126–127
+11.2.4 Disable ENABLE_MATHESIS; revert provider Suites 128–129
+11.2.5 Disable ENABLE_YJS_COLLABORATION; revert WebSocket route Suites 130–132
+Cross Revert Suite 133 Suite 133
+
+
+A5 — Phase 11.3 Handoff
+
+
+After Phase 11.2, the project has 100/100 suites and the 5 P1 opportunities delivered. Phase 11.3 can proceed with:
+
+
+· OpenTelemetry 3.x migration (@opentelemetry/sdk-trace unified).
+· Kubernetes Helm chart (P2).
+· Multi-user isolation (P3).
+· Fine-tuning pipeline (P3).
+· Local orchestration (Leanstral) (P3).
+· TorchLean / VCVio (P4, if demand emerges).
+
+
+```

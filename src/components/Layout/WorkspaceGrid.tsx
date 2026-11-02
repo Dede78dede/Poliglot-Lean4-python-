@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
 import type { SupportedLanguage } from '../../types/language';
 import type { AuxiliaryTab, WorkspaceLayout } from '../../types/workspace';
 import { WorkspaceLayoutSchema } from '../../types/workspace';
 import { APP_CONSTANTS } from '../../registries/constants';
 import { Compass, Terminal, Layers, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { activityBarStore } from '../../services/shell/activity-bar-store';
+import { sidePanelStore } from '../../services/shell/side-panel-store';
 
 export interface WorkspaceGridProps {
   readonly language: SupportedLanguage;
@@ -15,6 +17,11 @@ export interface WorkspaceGridProps {
   readonly onToggleExplorer?: () => void;
   readonly tabsNode?: React.ReactNode;
   readonly pipelineNode?: React.ReactNode;
+  readonly activityBarNode?: React.ReactNode;
+  readonly sidePanelNode?: React.ReactNode;
+  readonly breadcrumbsNode?: React.ReactNode;
+  readonly diffViewerNode?: React.ReactNode;
+  readonly isDiffActive?: boolean;
 }
 
 function loadInitialLayout(): WorkspaceLayout {
@@ -39,6 +46,11 @@ export function WorkspaceGrid({
   onToggleExplorer,
   tabsNode,
   pipelineNode,
+  activityBarNode,
+  sidePanelNode,
+  breadcrumbsNode,
+  diffViewerNode,
+  isDiffActive = false,
 }: WorkspaceGridProps): React.JSX.Element {
   const [layout, setLayout] = useState<WorkspaceLayout>(loadInitialLayout);
   const [isNarrow, setIsNarrow] = useState<boolean>(() => {
@@ -46,6 +58,15 @@ export function WorkspaceGrid({
   });
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingSplitRef = useRef<boolean>(false);
+
+  const activitySnapshot = useSyncExternalStore(
+    activityBarStore.subscribe,
+    activityBarStore.getSnapshot,
+  );
+  const sidePanelSnapshot = useSyncExternalStore(
+    sidePanelStore.subscribe,
+    sidePanelStore.getSnapshot,
+  );
 
   // Responsive breakpoint check
   useEffect(() => {
@@ -90,6 +111,25 @@ export function WorkspaceGrid({
 
   const isLean = language === 'lean4';
   const activeTab = layout.activeAuxiliaryTab;
+  const isActivityBarLeft = activitySnapshot.position === 'left';
+  const showActivityBar = !activitySnapshot.isZenMode && Boolean(activityBarNode);
+  const showSidePanel =
+    !activitySnapshot.isZenMode &&
+    !sidePanelSnapshot.collapsed &&
+    Boolean(activitySnapshot.activeActivity) &&
+    Boolean(sidePanelNode || fileExplorerNode);
+
+  const renderedSidePanel = sidePanelNode ?? (
+    fileExplorerNode && (
+      <div
+        className={`h-full border-r border-neutral-800 transition-all duration-150 flex flex-col shrink-0 ${
+          isExplorerOpen ? 'w-60 opacity-100' : 'w-0 opacity-0 overflow-hidden border-none pointer-events-none'
+        }`}
+      >
+        {fileExplorerNode}
+      </div>
+    )
+  );
 
   return (
     <div
@@ -99,8 +139,16 @@ export function WorkspaceGrid({
       {/* Desktop Split Mode */}
       {!isNarrow ? (
         <div className="flex w-full h-full">
-          {/* Optional Left Sidebar: File Explorer */}
-          {fileExplorerNode && (
+          {/* Left Activity Bar & Side Panel (if position is left) */}
+          {isActivityBarLeft && (
+            <>
+              {showActivityBar && activityBarNode}
+              {showSidePanel && renderedSidePanel}
+            </>
+          )}
+
+          {/* Legacy fallback if no ActivityBar configured */}
+          {!activityBarNode && fileExplorerNode && (
             <div
               className={`h-full border-r border-neutral-800 transition-all duration-150 flex flex-col shrink-0 ${
                 isExplorerOpen ? 'w-60 opacity-100' : 'w-0 opacity-0 overflow-hidden border-none pointer-events-none'
@@ -110,14 +158,14 @@ export function WorkspaceGrid({
             </div>
           )}
 
-          {/* Center Column: Monaco Tabs + Monaco Editor */}
+          {/* Center Column: Monaco Tabs + Breadcrumbs + Monaco Editor / DiffViewer */}
           <div
             style={{ width: `${layout.editorWidthRatio * 100}%` }}
             className="h-full flex flex-col relative overflow-hidden min-w-[280px]"
           >
             {/* Top row with optional Explorer Toggle & Tabs */}
             <div className="flex items-center bg-[#090d15] border-b border-neutral-800">
-              {onToggleExplorer && (
+              {!activityBarNode && onToggleExplorer && (
                 <button
                   type="button"
                   onClick={onToggleExplorer}
@@ -132,9 +180,12 @@ export function WorkspaceGrid({
               </div>
             </div>
 
-            {/* Monaco Editor Canvas */}
+            {/* Breadcrumbs Navigation Bar */}
+            {breadcrumbsNode}
+
+            {/* Main Canvas: Diff Viewer or Monaco Editor Canvas */}
             <div className="flex-1 relative overflow-hidden">
-              {editorNode}
+              {isDiffActive && diffViewerNode ? diffViewerNode : editorNode}
             </div>
           </div>
 
@@ -201,7 +252,6 @@ export function WorkspaceGrid({
 
             {/* Persistent Tab Panes */}
             <div className="flex-1 relative overflow-hidden">
-              {/* Infoview view for Lean 4 */}
               {isLean && (
                 <div
                   className={`w-full h-full flex flex-col ${
@@ -223,7 +273,6 @@ export function WorkspaceGrid({
                 </div>
               )}
 
-              {/* Dedicated Output Console */}
               <div
                 className={`w-full h-full ${
                   activeTab === 'output' || (!isLean && activeTab === 'infoview') ? 'block' : 'hidden'
@@ -232,7 +281,6 @@ export function WorkspaceGrid({
                 {outputNode}
               </div>
 
-              {/* Dedicated Dynamic Interaction Pipeline */}
               {pipelineNode && (
                 <div
                   className={`w-full h-full ${
@@ -244,25 +292,31 @@ export function WorkspaceGrid({
               )}
             </div>
           </div>
+
+          {/* Right Activity Bar & Side Panel (if position is right) */}
+          {!isActivityBarLeft && (
+            <>
+              {showSidePanel && renderedSidePanel}
+              {showActivityBar && activityBarNode}
+            </>
+          )}
         </div>
       ) : (
         /* Mobile / Narrow Tabbed Layout */
         <div className="flex flex-col w-full h-full min-h-0 flex-1 overflow-hidden">
-          {/* Top Half: Editor */}
           <div className="h-1/2 min-h-0 w-full border-b border-neutral-800 overflow-hidden flex flex-col">
             {tabsNode && (
               <div className="flex items-center bg-[#090d15] border-b border-neutral-800">
                 {tabsNode}
               </div>
             )}
+            {breadcrumbsNode}
             <div className="flex-1 min-h-0 overflow-hidden">
               {editorNode}
             </div>
           </div>
 
-          {/* Bottom Drawer: Tabbed Auxiliary Pane */}
           <div className="h-1/2 min-h-0 w-full flex flex-col bg-[#111827] overflow-hidden">
-            {/* Tab navigation */}
             <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0d131f] border-b border-neutral-800 text-xs">
               {isLean && (
                 <button
@@ -306,7 +360,6 @@ export function WorkspaceGrid({
               )}
             </div>
 
-            {/* Tab Content with Persistent Mounting */}
             <div className="flex-1 relative overflow-hidden">
               <div
                 className={`w-full h-full ${

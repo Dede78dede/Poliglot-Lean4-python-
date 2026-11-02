@@ -1,4 +1,5 @@
 import type { SupportedLanguage } from './language';
+export type { SupportedLanguage };
 
 export const EXECUTION_STATUSES = [
   'idle',
@@ -17,12 +18,7 @@ export interface ExecutionResult {
   readonly stderr: string;
   readonly exitCode: number;
   readonly durationMs: number;
-  /** True if the result was produced by the simulated verifier, not live Lean runtime */
   readonly simulated?: boolean;
-  /**
-   * Formal verification validity:
-   * verified === true <==> exitCode === 0 && !hasSorry && !hasErrors && !simulated
-   */
   readonly verified: boolean;
 }
 

@@ -1,0 +1,40 @@
+# Phase 10.10: Optional MCP Gateway Services
+# Used only when ENABLE_MCP_GATEWAY=true for non-native MCP providers
+# (DeepSeek, Kimi, MiniMax, Groq, OpenRouter)
+version: '3.8'
+
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: polyglot-litellm-gateway
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-polyglot-gateway}
+      - STORE_MODEL_IN_DB=False
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - gateway
+
+  agentgateway:
+    image: ghcr.io/polyglot/agentgateway:latest
+    container_name: polyglot-agentgateway
+    restart: unless-stopped
+    ports:
+      - "8089:8089"
+    environment:
+      - PORT=8089
+      - MCP_UPSTREAM_URL=http://app:3000/api/v1/mcp
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8089/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - gateway

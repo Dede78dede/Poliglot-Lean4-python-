@@ -1,108 +1,85 @@
-import http from 'http';
+/**
+ * Full-Stack Express Server (Phase 11.3)
+ *
+ * Runs Express on port 3000 mounting Vite dev middlewares in development
+ * or serving static production assets in production.
+ */
+
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { resolveKiminaConfig } from './server/src/config/kimina-config';
-import { KiminaClientProxy } from './server/src/services/kimina-client-proxy';
-import { createLeanRouter } from './server/src/routes/lean';
-import { createHealthRouter, createReadinessRouter } from './server/src/routes/health';
+import { createServer as createViteServer } from 'vite';
+import { proofReuseRouter } from './server/src/routes/proof-reuse';
+import { proposalLoopRouter } from './server/src/routes/proposal-loop';
+import { translationRouter } from './server/src/routes/translation';
+import { contractsRouter } from './server/src/routes/contracts';
+import { notebookRouter } from './server/src/routes/notebook';
+import { configRouter } from './server/src/routes/config';
+import { searchRouter } from './server/src/routes/search';
+import { diffRouter } from './server/src/routes/diff';
+import { automationMetrics } from './src/services/proof/metrics/automation-metrics';
 
-import { resolveLeanRunnerConfig } from './server/src/config/lean-runner-config';
-import { LeanProjectRunner } from './server/src/services/lean-project-runner';
-import { createProjectsRouter } from './server/src/routes/projects';
-import { createInteractRouter } from './server/src/routes/interact';
-import { createGitHubAuthRouter } from './server/src/routes/github-auth';
-import { createDiscoveryRouter } from './server/src/routes/discovery';
-import { createAiRouter } from './server/src/routes/ai';
-import { createAutoCorrectRouter } from './server/src/routes/autocorrect';
-import { WorkspaceStore } from './server/src/services/collaboration/workspace-store';
-import { BlueprintRelay } from './server/src/services/collaboration/blueprint-relay';
-import { createWorkspacesRouter } from './server/src/routes/workspaces';
-import { ProofCoordinator } from './server/src/services/proof/proof-coordinator';
-import { AxleAdvancedService } from './server/src/services/proof/axle-advanced';
-import { BlueprintSyncService } from './server/src/services/proof/blueprint-sync';
-import { createProofAutomationRouter } from './server/src/routes/proof-automation';
-import { createMcpServerRouter } from './server/src/routes/mcp-server-router';
-import { createFemevRouter } from './server/src/routes/femev';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const PORT = 3000;
 
 async function startServer(): Promise<void> {
-  const kiminaConfig = resolveKiminaConfig(process.env);
-  const kiminaProxy = new KiminaClientProxy(kiminaConfig);
-
-  const runnerConfig = resolveLeanRunnerConfig(process.env);
-  const leanRunner = new LeanProjectRunner(runnerConfig);
-
   const app = express();
-  app.use(express.json({ limit: '500kb' }));
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  // API Routes
-  app.post('/api/v1/lean/execute', createLeanRouter(kiminaProxy));
-  app.get('/api/v1/health', createHealthRouter(kiminaProxy));
-  app.get('/api/v1/health/ready', createReadinessRouter());
-  app.get('/healthz', (_req, res) => { res.status(200).send('OK'); });
-  app.get('/readyz', createReadinessRouter());
-  app.use('/api/v1/projects', createProjectsRouter(leanRunner));
-  app.use('/api/v1', createInteractRouter(kiminaProxy));
-  app.use('/proof', createInteractRouter(kiminaProxy));
-  app.get('/api/v1/lean/toolchains', (_req, res) => {
-    res.status(200).json({
-      available: ['v4.28.0', 'v4.31.0', 'v4.33.1', 'v4.35.0-rc4'],
-      default: 'v4.35.0-rc4',
+  app.use(express.json());
+
+  // Health and readiness endpoints
+  app.get('/api/health', (_req, res) => {
+    res.json({
+      status: 'healthy',
+      phase: '13',
+      compiler: 'annotation',
+      virtualization: 'react-window-v2',
+      wcag: '2.2-AA',
+      proofReuse: true,
+      proposalLoop: true,
+      translationFidelity: true,
+      resultEnvelope: true,
+      contractParity: true,
+      nativeNotebook: true,
+      configManager: true,
+      crossArtifactSearch: true,
+      structuralDiff: true,
     });
   });
-  const workspaceStore = new WorkspaceStore();
-  const proofCoordinator = new ProofCoordinator();
-  const axleAdvanced = new AxleAdvancedService();
-  const blueprintSync = new BlueprintSyncService();
 
-  app.use('/api/v1/auth/github', createGitHubAuthRouter());
-  app.use('/api/v1/discovery', createDiscoveryRouter());
-  app.use('/api/v1/ai', createAiRouter());
-  app.use('/api/v1/autocorrect', createAutoCorrectRouter());
-  app.use('/api/v1/workspaces', createWorkspacesRouter(workspaceStore));
-  app.use('/api/v1/proof', createProofAutomationRouter(proofCoordinator, axleAdvanced, blueprintSync, workspaceStore));
-  app.use('/api/v1/femev', createFemevRouter());
-  app.use('/mcp', createMcpServerRouter());
-
-  const isProduction = process.env.NODE_ENV === 'production';
-  // In dev, AI Studio's supervisor proxies ingress traffic to port 3000.
-  // In production Cloud Run, process.env.PORT (8080) is used.
-  const port = isProduction ? Number(process.env.PORT || 8080) : 3000;
+  // Modular Routers
+  app.use('/api/v1/proof/reuse', proofReuseRouter);
+  app.use('/api/v1/proof/proposal-loop', proposalLoopRouter);
+  app.use('/api/v1/translation', translationRouter);
+  app.use('/api/v1/contracts', contractsRouter);
+  app.use('/api/v1/notebook', notebookRouter);
+  app.use('/api/v1/config', configRouter);
+  app.use('/api/v1/search', searchRouter);
+  app.use('/api/v1/diff', diffRouter);
+  app.get('/api/v1/proof/metrics', (_req, res) => {
+    res.json(automationMetrics.getMetrics());
+  });
 
   if (!isProduction) {
-    // Development: Integrate Vite middleware
-    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: false,
-      },
+      server: { middlewareMode: true },
       appType: 'spa',
     });
+
     app.use(vite.middlewares);
   } else {
-    // Production: Serve static built files
-    const distPath = path.resolve(__dirname, 'dist');
+    const distPath = path.resolve(import.meta.dirname, 'dist');
     app.use(express.static(distPath));
     app.get('*', (_req, res) => {
       res.sendFile(path.resolve(distPath, 'index.html'));
     });
   }
 
-  const server = http.createServer(app);
-  new BlueprintRelay(server, workspaceStore);
-
-  server.listen(port, '0.0.0.0', () => {
-    console.log(`[Polyglot Code Studio] Server running on http://0.0.0.0:${port}`);
-    console.log(`[Polyglot Code Studio] Kimina Lean mode: ${kiminaConfig.mode}`);
-    console.log(`[Polyglot Code Studio] Archon Blueprint Workspaces & WebSocket Relay active`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Polyglot Code Studio dev server listening on http://0.0.0.0:${PORT}`);
   });
 }
 
 startServer().catch((err) => {
-  console.error('[Server Fatal Error]', err);
+  console.error('Failed to start server:', err);
   process.exit(1);
 });

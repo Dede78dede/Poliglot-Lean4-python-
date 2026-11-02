@@ -12,6 +12,10 @@ export const DATABASE_VERSIONS = {
   'polyglot-bibliography': 1,
   'polyglot-audit-log': 1,
   'polyglot-feature-flags': 1,
+  'polyglot-chat-sessions': 1,
+  'polyglot-settings': 1,
+  'polyglot-notebooks': 1,
+  'polyglot-search-index': 1,
 } as const;
 
 export type DatabaseName = keyof typeof DATABASE_VERSIONS;

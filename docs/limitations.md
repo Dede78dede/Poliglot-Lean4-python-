@@ -139,3 +139,64 @@ Aligned with the official "Are we PEP 783 yet?" ecosystem tracker:
 
 
 
+
+## Shell & File Manager Quotas (Sprint 11.0.1)
+
+- **Manual Archive Max Size**: 50 MiB uncompressed project payload.
+- **Single File Archive Max Size**: 5 MiB per file.
+- **Maximum File Count**: 500 files per archive.
+- **Maximum Compression Ratio**: 100:1 (rejection of suspicious ZIP bomb payloads).
+- **Prohibited Archive Entries**: Symlinks (0 allowed), nested archives (.zip/.tar.gz inside archives), executable binaries (.exe, .dll, .so, .dylib, .bat, .sh).
+- **Two-Stage Deletion**: Soft-deleted files move to `.trash/<uuid>/` with metadata. Eviction or restoration is manual via the Trash View.
+- **Side Panel Range**: Resizable between 200px and 480px.
+- **Editor Reopen Stack**: Tracks up to 10 recently closed tabs (LIFO).
+
+---
+
+## 18. Frontend Production Bundle Budget Warning (Phase 11.0.2 / 11.1)
+
+- **Current Bundle Size**: 388.09 KB JS gzipped (via Vite 8.3.4 production build).
+- **Enforced Budget**: 385.0 KB (350.0 KB Phase 9.5 baseline + 10% maximum margin).
+- **Variance**: +3.09 KB (+0.8% over soft ceiling).
+- **Root Cause Rationale**: Accumulation of rich interactive workbench surfaces delivered across 4 consecutive feature sprints (Phase 10.10 MCP Gateway/Skills, Sprint 11.0.1 IDE Shell/DiffViewer/File Manager, Sprint 11.0.2 LLM Chat/Settings Modal/Scaffolding, and Sprint 11.0.2 Audit extensions).
+- **Resolution Path (Phase 11.2)**: Conduct detailed module profiling using `vite-bundle-visualizer` in Phase 11.2. The primary code-splitting candidate is `@enjoys/context-engine` and Monaco worker chunks, which will be migrated to dynamic `import()` to restore the bundle comfortably below 350 KB.
+
+---
+
+## 19. lean-beam Speculative Tactic Broker Constraints (Phase 11.1)
+
+- **Beta Status**: `leanprover/lean-beam` is currently at release `v0.1.0` (stable alpha, released 2026-07-07); `v0.2.0-beta` is in active development on `main` (`Beam.Version.projectVersion = "0.2.0-beta"`).
+- **Toolchain Qualification & Documented Conflict**:
+  - Upstream documentation conflict: `CHANGELOG` (2026-03-13) cites `v4.33.0` as repository default; Reservoir (2026-10-17) indicates default `v4.36.0-rc1`.
+  - Upstream `validated-lean-toolchains` lists: `v4.34.0-rc1`, `v4.33.0`, `v4.32.0`, `v4.31.0`, `v4.30.0`, `v4.29.0`, `v4.28.0`. Note that `v4.36.0-rc1` is **not** present in `validated-lean-toolchains`.
+  - Operational Binding: Polyglot Code Studio installs and validates `leanprover/lean4:v4.34.0-rc1`. Projects specifying non-qualified toolchains throw RFC 9457 error `LEAN_BEAM_TOOLCHAIN_UNSUPPORTED` (HTTP 422).
+- **Syntax & Language Constraints**:
+  - `let rec`: Recursive let declarations inside tactic sequences are currently unsupported by `lean-beam` speculative probes.
+  - `saveUnsupportedSetup`: Batch builds utilizing custom `moreLeanArgs` require offline staging.
+  - Indentation Sensitivity: Probes executed via `runAt` must match the lexical indentation column of the target proof block.
+  - Search Tree Handles: Handles minted by `lean_run_at_handle` are broker process-local and do not map to cross-family LSP concepts.
+- **Memory Footprint & Workspace Cap**:
+  - Each active workspace initiates an independent Lean LSP session consuming approximately **2 GB RSS**.
+  - Polyglot Code Studio enforces a hard maximum ceiling of **3 active workspaces** per broker subprocess, evicting the least recently used (LRU) workspace via `lean-beam release`.
+
+---
+
+## 20. Phase 11.2 Subsystem Constraints (Archive, OTel, Mathesis, Yjs)
+
+- **Workspace Archive Limits**:
+  - Maximum archive uncompressed payload is capped at **100 MB** (`MAX_WORKSPACE_ARCHIVE_SIZE_BYTES`).
+  - Path traversals (`../`, `/`) and unsupported schema versions (`>= 2.0.0`) are rejected immediately.
+- **OpenTelemetry Browser SDK Pinned Version**:
+  - `@opentelemetry/sdk-trace-web` is pinned to **2.12.0**. Migration to 3.0.x is scheduled for Phase 11.3 following ecosystem maturity.
+  - Telemetry exports are strictly bound to local endpoint `http://localhost:4318/v1/traces`.
+- **Mathesis Remote Inference**:
+  - Requires external GPU server configured via `MATHESIS_ENDPOINT`. Fails fast with `MATHESIS_UNAVAILABLE` (HTTP 503) if endpoint is empty.
+  - Candidates and `LeanScorer` confidence scores are strictly heuristic and never bypass `SEAL_KERNEL_VERIFIED_TIER5`.
+- **Yjs CRDT & Hocuspocus**:
+  - CVE-2026-24772 affects OpenProject's specific deployment, not upstream Hocuspocus. Strict token auth and origin allowlists are enforced.
+  - Pinned `y-monaco@0.1.6` is encapsulated within `MonacoYjsAdapter` and lazy-loaded via `ENABLE_YJS_COLLABORATION`.
+
+---
+
+*Last verified: 2026-10-29*
+

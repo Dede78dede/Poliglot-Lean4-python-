@@ -140,7 +140,9 @@ export function validateZipEntries(
       fileName === 'lean-toolchain' ||
       fileName === 'pyproject.toml' ||
       fileName === 'requirements.txt' ||
-      fileName === 'README.md';
+      fileName === 'README.md' ||
+      fileName === 'SHA256SUMS' ||
+      fileName === 'manifest.json';
 
     const hasAllowedExt = ZIP_LIMITS.ALLOWED_EXTENSIONS.some((ext) =>
       lowerFileName.endsWith(ext),

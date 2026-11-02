@@ -11,9 +11,9 @@ export function PyodideProvider({ children }: PyodideProviderProps): React.JSX.E
   const pyodide = usePyodide();
 
   return (
-    <PyodideContext.Provider value={pyodide}>
+    <PyodideContext value={pyodide}>
       {children}
-    </PyodideContext.Provider>
+    </PyodideContext>
   );
 }
 

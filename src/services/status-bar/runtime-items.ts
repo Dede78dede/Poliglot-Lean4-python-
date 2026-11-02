@@ -1,4 +1,5 @@
 import { statusBarRegistry } from './status-bar-registry';
+import { FEATURE_FLAGS } from '../flags/feature-flag-registry';
 
 export function initializeDefaultStatusBarItems(): void {
   // If default items are already registered, avoid resetting to prevent store notification cascades
@@ -7,7 +8,11 @@ export function initializeDefaultStatusBarItems(): void {
   }
   statusBarRegistry.reset();
 
-  // Phase 10.9: Unified Container Health & Readiness
+  const flagCount = Object.keys(FEATURE_FLAGS).length;
+
+  // ==========================================
+  // Left Zone: Toolchain, Runtime & Health
+  // ==========================================
   statusBarRegistry.add({
     id: 'system-readiness',
     text: '● System Ready',
@@ -18,7 +23,6 @@ export function initializeDefaultStatusBarItems(): void {
     color: '#10b981',
   });
 
-  // 1. Toolchain & Runtime (Left)
   statusBarRegistry.add({
     id: 'kimina-ready',
     text: 'Lean 4.35 (Aligned)',
@@ -48,15 +52,57 @@ export function initializeDefaultStatusBarItems(): void {
   });
 
   statusBarRegistry.add({
+    id: 'correlation-id',
+    text: 'trace: ready',
+    tooltip: 'Request trace correlation ID',
+    alignment: 'left',
+    priority: 65,
+  });
+
+  statusBarRegistry.add({
     id: 'session-pinned',
     text: 'Pinned',
     tooltip: 'Session exempt from 72h TTL automatic cold storage eviction',
     alignment: 'left',
-    priority: 70,
+    priority: 50,
     visible: false,
   });
 
-  // 2. Proof Status (Center)
+  // ==========================================
+  // Center Zone: Document Specs & Proof Status
+  // ==========================================
+  statusBarRegistry.add({
+    id: 'doc-language',
+    text: 'Lean 4',
+    tooltip: 'Active file language mode',
+    alignment: 'center',
+    priority: 70,
+  });
+
+  statusBarRegistry.add({
+    id: 'doc-encoding',
+    text: 'UTF-8',
+    tooltip: 'File character encoding',
+    alignment: 'center',
+    priority: 65,
+  });
+
+  statusBarRegistry.add({
+    id: 'doc-eol',
+    text: 'LF',
+    tooltip: 'Line sequence ending (UNIX)',
+    alignment: 'center',
+    priority: 60,
+  });
+
+  statusBarRegistry.add({
+    id: 'doc-indent',
+    text: 'Spaces: 2',
+    tooltip: 'Indentation style and width',
+    alignment: 'center',
+    priority: 55,
+  });
+
   statusBarRegistry.add({
     id: 'proof-progress',
     text: '0 Open Goals',
@@ -67,7 +113,18 @@ export function initializeDefaultStatusBarItems(): void {
     color: '#10b981',
   });
 
-  // 3. Telemetry & User Coordinates (Right)
+  // ==========================================
+  // Right Zone: Telemetry, Memory, Flags & Diagnostics
+  // ==========================================
+  statusBarRegistry.add({
+    id: 'problems-count',
+    text: '0 Errors, 0 Warnings',
+    tooltip: 'Language diagnostics and linter problems',
+    alignment: 'right',
+    priority: 110,
+    color: '#10b981',
+  });
+
   statusBarRegistry.add({
     id: 'cursor-position',
     text: 'Ln 1, Col 1',
@@ -85,6 +142,15 @@ export function initializeDefaultStatusBarItems(): void {
     commandId: 'proof.openBlueprint',
   });
 
+  statusBarRegistry.add({
+    id: 'memory-status',
+    text: 'L1 RAM · L5 Cold',
+    tooltip: '5-Tier Memory Architecture Status (L1-L5 active)',
+    alignment: 'right',
+    priority: 85,
+    commandId: 'tools.memory',
+  });
+
   const defaultProviderText =
     typeof process !== 'undefined' && process.env?.['LEANSTRAL_ENDPOINT']
       ? 'Leanstral 1.5 (MoE)'
@@ -99,7 +165,6 @@ export function initializeDefaultStatusBarItems(): void {
     commandId: 'tools.llmProviders',
   });
 
-  // Phase 10.2: Native Lean LSP MCP Client item
   statusBarRegistry.add({
     id: 'mcp-status',
     text: 'MCP: Lean LSP (Stdio)',
@@ -108,5 +173,22 @@ export function initializeDefaultStatusBarItems(): void {
     priority: 75,
     commandId: 'tools.mcpTools',
     color: '#06b6d4',
+  });
+
+  statusBarRegistry.add({
+    id: 'feature-flags-count',
+    text: `${flagCount} Flags`,
+    tooltip: `Active feature flags registered (${flagCount} flags)`,
+    alignment: 'right',
+    priority: 70,
+    commandId: 'tools.featureFlags',
+  });
+
+  statusBarRegistry.add({
+    id: 'toolchain-policy',
+    text: 'v4.35 Aligned',
+    tooltip: 'Lean toolchain compliance policy',
+    alignment: 'right',
+    priority: 60,
   });
 }

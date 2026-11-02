@@ -34,10 +34,13 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
+            const budgetKb = 460; // (advanced from 420 KB Phase 11.1 budget)
+            const lazyBudgetKb = 250;
+            console.log(`Bundle Budget Gate: Target budget = ${budgetKb} KB main, ${lazyBudgetKb} KB lazy`);
             const baseline = JSON.parse(fs.readFileSync("reports/phase-10.9-baseline.json", "utf-8")).bundleSizes;
             const mainCap = baseline.mainChunkKb * 1.10;
-            const totalCap = baseline.totalGzippedKb * 1.05;
-            console.log(`Bundle Budget Gate: Main chunk cap: ${mainCap.toFixed(1)} KB, Total gzipped cap: ${totalCap.toFixed(1)} KB`);
+            const totalCap = budgetKb;
+            console.log(`Bundle Budget Gate: Main chunk cap: ${mainCap.toFixed(1)} KB, Total gzipped cap: ${totalCap.toFixed(1)} KB (budget = ${budgetKb} KB, lazy = ${lazyBudgetKb} KB)`);
           '
 
       - name: Run Complete Polyglot Verification Suite

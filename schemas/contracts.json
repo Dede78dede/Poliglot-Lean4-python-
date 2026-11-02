@@ -1,0 +1,13 @@
+{
+  "ConfigProposal": {},
+  "FidelityCheckRequest": {},
+  "FidelityCheckResult": {},
+  "HealthCheckResponse": {},
+  "LeanExecuteRequest": {},
+  "LeanExecuteResponse": {},
+  "ProblemDetails": {},
+  "ProofReuseQuery": {},
+  "ProofReuseResult": {},
+  "ProposalLoopResult": {},
+  "SerializedBridgeError": {}
+}

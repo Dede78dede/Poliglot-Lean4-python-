@@ -21,6 +21,7 @@ export const TOOLCHAIN_POLICY = {
   'v4.32.2':       { toolchain: 'v4.32.2',       owner: 'femev-runner',     purpose: 'LeanInteract v0.11.5',                              stability: 'stable' },
   'v4.33.0':       { toolchain: 'v4.33.0',       owner: 'leanflow-runner',  purpose: 'Verso Blueprint v4.33.0',                           stability: 'stable' },
   'v4.33.1':       { toolchain: 'v4.33.1',       owner: 'pantograph',       purpose: 'Pantograph v0.3.19',                                stability: 'stable' },
+  'v4.34.0-rc1':   { toolchain: 'v4.34.0-rc1',   owner: 'femev-runner',     purpose: 'lean-beam validated',                               stability: 'rc' },
   'v4.34.1':       { toolchain: 'v4.34.1',       owner: 'femev-runner',     purpose: 'Lungo v1.86.160',                                   stability: 'stable' },
   'v4.35.0-rc2':   { toolchain: 'v4.35.0-rc2',   owner: 'leanflow-runner',  purpose: 'doc-gen4 v4.35.0-rc2',                              stability: 'rc' },
   'v4.35.0-rc4':   { toolchain: 'v4.35.0-rc4',   owner: 'kimina',           purpose: 'Kimina latest RC',                                  stability: 'rc' },

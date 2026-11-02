@@ -1,156 +1,181 @@
-# Phase 10.9 — Consolidation, Protocol Unification & Architectural Coherence
+# Phase 13 — Unified Result Contracts, Contract Parity, Native Notebook, Config Discovery & Verification Hardening
 
-This phase consolidates Polyglot Code Studio's architecture following eight phases of rapid capability expansion (Phases 10.2–10.8). Operating under a strict **"no new runtime feature, no new container, no new dependency"** contract, Phase 10.9 eliminates structural debt, unifies core protocols, and establishes a regression-proof baseline across all subsystems to prepare the codebase for Phase 11. The sole new endpoint introduced is `GET /api/v1/health/ready`.
+Phase 13 closes three fundamental structural debts in Polyglot Code Studio: (1) fragmenting `Result<T>` implicit contracts across 18 bridge services; (2) manual TS↔Python contract synchronization; and (3) lack of a persistent interactive notebook execution mode. It introduces a unified `ResultEnvelope<T>` discriminated union, automated contract parity verification, an isolated native notebook engine, evidence-driven config proposals, and verification hardening.
 
-***
+---
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> Based on your Phase 1 clarifications, the implementation enforces:
-> 1. **Subtle Status Bar Health Indicator with Diagnostic Popover**: Real-time aggregate readiness (`ready`, `degraded`, `not_ready`) surfaced via an unboxed monospace status indicator in the bottom bar, expanding into a container-level latency and toolchain health popover.
-> 2. **Expandable RFC 9457 Problem Details for Verification Diagnostics**: User-friendly alerts with expandable technical details (RFC 9457 problem type URI, correlation ID, retryable status, and diagnostic trace) on bridge or kernel errors.
-> 3. **Tab-Local Feature Flag Overrides with IndexedDB Persistence**: The unified `FeatureFlagRegistry` maintains tab-local experiment isolation by default, persists user toggles into `polyglot-feature-flags` IndexedDB, and exposes an instant reset-to-defaults control.
+> The following architectural and user experience decisions were confirmed through Phase 1 clarification:
 
-***
+- **Confirmed Decision 1 (Notebook Workspace)**: Dedicated full-screen route `/notebook` with dual editor-output layout, featuring cell-level execution, persistent Python globals across cells, and session export/import.
+- **Confirmed Decision 2 (Dense Embeddings Upgrade)**: Dense embeddings upgrade (`all-MiniLM-L6-v2` via `@huggingface/transformers` web worker with `minSimilarity ≥ 0.90` and HNSW indexing) will be implemented directly in Sprint 13.5 with worker offloading, upgrading the Phase 12 Dice similarity engine.
+- **Confirmed Decision 3 (Cross-Artifact Search Scope)**: Full unified corpus indexed by `MiniSearch` worker across workspace files, evidence entries, formal proofs, chat threads, and notebooks.
+
+---
 
 ## 1. Overview & Core Concept
 
 - **What It Delivers**:
-  - **Authoritative Pre-Consolidation Baseline (`reports/phase-10.9-baseline.json`)**: Formally typed Zod/TypeScript snapshot capturing all 9 containers, 11 Lean toolchains, 26 feature flags, 12 bridge services, 10 external stores, and 6 IndexedDB databases.
-  - **Unified Feature Flag Registry (`FeatureFlagRegistry`)**: Single source of truth consolidating 26 scattered flags across runtime, tooling, experiment, and policy categories with tab-local state and IndexedDB persistence.
-  - **Unified RFC 9457 Error Taxonomy (`ERROR_REGISTRY` & `BridgeError`)**: Typed catalog of 30 error codes mapped to HTTP status codes, URI problem types, and user messages. All 12 bridge services standardized to throw `BridgeError` with correlation IDs.
-  - **Unified External Store Base (`ExternalStoreBase<TSnapshot>`)**: Shared foundational class for all 10 `useSyncExternalStore` registries with opt-in `BroadcastChannel` multi-tab synchronization (enabled for global command/server registries, disabled for tab-local token budgets).
-  - **Unified Container Readiness (`GET /api/v1/health/ready`)**: Aggregate health orchestrator monitoring critical (`femev-runner`, `kimina`, `pantograph`) and non-critical containers with standardized `/healthz` and `/readyz` probes.
-  - **Formal Toolchain Policy (`TOOLCHAIN_POLICY`)**: Rigorous matrix documenting all 11 pinned Lean toolchain bindings and upstream commit hashes.
-  - **Consolidated ZIP Security Matrix (`ZIP_LIMITS`)**: Single immutable constants definition and an 11-test security suite covering path traversal (CVE-2018-1002200), zombie ZIPs (CVE-2026-0866), and decompression bombs.
-  - **IndexedDB Schema Migration Framework**: Version tracking (`DATABASE_VERSIONS`) across 6 browser databases with ordered `MigrationStep` execution and automated rollback hooks.
-  - **System Lifecycle & Structured Logging**: Coordinated graceful shutdown handling (SIGTERM/SIGINT) with work checkpointing, and structured JSON logging with pervasive correlation ID tracking.
-  - **Bundle Budget CI Gate & Migration Guide**: Automated bundle size threshold enforcement (+10% main chunk gate) and detailed rollback instructions (`docs/phase-10.9-migration.md`).
-- **Target Users**: Mathematicians and formal verification engineers requiring rock-solid stability, deterministic reproducibility, and zero silent failures.
-- **Key Value**: Guarantees architectural integrity, eliminates cross-service protocol drift, and ensures all 40+ verification test suites remain passing.
+  - **`ResultEnvelope<T>`**: Standardized discriminated union on `ok: boolean` with RFC 9457 `SerializedBridgeError`, correlation ID propagation, and non-breaking `withEnvelope()` wrapper across 18 bridge services.
+  - **Contract Parity**: Automated pipeline exporting Zod v4 schemas to JSON Schema with explicit `discriminator: { propertyName }` and compiling to Pydantic v2 BaseModels with strict validation and round-trip verification.
+  - **Native Notebook Mode**: Client-side interactive Python cells running inside a dedicated `notebook.worker` that persists globals across cell executions, provides cell timeout recovery without kernel death, and serializes to IndexedDB (`polyglot-notebooks`) and `.ipynb`.
+  - **Config Manager**: 3-signal discovery engine (Hardware RAM/VRAM, Usage patterns, Benchmark baselines) presenting up to 3 evidence-backed configuration proposals with mandatory explicit user confirmation (zero auto-application).
+  - **Verification Hardening**: Mutation testing harness (nightly Stryker/mutmut, minimal PR diff configuration), meta-scan for flaky/slow/dead tests, integrity checks, and AST-level structural diffing for Lean 4 using `tree-sitter-lean`.
+- **Target Audience**: Mathematicians and Python developers requiring interactive notebook exploration, reliable dual-language contracts, and provable formal verification without unexpected runtime failures.
+- **Epistemic Invariant**: **Only `SEAL_KERNEL_VERIFIED_TIER5` certifies truth.** No envelope, notebook cell, contract parity check, or config proposal can grant certified status.
 
-***
+---
 
 ## 2. User Experience & Visual Design
 
-Adhering strictly to the **Science, Space & Biotech** visual design constitution and zero-pill discipline:
-- **Palette**: Deep space obsidian canvas (`#070A0F`), structural slate panels (`#0E1420`), crisp hairline borders (`#1E293B`), laser cyan accents (`#06B6D4`), telemetry emerald (`#10B981`), and warning amber (`#F59E0B`).
-- **Typographic System**: Neo-grotesque interface labels (`Plus Jakarta Sans`) paired with strict tabular monospace figures (`font-mono tabular-nums`, `JetBrains Mono`) for all latencies, timestamps, error codes, and correlation IDs.
-- **Aggregate Readiness Status Bar Indicator**:
-  - Embedded in the persistent bottom status bar.
-  - Displays state: `● SYSTEM READY` (emerald), `▲ SYSTEM DEGRADED (1 non-critical down)` (amber), or `■ SYSTEM NOT READY` (rose).
-  - Clicking opens an unboxed diagnostic popover detailing individual container latencies, active toolchains, and restart policies.
-- **RFC 9457 Error Diagnostic View**:
-  - Plain, unboxed warning banner with a clear human-readable explanation.
-  - Expandable `[TECHNICAL DETAILS]` tray revealing problem type URI, machine error code, HTTP status, and correlation ID with one-click copy.
-- **Feature Flag Manager Drawer**:
-  - Tabular layout with category filters (`Runtime`, `Tooling`, `Search`, `Blueprint`, `Infrastructure`, `Policy`).
-  - Distinctive toggle switches, phase badges, and a `[RESET ALL TO DEFAULTS]` action.
+- **Dedicated Notebook Route (`/notebook`)**:
+  - Full-width workspace canvas adhering to SaaS dashboard guidelines with breadcrumbs: `Workspace / Notebook / [Session Title]`.
+  - Dual-column or vertical stack layout: cell code editor on the left/top, real-time output and stdout/stderr on the right/bottom.
+  - Cell header with execution order `[In 1]`, duration badge with tabular numerals (`142ms`), run button, and cell deletion.
+  - Global notebook toolbar: `Run All`, `Restart Kernel` (with explicit confirmation), `Export .ipynb`, `Export .polyglot-notebook`, and kernel status indicator (`Ready`, `Running Cell 2`, `Kernel Restarted`).
+- **Settings Recommendations Panel (`RecommendationsPanel.tsx`)**:
+  - Clean card surface inside Settings modal presenting up to 3 pending proposals.
+  - Each proposal displays title, evidence-based rationale (e.g., `Detected 8 GB RAM and 6.2 GB VRAM`), confidence badge, and explicit action buttons (`Apply`, `Dismiss`, `Do not show again`).
+  - No "Apply All" affordance to prevent accidental configuration shifts.
+- **Structural Diff Viewer (`DiffViewer.tsx`)**:
+  - Mode toggle: `Line` (Monaco DiffEditor) vs `Structural` (AST node-level tree diff) vs `Semantic` (Kernel equivalence check).
+  - Highlighting added/removed/modified theorem signatures, lemma binders, and tactic blocks with unboxed metadata tags.
+- **Unified Cross-Artifact Search Modal**:
+  - `Cmd+Shift+F` command palette modal searching across files, evidence items, proof certificates, chat logs, and notebook cells with instant (<50ms) MiniSearch ranking.
 
-***
+---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-- **Decision 1: Typed Baseline JSON Contract (Refinement R1)**:
-  - *Chosen Approach*: Emit `reports/phase-10.9-baseline.json` validated against TypeScript interface `Phase109Baseline`.
-  - *Why*: Establishes an unforgeable baseline contract so any unplanned structural drift is detected and rejected.
-- **Decision 2: Opt-In Multi-Tab Sync via BroadcastChannel (Refinement R2)**:
-  - *Chosen Approach*: `ExternalStoreBase` supports `multiTabSync: boolean`. Global registries (`CommandRegistry`, `McpServerRegistry`, `StatusBarRegistry`) set `true`; experiment-specific stores (`TokenBudgetManager`, `AiProviderRegistry`) set `false`.
-  - *Why*: Prevents cross-tab interference during simultaneous exploratory proving sessions while keeping global UI state consistent.
-- **Decision 3: Consolidated ZIP Matrix & Security Hardening (Refinement R3)**:
-  - *Chosen Approach*: Consolidate all upload constraints into `ZIP_LIMITS` and test against a comprehensive 11-point threat matrix.
-  - *Why*: Protects self-hosted instances from malicious archives without fragmenting quota definitions across frontend and backend.
-- **Decision 4: Explicit Rollback Plans in Migration Documentation (Refinement R4)**:
-  - *Chosen Approach*: Author `docs/phase-10.9-migration.md` providing step-by-step rollback strategies for every refactored service.
-  - *Why*: Guarantees zero regression risk across 10 store migrations and 12 bridge updates.
+- **Decision 1: `ResultEnvelope<T>` Discriminant on `ok: boolean` (not `success`)**:
+  - *Chosen Approach*: Standard Rust/TypeScript Result monad `{ ok: true, value: T } | { ok: false, error: SerializedBridgeError }`.
+  - *Why*: Eliminates ambiguity; TypeScript narrows `value` only after `if (res.ok)` is checked, preventing property access bugs.
+- **Decision 2: Explicit Discriminator in `z.toJSONSchema()`**:
+  - *Chosen Approach*: Override callback injecting `discriminator: { propertyName }` for `z.discriminatedUnion()`.
+  - *Why*: Zod v4 emits `oneOf` with `const` literals by default without the OpenAPI `discriminator` object; without it, `datamodel-code-generator` fails to generate Pydantic v2 `Discriminator` models.
+- **Decision 3: Isolated `notebook.worker` vs `pyodide.worker`**:
+  - *Chosen Approach*: Create a dedicated `notebook.worker` that maintains a persistent Python namespace, leaving `pyodide.worker` with its strict terminate-on-timeout policy for one-shot scripts and `/probe`.
+  - *Why*: Prevents long-running notebook sessions from being interrupted by one-shot execution timeouts, while ensuring cell timeouts in the notebook do not wipe user variables.
+- **Decision 4: MiniSearch over FlexSearch**:
+  - *Chosen Approach*: ~7 KB bundle, 0.89 ms search latency, indexed in a dedicated `search.worker.ts`.
+  - *Why*: Polyglot's typical workspace corpus (<10,000 documents) runs faster and uses less memory in MiniSearch, without the 20 KB bundle overhead of FlexSearch.
 
-***
+---
 
-## 4. Technical Architecture & System Layout
+## 4. Technical Architecture & Data Strategy
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          POLYGLOT CODE STUDIO                               │
-│       Phase 10.9: Consolidation, Protocol Unification & Coherence          │
-├──────────────────────────────────────┬──────────────────────────────────────┤
-│  Top Ribbon: Feature Flag Drawer     │  Bottom Status Bar: Health Popover   │
-└──────────────────┬───────────────────┴───────────────────▲──────────────────┘
-                   │                                       │
-                   │ State & Health Queries                │ GET /api/v1/health/ready
-                   ▼                                       │
-┌──────────────────────────────────────────────┐           │
-│           CORE PROTOCOL REGISTRIES           │           │
-│  - FeatureFlagRegistry (26 flags + IDB)      ├───────────┤
-│  - ERROR_REGISTRY (30 codes, RFC 9457)       │           │
-│  - TOOLCHAIN_POLICY (11 pinned versions)     │           │
-│  - ExternalStoreBase (Opt-in BroadcastSync)  │           │
-└──────────────────────┬───────────────────────┘           │
-                       │                                   │
-                       │ Correlation ID & Error Handling   │
-                       ▼                                   │
-┌──────────────────────────────────────────────┐           │
-│            12 BRIDGE SERVICES                │           │
-│  (FEMEV, PastaLean, Lungo, LeanFlow,         │           │
-│   leanscreen, LeanCert, Heron, LSpec,        ├───────────┘
-│   doc-gen4, Verso, LeanArchitect, CRAMF)     │
-│   All throw BridgeError with correlation IDs │
-└──────────────────────┬───────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────┐
-│           CONTAINER ORCHESTRATION            │
-│  9 Containers with /healthz & /readyz probes │
-│  Standardized docker-compose depends_on      │
-└──────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 POLYGLOT CODE STUDIO                                    │
+│                                                                                         │
+│  ┌───────────────────────┐   ┌──────────────────────────┐   ┌────────────────────────┐  │
+│  │   Monaco Studio IDE   │   │  Notebook View (/notebook│   │ Settings / Proposals   │  │
+│  │  (Dual Lean 4/Python) │   │ (Interactive Cells/State)│   │ (3-Signal Discovery)   │  │
+│  └───────────┬───────────┘   └────────────┬─────────────┘   └───────────┬────────────┘  │
+│              │                            │                             │               │
+│              ▼                            ▼                             ▼               │
+│  ┌───────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                          Unified ResultEnvelope<T> Layer                          │  │
+│  │      { ok: true, value, correlationId } | { ok: false, error, correlationId }      │  │
+│  └────────────────────────────────────────┬──────────────────────────────────────────┘  │
+│                                           │                                             │
+│       ┌───────────────────────────────────┼───────────────────────────────────┐         │
+│       ▼                                   ▼                                   ▼         │
+│  ┌─────────────────────────┐ ┌─────────────────────────┐ ┌───────────────────────────┐  │
+│  │  18 Bridge Services     │ │  notebook.worker (WASM) │ │  search.worker (MiniSearch)│  │
+│  │  - ProofReuseService    │ │  - Persistent globals   │ │  - Files, evidence, chat  │  │
+│  │  - ProposalLoop         │ │  - Pyodide runtime      │ │  - Proofs, notebooks      │  │
+│  │  - TranslationGate      │ │  - Safe cell timeout    │ │  - Fast client search     │  │
+│  │  - PastaLean / Lungo    │ │  - .ipynb export/import │ │  - Off-main-thread index  │  │
+│  └────────────┬────────────┘ └────────────┬────────────┘ └─────────────┬─────────────┘  │
+│               │                           │                            │                │
+│               ▼                           ▼                            ▼                │
+│  ┌───────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                        Tier 3 Persistence (IndexedDB)                             │  │
+│  │        polyglot-notebooks · polyglot-search-index · polyglot-config-dismissed     │  │
+│  └────────────────────────────────────────┬──────────────────────────────────────────┘  │
+│                                           │                                             │
+│                                           ▼                                             │
+│  ┌───────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                           Express API & Contract Boundary                         │  │
+│  │   /api/v1/contracts/parity-check · /api/v1/config/proposals · /api/v1/notebook    │  │
+│  └───────────────────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Components to Implement:
+### Detailed Sprint Breakdown
 
-1. **Baseline Snapshot (Section 0)**:
-   - `src/types/phase-10.9-baseline.ts`: Zod-validated baseline interfaces.
-   - `reports/phase-10.9-baseline.json`: Authoritative pre-consolidation snapshot.
-2. **Unified Feature Flags (Section 1)**:
-   - `src/services/flags/feature-flag-registry.ts`: Typed registry with 26 flags, env reading, IndexedDB persistence, and `useSyncExternalStore`.
-   - `.env.example`: Regenerated single source of truth.
-3. **Unified Error Taxonomy (Section 2)**:
-   - `src/services/errors/error-registry.ts`: 30 typed error codes with RFC 9457 problem types.
-   - `src/services/errors/bridge-error.ts`: Base `BridgeError` with correlation ID and freeze details.
-   - `docs/reference/error-codes.md`: Generated error documentation.
-4. **Unified External Store Base (Section 3)**:
-   - `src/services/stores/external-store-base.ts`: Base class with memoized snapshot caching and opt-in `BroadcastChannel` synchronization.
-   - Migration of 10 external stores to extend `ExternalStoreBase`.
-5. **Unified Health & Readiness (Section 4)**:
-   - `src/services/health/health-service.ts`: Container readiness checking service.
-   - `server/src/routes/health.ts`: `GET /api/v1/health/ready` aggregate endpoint.
-   - `docker-compose.yml`: Standardized healthchecks (`/healthz`, `/readyz`) and `depends_on: { condition: service_healthy }`.
-6. **Unified Toolchain Policy (Section 5)**:
-   - `src/services/toolchains/toolchain-policy.ts`: Definition of all 11 toolchain bindings.
-   - `docs/architecture/toolchain-matrix.md`: Canonical toolchain matrix documentation.
-7. **Consolidated ZIP Security Matrix (Section 6)**:
-   - `src/registries/constants.ts` & `src/services/archive/zip-validator.ts`: Immutable `ZIP_LIMITS` reference.
-   - `tests/phase-10.9/zip-validator-matrix.test.ts`: Complete 11-test security suite.
-8. **IndexedDB Schema Versioning (Section 7)**:
-   - `src/services/storage/schema-migration.ts`: Migration runner supporting 6 databases and rollback definitions.
-   - `docs/architecture/indexeddb-migrations.md`: Phase 11 forward migration strategy.
-9. **Nomenclature, Lifecycle & Structured Logging (Section 8)**:
-   - `docs/architecture/nomenclature.md`: Canonical casing rules and alias cleanup.
-   - `src/services/lifecycle/graceful-shutdown.ts`: SIGTERM/SIGINT handlers with timeout management.
-   - `src/services/logging/logger.ts`: Structured JSON logger with correlation ID injection.
-10. **Bundle Budget & Migration Guide (Sections 9 & 10)**:
-    - `.github/workflows/ci.yml`: Bundle visualizer and budget gate (+10% main chunk cap).
-    - `docs/phase-10.9-migration.md`: Per-section rollback guide.
-    - `docs/phase-11-deferred.md`: Explicitly deferred items for Phase 11.
-11. **Verification Test Suites 74–83 (Appendices A1 & A2)**:
-    - Suite 74: Unified Feature Flag Registry (5 sub-tests)
-    - Suite 75: Unified Error Taxonomy (5 sub-tests)
-    - Suite 76: Unified External Store Base (4 sub-tests)
-    - Suite 77: Unified Container Health (4 sub-tests)
-    - Suite 78: Unified Toolchain Policy (3 sub-tests)
-    - Suite 79: ZipValidator Matrix (5 sub-tests)
-    - Suite 80: IndexedDB Schema Versioning (4 sub-tests)
-    - Suite 81: Nomenclature, Shutdown & Logging (4 sub-tests)
-    - Suite 82: Bundle Budget & Env Regeneration (3 sub-tests)
-    - Suite 83: Migration Guide & Rollback (3 sub-tests)
-    - Integrated into `scripts/verify-all.ts` (50 total suites).
-    - Summary report in `reports/phase-10.9-summary.md`.
+#### Sprint 13.1 — Unified `ResultEnvelope<T>` (Suite 149, 6 Sub-tests)
+1. **Contract Definitions (`src/shared/contracts/result-envelope.ts`)**:
+   - `SerializedBridgeError` conforming to RFC 9457 `ProblemDetails`.
+   - `ResultEnvelope<T>` discriminated union on `ok: boolean`.
+   - `VoidEnvelope` with explicit `value: null`.
+   - `serializeBridgeError(error, correlationId)` and `unwrapEnvelope(envelope)` helpers.
+2. **`withEnvelope()` Wrapper (`src/shared/contracts/with-envelope.ts`)**:
+   - Intercepts calls, handles `BridgeError` and unforeseen exceptions gracefully with proper correlation IDs.
+3. **Bridge Migration**:
+   - Migrate 18 bridge services to return `ResultEnvelope<T>`.
+4. **HTTP Serialization & Validation**:
+   - Routes serialize envelopes directly, mapping `ok: false` to `error.httpStatus`.
+
+#### Sprint 13.2 — Contract Parity: Zod v4 → JSON Schema → Pydantic v2 (Suite 150, 6 Sub-tests)
+1. **JSON Schema Exporter (`src/services/contracts/json-schema-exporter.ts`)**:
+   - Native `z.toJSONSchema()` with override injecting `discriminator: { propertyName }` for `ZodDiscriminatedUnion`.
+   - Strict ban on `z.union()` for boundary schemas.
+2. **Pydantic Generation Script (`scripts/generate-pydantic.py`)**:
+   - Uses `datamodel-code-generator` without `--reuse-model` (preventing bug #3092).
+   - Generates `schemas/generated_contracts.py` with `strict=True` and `extra='forbid'`.
+3. **Parity Check Workflow & API (`server/src/routes/contracts.ts`)**:
+   - Endpoint `POST /api/v1/contracts/parity-check` testing bidirectional validation of 10 boundary fixtures.
+
+#### Sprint 13.3 — Native Notebook (Monaco + Pyodide, `notebook.worker`) (Suite 151, 6 Sub-tests)
+1. **Isolated Worker (`src/workers/notebook.worker.ts`)**:
+   - Persistent globals across cells (`import numpy as np` in cell 1 remains available in cell 2).
+   - Cell timeout handling without killing user variables.
+   - Explicit `RESTART_KERNEL` action returning `variablesLost: true`.
+2. **Data Model & IndexedDB (`src/types/notebook.ts`)**:
+   - `Notebook` and `NotebookCell` entities persisted in `polyglot-notebooks`.
+   - Import/export for `.ipynb` and `.polyglot-notebook`.
+3. **UI Implementation (`src/components/notebook/NotebookPanel.tsx` & `/notebook` Route)**:
+   - Full-screen notebook workspace with cell execution, per-cell outputs, tabular duration badges, and status bar indicator.
+
+#### Sprint 13.4 — Config Manager: Preset + Discovery + Proposal (Suite 152, 5 Sub-tests)
+1. **Config Manager Core (`src/services/config/config-manager.ts`)**:
+   - Evaluates Hardware (RAM, WebGPU VRAM), Usage (probe frequency, search frequency), and Benchmarks (cold load, INP).
+   - Generates at most 3 sorted proposals with confidence ratings and numeric evidence.
+   - Enforces `applyProposal(id, userConfirmed: true)` literal requirement (zero auto-apply).
+   - 90-day dismissal persistence in `localStorage`.
+2. **API & UI (`server/src/routes/config.ts` & `RecommendationsPanel.tsx`)**:
+   - Integrated into Settings modal with individual apply/dismiss actions.
+
+#### Sprint 13.5 — Verification Hardening & Dense Embeddings (Suite 153, 5 Sub-tests)
+1. **Integrity Tests (`tests/phase-13/suite-153-integrity.test.ts`)**:
+   - Archive SHA-256 round-trip, contract parity, hash-chain ledger, audit logs, and proof reuse certificate consistency.
+2. **Dense Embeddings Worker Integration**:
+   - Offloads `all-MiniLM-L6-v2` embedding generation to worker with HNSW fallback and `minSimilarity ≥ 0.90`.
+3. **Mutation Testing & Meta-Scan Workflows**:
+   - `.github/workflows/mutation.yml` (nightly Stryker/mutmut) and `.github/workflows/meta-scan.yml` (flaky/slow/dead tests).
+
+#### Sprint 13.6 — Structural Diff & Cross-Artifact Search (Suite 154, 5 Sub-tests)
+1. **Structural Diff Engine (`src/services/diff/structural-diff.ts`)**:
+   - Uses `tree-sitter-lean` for AST-level semantic diffing of theorem bodies, binders, and proofs.
+2. **Cross-Artifact Search Engine (`src/services/search/cross-artifact-search.ts` & `search.worker.ts`)**:
+   - MiniSearch index over files, evidence, proofs, chat, and notebooks (<50ms query latency).
+
+#### Cross-Cutting Integration (Suite 155, 5 Sub-tests)
+- End-to-end integration across notebook execution, config proposals, ResultEnvelope unwrapping, contract parity, and kernel verification.
+- Cumulative suite count: **186/186 suites passing (100%)**.
+
+---
+
+## 5. Verification Plan & Rollback Strategy
+
+1. **Compilation & Type Check**: `npx tsc --noEmit` and `npm run lint`.
+2. **Production Bundle Verification**: `npm run build` maintaining main bundle gzip $\le 180$ KB and total JS $\le 260$ KB.
+3. **Test Suite Verification**: Run `npm test` verifying all 186 cumulative suites (1–148 regression suites + 149–155 new suites).
+4. **Epistemic Audit**: Ensure no unverified declaration can achieve `SEAL_KERNEL_VERIFIED_TIER5`.
+5. **Rollback Plan**:
+   - Disable `ENABLE_RESULT_ENVELOPE` to fall back to `withEnvelope` compatibility shim.
+   - Disable `ENABLE_CONTRACT_PARITY`, `ENABLE_NOTEBOOK`, and `ENABLE_CONFIG_MANAGER` via standard feature flag toggles.

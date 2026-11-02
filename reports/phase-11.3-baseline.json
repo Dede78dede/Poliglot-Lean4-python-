@@ -1,0 +1,72 @@
+{
+  "capturedAt": "2026-10-30T23:30:00.000Z",
+  "phase": "11.3-baseline",
+  "previousPhase": "11.2",
+  "deltaAgainst112": "zero_unplanned_delta",
+  "registries": {
+    "featureFlagCount": 51,
+    "errorCodeCount": 62,
+    "toolchainCount": 12,
+    "providerCount": 15,
+    "slashCommandsCount": 9
+  },
+  "workspaceArchive": {
+    "format": "polyglot-workspace",
+    "version": "1.0.0",
+    "compression": "gzip",
+    "determinism": "normalized_mtime_epoch_sorted_paths",
+    "maxUncompressedSizeMb": 100,
+    "conflictPolicies": ["fail", "overwrite", "rename"]
+  },
+  "paperproof": {
+    "status": "integrated_mcp_client",
+    "transport": "stdio",
+    "command": "uvx paperproof-mcp",
+    "tools": ["lean_proof_structure", "lean_proof_steps"]
+  },
+  "telemetry": {
+    "sdk": "@opentelemetry/sdk-trace-web",
+    "version": "2.12.0",
+    "futureMigration": "Phase 11.3 scheduled upgrade to 3.0.x",
+    "localEndpoint": "http://localhost:4318/v1/traces",
+    "traceCorrelation": "StructuredLogger.correlationId <-> trace_id"
+  },
+  "mathesis": {
+    "pipeline": "ICLR 2026 NL-to-Lean 4",
+    "scorer": "LeanScorer",
+    "acceptanceThreshold": 0.5,
+    "failFastOnEmptyEndpoint": true,
+    "errorCode": "MATHESIS_UNAVAILABLE"
+  },
+  "collaboration": {
+    "gateway": "Fastify Hocuspocus",
+    "adapter": "y-monaco@0.1.6",
+    "route": "/ws/collaboration-yjs",
+    "persistence": ".collab/{docId}.yjs",
+    "compactionThresholdUpdates": 50,
+    "auth": "onAuthenticate_token_origin_allowlist"
+  },
+  "bundleMetrics": {
+    "bundler": "Vite 8.3",
+    "mainBudgetGzipKb": 460.0,
+    "lazyBudgetKb": 250.0,
+    "withinBudget": true
+  },
+  "verificationSuites": {
+    "cumulativeSuites": 100,
+    "passRate": "100%",
+    "phase112Suites": [
+      "suite-123-archive-format",
+      "suite-124-archive-safety",
+      "suite-125-paperproof",
+      "suite-126-otel-core",
+      "suite-127-trace-correlation",
+      "suite-128-mathesis-provider",
+      "suite-129-mathesis-router",
+      "suite-130-yjs-crdt",
+      "suite-131-yjs-persistence",
+      "suite-132-yjs-lazy-load",
+      "suite-133-integration"
+    ]
+  }
+}

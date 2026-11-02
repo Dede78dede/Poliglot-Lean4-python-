@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-11-01T17:34:49.814Z",
+  "phase": "12.9.0",
+  "mainBundleGzipKb": 141.52,
+  "mainBundleBudgetGzipKb": 360,
+  "mainWithinBudget": true,
+  "totalJsGzipKb": 203.27,
+  "lazyChunksBudgetGzipKb": 650,
+  "totalWithinBudget": true,
+  "chunks": [
+    {
+      "file": "index-CxYihfBa.js",
+      "rawBytes": 498704,
+      "rawKb": 487.02,
+      "gzipBytes": 144918,
+      "gzipKb": 141.52
+    },
+    {
+      "file": "index-QIWPZ92o.css",
+      "rawBytes": 104557,
+      "rawKb": 102.11,
+      "gzipBytes": 16048,
+      "gzipKb": 15.67
+    },
+    {
+      "file": "react-aria-vendor-Do_oFdx0.js",
+      "rawBytes": 203216,
+      "rawKb": 198.45,
+      "gzipBytes": 62865,
+      "gzipKb": 61.39
+    },
+    {
+      "file": "rolldown-runtime-CbXtAM7H.js",
+      "rawBytes": 589,
+      "rawKb": 0.58,
+      "gzipBytes": 368,
+      "gzipKb": 0.36
+    }
+  ]
+}

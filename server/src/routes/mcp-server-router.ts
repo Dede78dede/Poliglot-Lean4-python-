@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { streamableHttpServerHandler } from '../../../src/services/mcp/transports/streamable-http';
-import '../../../src/services/mcp/mcp-server'; // ensure 10 tools are registered
+import '../../../src/services/mcp/mcp-server'; // ensure tools are registered
 
 export function createMcpServerRouter(): Router {
   const router = Router();
@@ -27,7 +27,8 @@ export function createMcpServerRouter(): Router {
     }
   };
 
-  // Mount handlers for POST, GET, DELETE, and all other methods on /mcp
+  // Mount handlers for POST, GET, DELETE, /discover, and all other methods on /mcp or /api/v1/mcp
+  router.post('/discover', handleAll);
   router.post('/', handleAll);
   router.get('/', handleAll);
   router.delete('/', handleAll);

@@ -1,4 +1,5 @@
 import type { EncryptedVaultPayload } from '../../types/storage';
+import { PROVIDER_CAPABILITIES_MAP, type ProviderAuthScheme } from '../ai/providers/provider-capabilities';
 
 export const VAULT_STORAGE_KEY = 'polyglot_token_vault_v1';
 export const MULTI_SECRET_STORAGE_KEY = 'polyglot_multi_secrets_vault_v1';
@@ -15,6 +16,13 @@ export interface SecretMetadata {
   readonly createdAt: number;
   readonly updatedAt: number;
   readonly lastAccessedAt?: number;
+  // Phase 10.10 extensions
+  readonly authScheme?: ProviderAuthScheme;
+  readonly additionalHeaders?: Readonly<Record<string, string>>;
+  readonly pricing?: {
+    readonly inputUsdPerMillion: number;
+    readonly outputUsdPerMillion: number;
+  };
 }
 
 export interface SecretAuditEntry {
@@ -231,23 +239,51 @@ export class TokenVault {
     providerId: string,
     secret: string,
     passphrase: string,
-    label?: string,
+    optionsOrLabel?: string | {
+      label?: string;
+      authScheme?: ProviderAuthScheme;
+      additionalHeaders?: Readonly<Record<string, string>>;
+      pricing?: { inputUsdPerMillion: number; outputUsdPerMillion: number };
+    },
   ): Promise<string> {
     const id = `sec_${providerId}_${Date.now()}`;
     const payload = await this.encrypt(secret, passphrase);
 
+    const opts = typeof optionsOrLabel === 'string' ? { label: optionsOrLabel } : (optionsOrLabel ?? {});
+    const defaultCaps = PROVIDER_CAPABILITIES_MAP[providerId];
+
     const metadata: SecretMetadata = {
       id,
       providerId,
-      label: label ?? `${providerId} API Key`,
+      label: opts.label ?? `${providerId} API Key`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      authScheme: opts.authScheme ?? defaultCaps?.authScheme,
+      additionalHeaders: opts.additionalHeaders,
+      pricing: opts.pricing ?? (defaultCaps ? {
+        inputUsdPerMillion: defaultCaps.pricingUsdPerMillionInput,
+        outputUsdPerMillion: defaultCaps.pricingUsdPerMillionOutput,
+      } : undefined),
     };
 
     this.secretStore.set(id, { metadata, payload });
     this.persistMultiSecrets();
     this.recordAudit(id, providerId, 'store', true);
     return id;
+  }
+
+  /**
+   * Calculates estimated USD cost for input and output token usage against provider pricing.
+   */
+  calculateCostUsd(providerId: string, tokensIn: number, tokensOut: number): number {
+    const meta = this.listSecrets().find((s) => s.providerId === providerId);
+    const pricing = meta?.pricing ?? (PROVIDER_CAPABILITIES_MAP[providerId] ? {
+      inputUsdPerMillion: PROVIDER_CAPABILITIES_MAP[providerId]!.pricingUsdPerMillionInput,
+      outputUsdPerMillion: PROVIDER_CAPABILITIES_MAP[providerId]!.pricingUsdPerMillionOutput,
+    } : { inputUsdPerMillion: 0, outputUsdPerMillion: 0 });
+
+    const cost = ((tokensIn * pricing.inputUsdPerMillion) + (tokensOut * pricing.outputUsdPerMillion)) / 1_000_000;
+    return Math.round(cost * 1_000_000) / 1_000_000;
   }
 
   /**

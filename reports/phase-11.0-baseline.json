@@ -1,0 +1,66 @@
+{
+  "capturedAt": "2026-10-26T04:48:00.000Z",
+  "phase": "11.0-baseline",
+  "deltaAgainst1097": "phase-10.10-llm-native-access-layer",
+  "registries": {
+    "featureFlagCount": 37,
+    "errorCodeCount": 43,
+    "providerCount": 14,
+    "epistemicStates": [
+      "conjecture",
+      "heuristically-validated",
+      "faithfulness-screened",
+      "numerically-verified",
+      "formally-proven",
+      "refuted"
+    ]
+  },
+  "mcp": {
+    "specVersion": "2026-07-28",
+    "stateless": true,
+    "discoverRpcSupported": true,
+    "toolSearchReductionPercent": 80.2,
+    "canonicalSkills": [
+      "polyglot-prove-theorem",
+      "polyglot-import-paper",
+      "polyglot-search-mathlib",
+      "polyglot-generate-blueprint",
+      "polyglot-distribute-code"
+    ],
+    "skillTargets": ["claude-code", "codex-cli", "cursor"],
+    "totalGeneratedSkillFiles": 15
+  },
+  "providers": [
+    { "id": "gemini", "transport": "native-mcp", "authScheme": "bearer", "maxTools": 128 },
+    { "id": "nvidia-nim", "transport": "function-only", "authScheme": "bearer", "maxTools": 128 },
+    { "id": "groq", "transport": "function-only", "authScheme": "bearer", "maxTools": 128 },
+    { "id": "cerebras", "transport": "function-only", "authScheme": "bearer", "maxTools": 128 },
+    { "id": "mistral", "transport": "function-only", "authScheme": "bearer", "maxTools": 128 },
+    { "id": "openrouter", "transport": "function-only", "authScheme": "bearer", "maxTools": 128 },
+    { "id": "leanstral", "transport": "native-mcp", "authScheme": "bearer", "maxTools": 128 },
+    { "id": "axle", "transport": "function-only", "authScheme": "x-api-key", "maxTools": 32 },
+    { "id": "anthropic", "transport": "native-mcp", "authScheme": "x-api-key", "maxTools": 128 },
+    { "id": "openai", "transport": "native-mcp", "authScheme": "bearer", "maxTools": 128 },
+    { "id": "no-ai", "transport": "function-only", "authScheme": "bearer", "maxTools": 0 },
+    { "id": "deepseek", "transport": "function-only", "authScheme": "bearer", "maxTools": 128 },
+    { "id": "kimi", "transport": "function-only", "authScheme": "bearer", "maxTools": 128 },
+    { "id": "minimax", "transport": "hybrid", "authScheme": "bearer-plus-header", "maxTools": 64 }
+  ],
+  "containers": [
+    { "id": "femev-runner", "port": 8080, "toolchains": ["v4.32.2", "v4.34.1", "v4.35.0"] },
+    { "id": "kimina", "port": 8081, "toolchains": ["v4.28.0", "v4.31.0", "v4.35.0-rc4"] },
+    { "id": "pantograph", "port": 8082, "toolchains": ["v4.33.1"] },
+    { "id": "pastalean-runner", "port": 8083, "toolchains": ["v4.31.0-rc2"] },
+    { "id": "leanflow-runner", "port": 8084, "toolchains": ["v4.33.0", "v4.35.0-rc2", "v4.35.0"] },
+    { "id": "leancert-runner", "port": 8085, "toolchains": ["v4.32.0"] },
+    { "id": "heron-runner", "port": 8086, "toolchains": ["v4.31.0"] },
+    { "id": "pyodide-builder", "port": 8087, "toolchains": [] },
+    { "id": "mcp-server", "port": 8088, "toolchains": [] }
+  ],
+  "optionalGatewayCompose": "docker-compose.gateway.yml",
+  "verificationSuites": {
+    "cumulativeSuites": 68,
+    "passRate": "100%",
+    "suitesRange": "1-40, 69-101"
+  }
+}

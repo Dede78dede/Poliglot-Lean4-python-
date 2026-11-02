@@ -41,6 +41,10 @@ export class BlueprintRelay {
   }
 
   private setupListeners(): void {
+    this.wss.on('error', (err) => {
+      console.warn('[BlueprintRelay WebSocketServer error]', err);
+    });
+
     this.wss.on('connection', (ws: WebSocket) => {
       const conn: ClientConnection = {
         ws,

@@ -1,0 +1,35 @@
+name: Polyglot Test Suite Meta-Scan
+
+# Weekly audit for test health, flakiness, duration anomalies, and dead suites
+on:
+  schedule:
+    - cron: '0 4 * * 1' # Weekly Monday at 04:00 UTC
+  workflow_dispatch:
+
+jobs:
+  meta-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Scan for Test Duration Anomalies (> 5000ms) and Dead Suites
+        run: |
+          echo "Scanning all test suites for latency anomalies (> 5000ms)..."
+          npx tsx -e '
+            import fs from "fs";
+            import path from "path";
+            const suites = fs.readdirSync("tests", { recursive: true }).filter(f => f.endsWith(".test.ts"));
+            console.log("Found " + suites.length + " active test suite files.");
+          '

@@ -1,0 +1,76 @@
+{
+  "generatedAt": "2026-10-31T12:40:44.163Z",
+  "standard": "AAIF Agent Skills (agentskills.io)",
+  "skillCount": 6,
+  "skills": [
+    {
+      "name": "polyglot-prove-theorem",
+      "description": "Autoformalize and verify formal Lean 4 theorems with independent kernel cross-checks.",
+      "tools": [
+        "polyglot_search_proof_library",
+        "polyglot_get_proof_automation_status",
+        "polyglot_verify_proof_kernel",
+        "polyglot_propose_proof_patch"
+      ]
+    },
+    {
+      "name": "polyglot-import-paper",
+      "description": "Ingest arXiv/LaTeX papers into formal Lean workspaces with span ledger alignment.",
+      "tools": [
+        "polyglot_get_bibliography",
+        "polyglot_get_project_manifest"
+      ]
+    },
+    {
+      "name": "polyglot-search-mathlib",
+      "description": "Search Mathlib using semantic embeddings, token-bucket limits, and RRF rank fusion.",
+      "tools": [
+        "polyglot_search_proof_library"
+      ]
+    },
+    {
+      "name": "polyglot-generate-blueprint",
+      "description": "Generate dependency blueprints with topological sorting and sorry_using stubs.",
+      "tools": [
+        "polyglot_get_femev_status"
+      ]
+    },
+    {
+      "name": "polyglot-distribute-code",
+      "description": "Package verified formal specifications and research artifacts for distribution.",
+      "tools": [
+        "polyglot_verify_proof_kernel",
+        "polyglot_get_context_keys",
+        "polyglot_get_project_manifest"
+      ]
+    },
+    {
+      "name": "polyglot-probe-tactic",
+      "description": "Speculatively evaluate Lean 4 tactics without file mutation using the lean-beam MCP broker.",
+      "tools": [
+        "polyglot_probe_tactic",
+        "polyglot_get_proof_automation_status"
+      ]
+    }
+  ],
+  "files": [
+    ".claude/skills/polyglot-prove-theorem/SKILL.md",
+    ".agents/skills/polyglot-prove-theorem/SKILL.md",
+    ".cursor/rules/polyglot-prove-theorem.mdc",
+    ".claude/skills/polyglot-import-paper/SKILL.md",
+    ".agents/skills/polyglot-import-paper/SKILL.md",
+    ".cursor/rules/polyglot-import-paper.mdc",
+    ".claude/skills/polyglot-search-mathlib/SKILL.md",
+    ".agents/skills/polyglot-search-mathlib/SKILL.md",
+    ".cursor/rules/polyglot-search-mathlib.mdc",
+    ".claude/skills/polyglot-generate-blueprint/SKILL.md",
+    ".agents/skills/polyglot-generate-blueprint/SKILL.md",
+    ".cursor/rules/polyglot-generate-blueprint.mdc",
+    ".claude/skills/polyglot-distribute-code/SKILL.md",
+    ".agents/skills/polyglot-distribute-code/SKILL.md",
+    ".cursor/rules/polyglot-distribute-code.mdc",
+    ".claude/skills/polyglot-probe-tactic/SKILL.md",
+    ".agents/skills/polyglot-probe-tactic/SKILL.md",
+    ".cursor/rules/polyglot-probe-tactic.mdc"
+  ]
+}

@@ -1,0 +1,15 @@
+---
+name: polyglot-search-mathlib
+description: "Search Mathlib using semantic embeddings, token-bucket limits, and RRF rank fusion."
+tools: ["polyglot_search_proof_library"]
+---
+
+# polyglot-search-mathlib
+
+Searches Mathlib and the Lean 4 standard library using semantic embeddings, token-bucket rate limits, and Reciprocal Rank Fusion (RRF).
+
+## Workflow
+1. Formulate search queries using natural language description, Lean 4 type signatures, or tactic patterns.
+2. Use `polyglot_search_proof_library` to retrieve candidate theorems.
+3. Inspect theorem statements, docstrings, and verified dependencies.
+4. Integrate selected lemmas into the current active proof buffer.

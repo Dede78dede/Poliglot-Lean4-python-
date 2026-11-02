@@ -298,7 +298,7 @@ export function ProjectProvider({ children }: { readonly children: React.ReactNo
   const fileTree = currentProject ? vfs.buildFileTree(currentProject.files) : [];
 
   return (
-    <ProjectContext.Provider
+    <ProjectContext
       value={{
         currentProject,
         activeFilePath,
@@ -319,7 +319,7 @@ export function ProjectProvider({ children }: { readonly children: React.ReactNo
       }}
     >
       {children}
-    </ProjectContext.Provider>
+    </ProjectContext>
   );
 }
 

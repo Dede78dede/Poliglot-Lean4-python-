@@ -1,0 +1,109 @@
+{
+  "capturedAt": "2026-11-01T17:35:00.000Z",
+  "phase": "13-baseline",
+  "previousPhase": "12",
+  "deltaAgainstPhase12": "zero_unplanned_delta",
+  "registries": {
+    "featureFlagCount": 58,
+    "errorCodeCount": 75,
+    "toolchainCount": 12,
+    "toolchainRange": "v4.28.0–v4.35.0",
+    "supportedToolchains": [
+      "v4.28.0",
+      "v4.31.0",
+      "v4.31.0-rc2",
+      "v4.32.0",
+      "v4.32.2",
+      "v4.33.0",
+      "v4.33.1",
+      "v4.34.0-rc1",
+      "v4.34.1",
+      "v4.35.0-rc2",
+      "v4.35.0-rc4",
+      "v4.35.0"
+    ],
+    "providerCount": 14,
+    "agentSkillsCount": 8,
+    "externalMcpClientsCount": 3,
+    "slashCommandsCount": 9
+  },
+  "bundleMetrics": {
+    "mainBundleGzipKb": 141.52,
+    "mainBundleBudgetGzipKb": 360.0,
+    "mainWithinBudget": true,
+    "totalJsGzipKb": 203.27,
+    "lazyChunksBudgetGzipKb": 650.0,
+    "totalWithinBudget": true
+  },
+  "phase12AutomationMetrics": {
+    "proofReuseRate": 0.25,
+    "proposalLoopSuccessRate": 0.5333,
+    "translationFidelityRate": 0.9167,
+    "costPerProvenTheorem": 0.04,
+    "timeSavedByReuseMs": 1750
+  },
+  "proofReuse": {
+    "indexing": "two_level_canonical_hash_and_token_dice",
+    "sorryRejected": true,
+    "freshKernelCheckRequired": true,
+    "toolchainMismatchGuarded": true,
+    "minSimilarityThreshold": 0.85
+  },
+  "proposalLoop": {
+    "pattern": "AX-PROVER-4-node",
+    "nodes": ["proposer", "builder", "reviewer", "memory"],
+    "maxToolCallingIterations": 1,
+    "maxConcurrentBuilds": 12,
+    "defaultMaxIterations": 50,
+    "defaultMaxWallTimeMs": 600000,
+    "defaultMaxCostUsd": 5.0,
+    "apolloRepairK": 1,
+    "forbiddenTactics": ["sorry", "admit", "native_decide"],
+    "memoryProcessor": "ExperienceProcessor-RetrievalMemory"
+  },
+  "translationFidelity": {
+    "pyToLeanCheck": "definitional_rfl_pasta_lean",
+    "leanToPyCheck": "lungo_assurance_json_lng0602_lng0603",
+    "differentialTestingInputs": 20,
+    "lp2Transpiler": {
+      "featureFlag": "ENABLE_LP2",
+      "default": false,
+      "lossyWarningsMandatory": true,
+      "requiresFidelityCheck": true
+    }
+  },
+  "conditionalIntegrations": {
+    "mathesisFull": {
+      "endpointEnv": "MATHESIS_ENDPOINT",
+      "acceptanceThreshold": 0.8,
+      "failFastOnEmptyEndpoint": true
+    },
+    "treeThink": {
+      "featureFlag": "ENABLE_TREETHINK",
+      "default": false,
+      "backend": "vllm_kimina_server",
+      "requiresKernelVerification": true
+    }
+  },
+  "deferredToPhase13": {
+    "proofStateSnapshotting": {
+      "dependency": "A2DR1/Lean_Snapshot",
+      "reason": "Patched Lean 4 binary not yet released open source",
+      "activationTrigger": "public_github_release_of_patched_binary"
+    }
+  },
+  "verificationSuites": {
+    "cumulativeSuites": 148,
+    "passRate": "100%",
+    "phase12Suites": [
+      "suite-141-proof-reuse",
+      "suite-142-reuse-integration",
+      "suite-143-proposal-loop",
+      "suite-144-loop-budgets-epistemic",
+      "suite-145-translation-fidelity",
+      "suite-146-lp2-adapter",
+      "suite-147-conditional-integrations",
+      "suite-148-integration"
+    ]
+  }
+}

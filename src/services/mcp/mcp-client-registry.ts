@@ -1,4 +1,6 @@
 import { defaultLeanLspClient, type McpClientInterface } from './lean-lsp-client';
+import { defaultLeanBeamClient } from './lean-beam-client';
+import { defaultPaperproofClient } from './paperproof-client';
 import { ExternalStoreBase } from '../stores/external-store-base';
 
 export interface Disposable {
@@ -20,6 +22,12 @@ export class McpClientRegistry extends ExternalStoreBase<McpClientSnapshot> {
     // Automatically register default lean-lsp-mcp client as initial client
     this.register(defaultLeanLspClient);
     this.activeClientId = defaultLeanLspClient.id;
+
+    // Register real Paperproof MCP client (Phase 11.2)
+    this.register(defaultPaperproofClient);
+
+    // Register lean-beam client as 3rd client
+    this.register(defaultLeanBeamClient);
   }
 
   public register(client: McpClientInterface): Disposable {

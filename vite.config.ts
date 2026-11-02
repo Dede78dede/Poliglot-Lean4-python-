@@ -1,25 +1,48 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react({
+        compiler: {
+          compilationMode: 'annotation',
+        },
+      }),
+      tailwindcss(),
+    ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(import.meta.dirname, './src'),
       },
     },
     define: {
       'process.env': {},
       global: 'globalThis',
     },
+    build: {
+      chunkSizeWarningLimit: 600,
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: 'monaco-vendor',
+                test: /@monaco-editor/,
+              },
+              {
+                name: 'react-aria-vendor',
+                test: /react-aria|@react-aria/,
+              },
+            ],
+          },
+        },
+      },
+    },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };

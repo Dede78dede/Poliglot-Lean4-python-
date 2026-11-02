@@ -11,6 +11,11 @@ import {
   DEFAULT_LEAN_TOOLCHAIN,
 } from '../config/lean-runner-config';
 import { sessionManager } from '../services/session-manager';
+import { featureFlagRegistry } from '../../../src/services/flags/feature-flag-registry';
+import { lspecCiTemplateGenerator, type LSpecCiTemplateOptions } from '../../../src/services/lean-tooling/lspec-ci-template-generator';
+import { BridgeError } from '../../../src/services/errors/bridge-error';
+import { ERROR_REGISTRY, createProblemDetails } from '../../../src/services/errors/error-registry';
+import { StructuredLogger } from '../../../src/services/logging/logger';
 
 const UploadRequestSchema = z.object({
   sessionId: z.string().uuid(),
@@ -258,6 +263,54 @@ export function createProjectsRouter(runner: LeanProjectRunner): Router {
 
     await sessionManager.deleteSession(id);
     res.status(200).json({ success: true, id });
+  });
+
+  // POST /api/v1/projects/:id/lspec-ci-template (Phase 10.9.7, Task LC2)
+  router.post('/:id/lspec-ci-template', async (req: Request, res: Response): Promise<void> => {
+    const correlationId = (req.headers['x-correlation-id'] as string) || StructuredLogger.generateCorrelationId();
+    const id = req.params['id'];
+
+    if (!featureFlagRegistry.isEnabled('ENABLE_LSPEC_CI_TEMPLATE')) {
+      const def = ERROR_REGISTRY.LSPEC_CI_TEMPLATE_FAILED;
+      const problem = createProblemDetails(def, correlationId, {
+        featureFlag: 'ENABLE_LSPEC_CI_TEMPLATE',
+        reason: 'Feature flag ENABLE_LSPEC_CI_TEMPLATE is disabled. Enable in Settings -> Feature Flags.',
+      });
+      res.setHeader('Content-Type', 'application/problem+json');
+      res.setHeader('x-correlation-id', correlationId);
+      res.status(503).json(problem);
+      return;
+    }
+
+    const options: LSpecCiTemplateOptions = {
+      projectName: req.body?.options?.projectName || req.body?.projectName || id || 'lean-project',
+      branch: req.body?.options?.branch || req.body?.branch,
+      leanVersion: req.body?.options?.leanVersion || req.body?.leanVersion,
+      includeCache: req.body?.options?.includeCache ?? req.body?.includeCache,
+      correlationId,
+    };
+
+    const projectPath = path.resolve(process.cwd(), 'projects', id || 'default');
+
+    try {
+      const result = await lspecCiTemplateGenerator.generateTemplate(projectPath, options);
+      res.setHeader('x-correlation-id', correlationId);
+      res.status(200).json(result);
+    } catch (err: unknown) {
+      if (err instanceof BridgeError) {
+        res.setHeader('Content-Type', 'application/problem+json');
+        res.setHeader('x-correlation-id', err.correlationId);
+        res.status(err.httpStatus).json(err.toProblemDetails());
+        return;
+      }
+      const def = ERROR_REGISTRY.LSPEC_CI_TEMPLATE_FAILED;
+      const fallbackProblem = createProblemDetails(def, correlationId, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      res.setHeader('Content-Type', 'application/problem+json');
+      res.setHeader('x-correlation-id', correlationId);
+      res.status(422).json(fallbackProblem);
+    }
   });
 
   return router;

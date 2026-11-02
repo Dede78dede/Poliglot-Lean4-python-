@@ -1,0 +1,39 @@
+{
+  "capturedAt": "2026-10-26T05:35:00.000Z",
+  "phase": "11.0.1-baseline",
+  "deltaAgainst1010": "zero_unplanned_delta",
+  "registries": {
+    "featureFlagCount": 37,
+    "errorCodeCount": 43,
+    "providerCount": 14,
+    "commandCount": 62
+  },
+  "uiBaseline": {
+    "monacoOptions": {
+      "bracketPairColorization": { "enabled": true },
+      "wordWrap": "on",
+      "minimap": { "enabled": false },
+      "automaticLayout": true
+    },
+    "fileExplorerCapabilities": [
+      "tree-navigation",
+      "create-file",
+      "delete-file",
+      "open-file",
+      "expand-collapse"
+    ],
+    "missingShellComponents": [
+      "ActivityBar",
+      "SidePanel",
+      "DiffViewer",
+      "Breadcrumbs",
+      "OutlinePanel",
+      "FilePreview",
+      "TrashView"
+    ]
+  },
+  "verificationSuites": {
+    "cumulativeSuites": 68,
+    "passRate": "100%"
+  }
+}

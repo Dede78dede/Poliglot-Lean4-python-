@@ -45,3 +45,34 @@ All HTTP endpoints and internal bridges surface errors compliant with [RFC 9457:
 | `MATHESIS_UNAVAILABLE` | 503 | `container` | Yes | `https://polyglot.dev/errors/mathesis-unavailable` | The Mathesis NL-to-Lean 4 autoformalization bridge is currently unreachable. |
 | `EPISTEMIC_TRANSITION_INVALID` | 400 | `policy` | No | `https://polyglot.dev/errors/epistemic-transition-invalid` | Illegal epistemic transition requested: state progression must satisfy epistemic integrity invariants. |
 | `ROUTER_NO_PROVIDER_AVAILABLE` | 503 | `bridge` | Yes | `https://polyglot.dev/errors/router-no-provider-available` | No autoformalization provider in the router fallback chain is available or enabled. |
+| `UNIFIED_SEARCH_PARTIAL_FAILURE` | 503 | `container` | Yes | `https://polyglot.dev/errors/unified-search-partial-failure` | All search providers are unavailable. |
+| `BLUEPRINT_STUB_GENERATION_FAILED` | 500 | `bridge` | No | `https://polyglot.dev/errors/blueprint-stub-generation-failed` | Failed to generate Lean stubs from the blueprint. |
+| `LSPEC_CI_TEMPLATE_FAILED` | 422 | `input` | No | `https://polyglot.dev/errors/lspec-ci-template-failed` | Failed to generate LSpec CI template. Check the project structure. |
+| `GATEWAY_UNAVAILABLE` | 503 | `container` | Yes | `https://polyglot.dev/errors/gateway-unavailable` | The MCP gateway is offline or unreachable. |
+| `PROPOSAL_TOKEN_REQUIRED` | 400 | `policy` | No | `https://polyglot.dev/errors/proposal-token-required` | Tool invocation requires a valid proposalToken confirmation. |
+| `SKILL_NAME_TOO_LONG` | 422 | `input` | No | `https://polyglot.dev/errors/skill-name-too-long` | Skill name exceeds maximum length of 64 characters. |
+| `SKILL_DESCRIPTION_TOO_LONG` | 422 | `input` | No | `https://polyglot.dev/errors/skill-description-too-long` | Skill description exceeds maximum length of 1024 characters. |
+| `SKILL_BODY_TOO_LONG` | 422 | `input` | No | `https://polyglot.dev/errors/skill-body-too-long` | Skill body exceeds maximum length of 500 lines. |
+| `MINIMAX_THINKING_DISABLED_REJECTED` | 422 | `policy` | No | `https://polyglot.dev/errors/minimax-thinking-disabled-rejected` | MiniMax provider requires interleaved thinking mode; thinking cannot be disabled. |
+| `FILE_MANAGER_UNAVAILABLE` | 503 | `container` | Yes | `https://polyglot.dev/errors/file-manager-unavailable` | File manager is unavailable. |
+| `ARCHIVE_OPERATION_FAILED` | 500 | `input` | No | `https://polyglot.dev/errors/archive-operation-failed` | Archive operation failed; see details. |
+| `TRASH_OPERATION_FAILED` | 500 | `input` | No | `https://polyglot.dev/errors/trash-operation-failed` | Trash operation failed; see details. |
+| `CHAT_PROVIDER_UNAVAILABLE` | 503 | `container` | Yes | `https://polyglot.dev/errors/chat-provider-unavailable` | The requested AI chat provider is unavailable or unreachable. |
+| `SETTINGS_VALIDATION_FAILED` | 400 | `input` | No | `https://polyglot.dev/errors/settings-validation-failed` | Settings validation failed against schema. |
+| `AUTONOMOUS_GUARDRAIL_EXCEEDED` | 429 | `policy` | No | `https://polyglot.dev/errors/autonomous-guardrail-exceeded` | Autonomous mode exceeded maximum tool call or file edit guardrails. |
+| `SCAFFOLD_TEMPLATE_NOT_FOUND` | 404 | `input` | No | `https://polyglot.dev/errors/scaffold-template-not-found` | The requested project scaffolding template was not found. |
+| `LEAN_BEAM_UNAVAILABLE` | 503 | `container` | Yes | `https://polyglot.dev/errors/lean-beam-unavailable` | The lean-beam MCP broker is unavailable or failed to respond. |
+| `LEAN_BEAM_TOOLCHAIN_UNSUPPORTED` | 422 | `bridge` | No | `https://polyglot.dev/errors/lean-beam-toolchain-unsupported` | The project Lean toolchain is not qualified for lean-beam speculative execution. |
+| `WORKSPACE_ARCHIVE_INVALID` | 400 | `input` | No | `https://polyglot.dev/errors/workspace-archive-invalid` | The provided .polyglot workspace archive is malformed or corrupted. |
+| `WORKSPACE_ARCHIVE_CHECKSUM_MISMATCH` | 422 | `bridge` | No | `https://polyglot.dev/errors/workspace-archive-checksum-mismatch` | One or more files in the workspace archive failed SHA-256 integrity verification. |
+| `WORKSPACE_RESTORE_CONFLICT` | 409 | `policy` | No | `https://polyglot.dev/errors/workspace-restore-conflict` | Workspace restore encountered conflicting paths and conflictPolicy is set to fail. |
+| `WORKSPACE_ARCHIVE_SCHEMA_TOO_NEW` | 422 | `input` | No | `https://polyglot.dev/errors/workspace-archive-schema-too-new` | The archive schemaVersion is newer than this version of Polyglot Code Studio supports. |
+| `OTEL_EXPORT_FAILED` | 502 | `container` | Yes | `https://polyglot.dev/errors/otel-export-failed` | Exporting telemetry spans to the local OTLP collector failed. |
+| `OTEL_TRACE_CORRELATION_FAILED` | 404 | `bridge` | No | `https://polyglot.dev/errors/otel-trace-correlation-failed` | Requested traceId could not be correlated across system layers or was not found. |
+| `LEANSCORER_FAILED` | 422 | `bridge` | No | `https://polyglot.dev/errors/leanscorer-failed` | Semantic LeanScorer evaluation failed or returned an invalid confidence score. |
+| `YJS_SYNC_FAILED` | 500 | `container` | Yes | `https://polyglot.dev/errors/yjs-sync-failed` | CRDT synchronization between client and Hocuspocus server failed. |
+| `HOCUSPOCUS_AUTH_FAILED` | 401 | `policy` | No | `https://polyglot.dev/errors/hocuspocus-auth-failed` | WebSocket authentication for real-time collaboration failed or token was rejected. |
+| `CRDT_CONFLICT_UNRESOLVED` | 409 | `policy` | No | `https://polyglot.dev/errors/crdt-conflict-unresolved` | A semantic verification conflict occurred between collaborating peers that requires manual resolution. |
+
+*Last verified: 2026-10-29*
+

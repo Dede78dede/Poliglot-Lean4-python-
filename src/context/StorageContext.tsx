@@ -405,7 +405,7 @@ export function StorageProvider({
   }, [currentProject, target, pushToGitHub, refreshSyncStatus]);
 
   return (
-    <StorageContext.Provider
+    <StorageContext
       value={{
         target,
         syncStatus,
@@ -438,7 +438,7 @@ export function StorageProvider({
       }}
     >
       {children}
-    </StorageContext.Provider>
+    </StorageContext>
   );
 }
 

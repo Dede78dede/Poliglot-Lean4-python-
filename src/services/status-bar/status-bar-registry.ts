@@ -34,6 +34,8 @@ export class StatusBarRegistry extends ExternalStoreBase<readonly StatusBarItemD
     };
   }
 
+  public updateItem(id: string, partial: Partial<StatusBarItemDescriptor>): void { this.update(id, partial); }
+
   public update(id: string, partial: Partial<StatusBarItemDescriptor>): void {
     const existing = this.items.get(id);
     if (!existing) return;

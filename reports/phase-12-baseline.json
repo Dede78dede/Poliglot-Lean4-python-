@@ -1,0 +1,61 @@
+{
+  "capturedAt": "2026-11-01T07:22:00.000Z",
+  "phase": "12-baseline",
+  "previousPhase": "11.3",
+  "deltaAgainst113": "zero_unplanned_delta",
+  "registries": {
+    "featureFlagCount": 53,
+    "errorCodeCount": 68,
+    "toolchainCount": 12,
+    "providerCount": 15,
+    "slashCommandsCount": 9
+  },
+  "reactArchitecture": {
+    "version": "19.0.1",
+    "compiler": "annotation_mode",
+    "compilerBackend": "oxc-transform-react",
+    "gatingFlag": "ENABLE_REACT_COMPILER",
+    "defaultEnabled": false,
+    "forwardRefDeprecated": true,
+    "directRefProps": true,
+    "nativeContextProvider": true
+  },
+  "virtualization": {
+    "engine": "react-window@2.3.0",
+    "api": "List_rowComponent_rowProps",
+    "activationThreshold": 100,
+    "subThresholdRendering": "native_scrollable_dom"
+  },
+  "accessibility": {
+    "standard": "WCAG 2.2 AA",
+    "primitives": "react-aria-components@1.19.0",
+    "prefersReducedMotion": true,
+    "touchTargetMinPx": 32,
+    "zeroPillDiscipline": true
+  },
+  "stateManagement": {
+    "unifiedBase": "ExternalStoreBase",
+    "selectorHook": "useStoreSelector",
+    "multiTabSync": "BroadcastChannel",
+    "useReducerResidue": 0
+  },
+  "bundleMetrics": {
+    "bundler": "Vite 8.3",
+    "codeSplitting": "rolldownOptions.output.codeSplitting.groups",
+    "mainBudgetGzipKb": 420.0,
+    "withinBudget": true
+  },
+  "verificationSuites": {
+    "cumulativeSuites": 107,
+    "passRate": "100%",
+    "phase113Suites": [
+      "suite-134-compiler-react19",
+      "suite-135-state-consolidation",
+      "suite-136-bundle-splitting",
+      "suite-137-a11y-wcag",
+      "suite-138-testing-strategy",
+      "suite-139-design-system",
+      "suite-140-integration"
+    ]
+  }
+}

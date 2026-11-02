@@ -1,0 +1,855 @@
+﻿`
+Implement Phase 11.1 — lean-beam Integration: Speculative Tactic Execution for Agentic Lean Workflows for Polyglot Code Studio. This phase integrates leanprover/lean-beam (v0.1.0 stable alpha, v0.2.0-beta in development) as an optional MCP client, exposes speculative execution (`runAt`) to the Polyglot MCP server, the ChatPanel, and `polyglot_propose_proof`, and ships the official lean-beam Agent Skill. It connects the L4 Epistemic, L3 Proof Automation, and L8 Agentic layers without adding new containers or mandatory dependencies. Test suites are specified but executed AFTER implementation, before Phase 11.2.
+
+
+## Context
+
+
+Polyglot Code Studio has completed:
+- Phase 9.1: Navigation Foundation (62 commands, 28 context keys, Command Palette, Menu Bar, Status Bar, Right Drawer).
+- Phase 9.5: Health Score 99/100, Diátaxis documentation, usability metrics (SUS 89.5).
+- Phase 10.3: MCP Server Hub (10 tools, Streamable HTTP).
+- Phase 10.5: FEMEV orchestrator, 6-kernel paranoid verification, `SEAL_KERNEL_VERIFIED_TIER5`.
+- Phase 10.6: PastaLean (v4.31.0-rc2) + Lungo (v4.34.1 + `lungo-cli` v1.86.160).
+- Phase 10.7: LeanFlow (Python 3.12 + Bubblewrap) + leanscreen + span + LaTeX ingestion.
+- Phase 10.8: leancert, Heron, LSpec, doc-gen4, Verso, 3 semantic search providers, CRAMF, leanblueprint-mcp, LeanArchitect, Lean Atlas.
+- Phase 10.9: Consolidation (31 flags, 37 error codes, `ExternalStoreBase`, `GET /api/v1/health/ready`, toolchain policy, `ZipValidator` + `ZipLimits`, IndexedDB schema versioning, nomenclature, graceful shutdown, structured logging, bundle budget CI gate).
+- Phase 10.9.5: Epistemic Unification (6 states), Selective Integrations, Python Scientific Audit.
+- Phase 10.9.7: Unified Search (RRF), Blueprint→Lean stubs, Evidence Timeline, LSpec CI.
+- Phase 10.10: MCP 2026-07-28 compliance, 14-provider capability matrix, tool search, optional gateway, approval flow mapping, Agent Skills bundle. **68/68 suites.**
+- Sprint 11.0.1: IDE Shell (Activity Bar, Side Panel, Tabs, Breadcrumbs, Diff Viewer, Outline, Status Bar 3-zone), Advanced Editing (Monaco options, multi-cursor, snippets, code lens, inlay hints, context engine fallback), Windows-style File Manager (multi-select, rename, drag&drop, ZIP with `ZipValidator`, archive preview, two-stage trash). **75/75 suites.**
+- Sprint 11.0.2 (expected complete): LLM Chat (14 providers, slash commands, tool blocks, diff preview, autonomous mode), Settings UI (12 categories), Automations. **Expected 113/113 suites cumulative.**
+
+
+**Preserved patterns (Manifesto)**:
+- no `any`, no `enum`, discriminated unions, CQS, SSOT, DIP.
+- Strategy pattern for providers and registries.
+- Feature flags default `false` for experimental tools.
+- Local-only telemetry.
+- Kernel verification via `SEAL_KERNEL_VERIFIED_TIER5` (unchanged — lean-beam cannot certify).
+- External stores extend `ExternalStoreBase` (Phase 10.9), `multiTabSync` opt-in.
+- Errors thrown via `BridgeError` (RFC 9457).
+- Logging via `StructuredLogger` with `correlationId`.
+- Sanitization: `validateProofSearchQuery`.
+- Coverage thresholds: services 95%, backend 90%, hooks 85%, components 75%.
+- PEP 8/257/484/585/604/621/695 for any Python code.
+- Epistemic discipline: no speculative probe can promote to `formally-proven`.
+
+
+**Target users**: mathematicians and Python developers, plus LLM agents that consume Polyglot as a tool surface. **Distribution**: self-hosted. **Metrics**: retention, time-to-first-proof, hybrid proof complexity, **agent tool-call success rate**, **speculative probe latency** (new).
+
+
+**This phase's contract**: add lean-beam as an optional MCP client. **No new container. No new mandatory dependency.** lean-beam is installed inside the existing `femev-runner` container; the `lean-beam-mcp` broker runs as a stdio subprocess owned by the Polyglot backend. The only new endpoint is `POST /api/v1/proof/probe`. Any change that breaks a Phase 1–11.0.2 suite is a regression and must be reverted.
+
+
+**Ecosystem reality (October 28, 2026), verified with citations**:
+
+
+### lean-beam (leanprover/lean-beam)
+- **Repository**: `leanprover/lean-beam`, **Apache-2.0, Copyright (c) 2026 Lean FRO LLC**, author Emilio J. Gallego Arias.
+- **Version status**:
+  - **v0.1.0** (2026-07-07): first public alpha release. "Lean Beam 0.1.0 is the first public alpha release"[reference:9].
+  - **v0.2.0-beta**: development open on `main` since 2026-07-08 ("release: start 0.2.0 beta development"). **Not yet released as a tagged version.** `Beam.Version.projectVersion` on `main` is `"0.2.0-beta"`, but users should install the latest tagged release (v0.1.0) or the `main` branch explicitly.
+- **Status**: **beta software**. "Preserve compatibility only for named external or versioned targets"[reference:11]. Documented compatibility targets: MCP `2026-07-28` (preferred), `2025-11-25` (transition), Codex CLI 0.147.0.
+- **Architecture**: new Lean LSP extensions + **thin local broker**. The broker owns request routing and one or more Lean LSP sessions with the Beam plugin loaded. "The CLI and MCP paths share typed operations and broker runtime code, but each owns its transport and runtime lifetime".
+- **Central extension**: speculative execution through `runAt`, exposed by the CLI as `lean-beam run-at` and through MCP as `lean_run_at`.
+- **Installation**:
+  - **do NOT add lean-beam to the target project's `lakefile`, do NOT install a copy into each project**. The wrapper detects the target project root from the current directory or `--root`.
+  - The installer requires `elan` on `PATH` and puts `lean-beam`, `lean-beam-search`, and `lean-beam-mcp` in `~/.local/bin`[reference:13].
+  - The runtime is staged under `BEAM_INSTALL_ROOT` (default `~/.local/share/beam`); it prebuilds the pinned `lean-toolchain` bundle by default and installs the bundled Lean skill only for the agent flags you request[reference:14].
+  - **Bundled with Lean toolchains** (commit `f66c0937`, 2026-10-27): "feat: bundle lean-beam with Linux and macOS toolchains (#15665)" — lean-beam is now bundled with Lean toolchains, simplifying installation[reference:15].
+  - `--custom-toolchain <toolchain>` accepts and prebuilds a specific toolchain (e.g., `--custom-toolchain lean4-dev` via `elan toolchain link`)[reference:16].
+- **Default Lean toolchain**: **Lean 4.36.0-rc1** (Reservoir, 2026-10-17: "Lean Beam defaults to Lean 4.36.0-rc1, a release candidate")[reference:17].
+- **`validated-lean-toolchains`**: the installer validates the toolchain against a hardcoded list; rejects unsupported toolchains with a clear error. It resolves Lean with `elan which lean`.
+- **CLI commands**: `run-at`, `run-at-handle`, `run-with`, `run-with-linear`, `release`, `sync`, `todo`, `document-symbols`, `workspace-symbols`, `feedback`, `recover --force`[reference:18].
+- **CLI `run-at` signature**: `lean-beam [--root PATH] [--port N] run-at <path> <version> <line> <character> (--stdin | --text-file <path> | -- <text...> | <text...>)`.
+- **MCP tools (public, verified from `McpProtocolTest.lean` and `MCP.md`)**:
+  - `lean_run_at` — inputs: `["path", "version", "line", "character", "text", "workspace"]`. Advertisement: `readOnlyHint = true`.
+  - **`lean_run_at_handle`** — inputs: `["path", "version", "line", "character", "text", "workspace"]`. Advertisement: `destructiveHint = false` (retained-handle additive tool)[reference:19].
+  - `lean_run_with` — inputs: `["path", "handle", "text", "workspace"]`. Advertisement: `destructiveHint = false`.
+  - `lean_run_with_linear` — inputs: `["path", "handle", "text", "workspace"]`. Advertisement: `destructiveHint = false`.
+  - `lean_todo` — inputs: `["path", "version", "start_line", "start_character", "end_line", "end_character", "workspace"]`. Advertisement: `readOnlyHint = true`.
+  - **Total MCP tool surface**: **79 tools** (5 curated + 74 projected: file operations, semantic navigation, code-action workflows, save/sync operations, version/stats, feedback report cards).
+  - **MCP.md** is the source of truth for the full tool list.
+- **MCP protocol**: "The server prefers stateless MCP 2026-07-28 and also accepts the initialization-based 2025-11-25 lifecycle while clients migrate"[reference:21].
+- **MCP 2026-07-28 compliance**: `lean-beam-mcp` implements `server/discover` and per-request metadata; **Logging is deprecated** in MCP 2026-07-28, so Beam writes operational logs to `stderr`[reference:22].
+- **MCP server binary**: `lean-beam-mcp` (multiplexed stdio, lazy multi-workspace).
+- **MCP client naming**: when registered with an agent, the tools are prefixed `mcp__lean-beam__lean_run_at` (and similarly for other tools).
+- **Skill**: `npx add-skill ejgallego/lean-beam` works with Claude Code, Codex CLI, and Cursor. The skill is Lean-only and self-contained[reference:23].
+- **MCTS relevance**: `MctsProofSearchTest.lean` uses `runWithHandle` and `linear` variants for tree search. Reservoir describes beam as "efficient interaction with Lean 4 and Monte-Carlo Tree Search".
+
+
+### lean-beam limitations (documented)
+- **`let rec` unsupported**: "Proof probes through `$/lean/runAt` and `$/lean/runWith` do **not support newly introduced local `let rec` declarations**. They return a semantic failure with the original proof state and no successor handle, including when the recursion is valid in ordinary Lean."
+- **`saveUnsupportedSetup`**: "Modules with batch-only `moreLeanArgs` fail with `saveUnsupportedSetup`; move shared `-D` settings to `leanOptions`, or use `lake build` when the arguments are intentionally batch-only"[reference:25].
+- **Indentation-sensitive probes**: `run-at` on blank or layout-sensitive lines may fail; the common path is a single isolated snippet.
+- **Handle minting**: handles are "minted, consumed, and released only by `runAt`, `runWith`, and `releaseHandle`" and "are not a cross-family LSP concept".
+
+
+### Not lean-beam (do not confuse)
+- **Lean Tools MCP** (`lean_run_code`, `lean_multi_attempt`, LobeHub 2026-04-18) is a **different project** (LSP-backed, high-concurrency). Do not mix its tools into this integration.
+
+
+### Constraints imposed by lean-beam
+- **Toolchain compatibility**: the Beam plugin must qualify for the exact Lean toolchain fingerprint; `validated-lean-toolchains` is the authoritative matrix. lean-beam defaults to **Lean 4.36.0-rc1**; on a project using v4.35.0, either add v4.36.0-rc1 to `femev-runner` or use `--custom-toolchain` with the project's toolchain (if validated).
+- **LSP ownership**: lean-beam **starts its own Lean LSP sessions** with the Beam plugin; it does not attach to the existing Kimina/Pantograph/lean4monaco sessions. This is an architectural difference from `lean-lsp-mcp` (which attaches to a running LSP).
+- **Session lifetime**: the CLI owns a foreground broker + private daemon; the MCP server owns a lazy multi-workspace runtime. Either way, the broker process is a subprocess of the Polyglot backend, not a container.
+- **Memory cost**: each active workspace spawns its own LSP session (~2 GB RSS). Multi-workspace parallelism is expensive; enforce a workspace cap (Section 2, Task LB3).
+
+
+---
+
+
+# SECTION 0 — SPRINT 11.0.1 AND 11.0.2 COMPLETION VERIFICATION (Do First)
+
+
+## Task V11.0.1-1 — Sprint 11.0.1 Residual Verifications
+Confirm the 3 residual verifications are resolved in `reports/phase-11.0.1-verification.md`:
+1. **Activity Bar drift**: where the Memory view lives today (Settings? menu? removed?) and whether "extensions" is a placeholder or active view.
+2. **Side Panel view modes**: whether `goals`/`timeline`/`dag`/`atlas`/`tiers`/`cold-storage`/`history`/`active` are implemented, or if the Side Panel delegates to the Right Drawer components unchanged.
+3. **Test files**: explicit paths of `tests/phase-11.0.1/suite-103-*.test.ts` … `suite-108-*.test.ts`, diff of `scripts/write-suites.js`, and explanation of why `scripts/test-11.ts` was deleted.
+
+
+If any of the 3 is unresolved, do not proceed to Phase 11.1: complete the verification first.
+
+
+## Task V11.0.2-1 — Sprint 11.0.2 Summary
+Confirm `reports/phase-11.0.2-summary.md` exists with:
+- LLM Chat (`ChatPanel`, 14 providers, 8 slash commands, tool blocks, diff preview, autonomous mode).
+- Settings UI (12 categories, 45 flags, 14 providers).
+- Automations (auto-archive, project export bundle, scaffolding, scheduled workflows).
+- Registries: 45 flags, 50 error codes.
+- Suites 109–113 pass (113/113 cumulative).
+
+
+## Task V11.0.2-2 — ChatPanel Baseline Confirmation
+Confirm `src/components/chat/ChatPanel.tsx` exists with:
+- Three-panel layout (conversation list, message thread, composer).
+- 14-provider selector.
+- 8 slash commands (`/prove`, `/formalize`, `/search`, `/blueprint`, `/explain`, `/refactor`, `/test`, `/archive`).
+- Tool call blocks (collapsible, arguments, results, duration).
+- Diff preview via `DiffViewer` (Sprint 11.0.1).
+- Autonomous mode toggle (if `ENABLE_AGENTIC_AUTOMATION=true`).
+- SSE streaming.
+
+
+This is the integration point for `/probe` in Section 4.
+
+
+## Task V11.0.2-3 — Baseline Snapshot for 11.1
+Produce `reports/phase-11.1-baseline.json`:
+- `McpClientRegistry`: `lean-lsp-mcp`, `paperproof-mcp` (2 external clients).
+- `polyglot_propose_proof` implementation (Duper/Pantograph, no speculative validation).
+- ChatPanel slash commands (8).
+- Agent Skills bundle (5 skills × 3 targets).
+- Lean toolchains in `femev-runner`: v4.32.2, v4.33.1, v4.34.1, v4.35.0.
+- Feature flags: 45; error codes: 50.
+
+
+## Acceptance Criteria — Section 0
+- [ ] Sprint 11.0.1 residual verifications resolved.
+- [ ] Sprint 11.0.2 summary verified.
+- [ ] ChatPanel baseline confirmed.
+- [ ] Baseline emitted.
+- [ ] Suites 1–113 pass.
+
+
+---
+
+
+# SECTION 1 — LEAN-BEAM INSTALLATION IN `femev-runner`
+
+
+## Task B1 — Add Lean v4.36.0-rc1 to the Toolchain Matrix
+
+
+lean-beam defaults to **Lean 4.36.0-rc1** (Reservoir 2026-10-17)[reference:26]. The `femev-runner` currently has v4.32.2, v4.33.1, v4.34.1, v4.35.0. Two options:
+
+
+- **Option A (recommended)**: Add `leanprover/lean4:v4.36.0-rc1` to `femev-runner/Dockerfile` and to the toolchain policy (`src/services/toolchains/toolchain-policy.ts`). This aligns lean-beam's default with the container.
+- **Option B**: Use `--custom-toolchain` with the project's existing toolchain (v4.35.0), provided that v4.35.0 is in `validated-lean-toolchains`. If not, lean-beam will reject it.
+
+
+Document the choice in `docs/architecture/lean-beam-integration.md`. If Option A is chosen, update the toolchain matrix from 11 to 12 versions (see Section 6, Task R3).
+
+
+## Task B2 — Install lean-beam in `femev-runner`
+
+
+Update `docker/femev-runner/Dockerfile`:
+
+
+- Ensure `elan` is on `PATH` (already required for Lean toolchains) and `~/.local/bin` is on `PATH`.
+- Install lean-beam via the official installer:
+  ```bash
+  curl -sSfL https://raw.githubusercontent.com/leanprover/lean-beam/main/scripts/install-beam.sh | sh
+```
+
+
+Or, if the installer has been bundled with the Lean toolchain (commit f66c0937, 2026-10-27), use the bundled version.
+
+
+· The installer places lean-beam, lean-beam-search, and lean-beam-mcp in ~/.local/bin, stages the runtime under ~/.local/share/beam, and prebuilds the pinned toolchain bundle.
+· Do NOT modify any target project's lakefile.
+· No new container: lean-beam runs inside femev-runner.
+· No new mandatory dependency: lean-beam is optional and feature-flagged.
+
+
+Verify:
+
+
+```bash
+lean-beam --version          # expected: lean-beam version 0.1.0 (or 0.2.0-beta on main)
+lean-beam-mcp --help         # stdio MCP server
+lean-beam run-at --help      # <path> <version> <line> <character> [--stdin | --text-file | -- <text>]
+lean-beam ensure lean --hold # validates the toolchain
+```
+
+
+Task B3 — Toolchain Qualification Check
+
+
+The Beam plugin must qualify for the exact toolchain fingerprint. Add a startup check in LeanBeamClient:
+
+
+· Read lean-toolchain from the project root.
+· Query lean-beam ensure lean (or the equivalent doctor command) to confirm the plugin is qualified for that toolchain.
+· If not qualified, return BridgeError(LEAN_BEAM_TOOLCHAIN_UNSUPPORTED, ...) with details.
+· Document the supported toolchains in docs/limitations.md (lean-beam's validated-lean-toolchains).
+
+
+Task B4 — Test Suite 114 (5 sub-tests)
+
+
+· 114.1: lean-beam --version returns a semver 0.x.y (alpha or beta).
+· 114.2: lean-beam-mcp --help lists the stdio transport.
+· 114.3: lean-beam run-at --help documents --stdin and --text-file.
+· 114.4: lean-beam ensure lean confirms the default toolchain (v4.36.0-rc1) is qualified.
+· 114.5: The toolchain qualification check rejects an unsupported toolchain with LEAN_BEAM_TOOLCHAIN_UNSUPPORTED.
+
+
+---
+
+
+SECTION 2 — LeanBeamClient (MCP Client)
+
+
+Task LB1 — LeanBeamClient
+
+
+Create src/services/mcp/lean-beam-client.ts. The client wraps the 5 curated MCP tools (the other 74 projected tools are out of scope for Phase 11.1; they can be added in Phase 11.2+).
+
+
+```typescript
+export interface LeanBeamRunAtRequest {
+  readonly path: string;                 // relative path inside the Lean project
+  readonly version: number;              // document version (Nat)
+  readonly line: number;                 // 1-indexed
+  readonly character: number;            // 0-indexed
+  readonly text: string;                 // tactic or command block
+  readonly workspace?: string;           // broker workspace name (optional; defaults to project root)
+}
+
+
+export interface LeanBeamRunAtHandleRequest extends LeanBeamRunAtRequest {
+  // Same fields; the tool retains a handle for follow-up via run-with / run-with-linear.
+}
+
+
+export interface LeanBeamRunWithRequest {
+  readonly path: string;
+  readonly handle: string;
+  readonly text: string;
+  readonly workspace?: string;
+}
+
+
+export interface LeanBeamRunWithLinearRequest {
+  readonly path: string;
+  readonly handle: string;
+  readonly text: string;
+  readonly workspace?: string;
+}
+
+
+export interface LeanBeamTodoRequest {
+  readonly path: string;
+  readonly version: number;
+  readonly startLine: number;
+  readonly startCharacter: number;
+  readonly endLine: number;
+  readonly endCharacter: number;
+  readonly workspace?: string;
+}
+
+
+export interface LeanBeamProbeResult {
+  readonly valid: boolean;
+  readonly goalsBefore: readonly string[];
+  readonly goalsAfter: readonly string[];
+  readonly errors: readonly string[];
+  readonly handle?: string;              // present only for lean_run_at_handle
+  readonly durationMs: number;
+}
+
+
+export interface LeanBeamClient {
+  readonly id: 'lean-beam';
+  isAvailable(): Promise<boolean>;
+  runAt(request: LeanBeamRunAtRequest): Promise<LeanBeamProbeResult>;
+  runAtHandle(request: LeanBeamRunAtHandleRequest): Promise<LeanBeamProbeResult>;
+  runWith(request: LeanBeamRunWithRequest): Promise<LeanBeamProbeResult>;
+  runWithLinear(request: LeanBeamRunWithLinearRequest): Promise<LeanBeamProbeResult>;
+  todo(request: LeanBeamTodoRequest): Promise<readonly unknown[]>;
+  listTools(): Promise<readonly McpTool[]>;
+}
+```
+
+
+Requirements:
+
+
+· Transport: stdio to lean-beam-mcp (spawned as a subprocess by the Polyglot backend). The MCP protocol revision is 2026-07-28 (preferred) or 2025-11-25 (transition).
+· Registration: add to McpClientRegistry as the third external client (after lean-lsp-mcp and paperproof-mcp). Polyglot itself is a server, not a client.
+· MCP 2026-07-28 compliance: lean-beam-mcp implements server/discover and per-request metadata; Logging is deprecated, so Beam writes operational logs to stderr. The Polyglot StructuredLogger captures stderr from the subprocess.
+· Handle continuation: runAtHandle() mints a handle; runWith() / runWithLinear() consume it. Handles are "minted, consumed, and released only by runAt, runWith, and releaseHandle"; they are not a cross-family LSP concept.
+· Workspace: the workspace field is optional; if omitted, the broker uses the default workspace (the project root detected via --root).
+· No silent fallback: if lean-beam-mcp is unavailable, isAvailable() returns false; calls throw BridgeError(LEAN_BEAM_UNAVAILABLE, ...).
+· Sanitization: validateProofSearchQuery on text (max 10k chars, no control chars, balanced delimiters).
+· No file mutation: none of the 5 curated tools writes the file; this is a hard invariant of lean-beam.
+· destructiveHint / readOnlyHint: the MCP server advertises readOnlyHint = true for lean_run_at and lean_todo, and destructiveHint = false for the retained-handle tools. Map these hints to the Polyglot McpTool.permission field: safe for all 5 curated tools.
+
+
+Task LB2 — Tool Surface Mapping
+
+
+Map the 5 curated lean-beam MCP tools into the Polyglot McpTool shape:
+
+
+· lean_run_at → McpTool { name: 'lean_run_at', permission: 'safe', inputSchema: { path, version, line, character, text, workspace? } }.
+· lean_run_at_handle → McpTool { name: 'lean_run_at_handle', permission: 'safe', inputSchema: { path, version, line, character, text, workspace? } }.
+· lean_run_with → McpTool { name: 'lean_run_with', permission: 'safe', inputSchema: { path, handle, text, workspace? } }.
+· lean_run_with_linear → McpTool { name: 'lean_run_with_linear', permission: 'safe', inputSchema: { path, handle, text, workspace? } }.
+· lean_todo → McpTool { name: 'lean_todo', permission: 'safe', inputSchema: { path, version, start_line, start_character, end_line, end_character, workspace? } }.
+
+
+All five are safe (read-only, no file mutation). The listTools() method also reports the total count: 79 tools (5 curated + 74 projected). The Phase 11.1 client only exposes the 5 curated; the projected tools are documented as available for future phases.
+
+
+Task LB3 — Workspace Cap
+
+
+Enforce a workspace cap to prevent memory explosion:
+
+
+· Max 3 active workspaces per lean-beam-mcp subprocess.
+· Each workspace spawns its own LSP session (~2 GB RSS).
+· When the cap is reached, evict the least-recently-used workspace via lean-beam release (or the MCP equivalent).
+· Document in docs/limitations.md.
+
+
+Task LB4 — Test Suite 115 (6 sub-tests)
+
+
+· 115.1: LeanBeamClient.isAvailable() returns true when lean-beam-mcp is installed.
+· 115.2: runAt() on a valid tactic returns valid: true with empty goalsAfter.
+· 115.3: runAt() on an invalid tactic returns valid: false with errors populated.
+· 115.4: runAtHandle() returns a handle; runWith(handle, tactic) continues from that state.
+· 115.5: runWithLinear(handle, tactic) works with the linear variant.
+· 115.6: listTools() returns the 5 curated tools with safe permission, and reports 79 total tools.
+
+
+---
+
+
+SECTION 3 — EXPOSE LEAN-BEAM IN THE POLYGLOT MCP SERVER
+
+
+Task M1 — New Polyglot MCP Tool: polyglot_probe_tactic
+
+
+Add a new tool to the Polyglot MCP server (Phase 10.3/10.10) that wraps LeanBeamClient.runAt:
+
+
+```typescript
+export interface PolyglotProbeTacticInput {
+  readonly filePath: string;
+  readonly line: number;
+  readonly character: number;
+  readonly tactic: string;
+  readonly version?: number;             // defaults to the current document version
+  readonly workspace?: string;
+}
+
+
+export interface PolyglotProbeTacticOutput {
+  readonly valid: boolean;
+  readonly goalsBefore: readonly string[];
+  readonly goalsAfter: readonly string[];
+  readonly errors: readonly string[];
+  readonly durationMs: number;
+}
+```
+
+
+Requirements:
+
+
+· Permission: safe (read-only, never writes the file).
+· Two-phase commit: not needed (safe tool).
+· Response cap: 100 KB (consistent with the other tools).
+· Feature flag: ENABLE_LEAN_BEAM=false (default off).
+· No silent fallback: if lean-beam is unavailable, return BridgeError(LEAN_BEAM_UNAVAILABLE, ...).
+
+
+Task M2 — Extend polyglot_propose_proof
+
+
+Update polyglot_propose_proof (Phase 10.3) to speculatively validate each candidate tactic before returning a proposal:
+
+
+· For each candidate proof returned by Duper/Pantograph, call LeanBeamClient.runAt at the appropriate position.
+· If a tactic returns valid: false, discard it without writing the file.
+· If a tactic returns valid: true, keep it in the proposal.
+· The proposal includes the speculative result for each tactic (goalsBefore/goalsAfter).
+· Feature-flagged: only when ENABLE_LEAN_BEAM=true. When disabled, the existing behavior is preserved.
+· Epistemic discipline: speculative validation is not a certificate; the user must still apply and run the kernel check (SEAL_KERNEL_VERIFIED_TIER5).
+
+
+Task M3 — Test Suite 116 (5 sub-tests)
+
+
+· 116.1: polyglot_probe_tactic returns a valid probe result.
+· 116.2: polyglot_probe_tactic with ENABLE_LEAN_BEAM=false returns 404.
+· 116.3: polyglot_propose_proof with ENABLE_LEAN_BEAM=true validates each candidate tactic.
+· 116.4: Invalid candidates are discarded (never returned in the proposal).
+· 116.5: Speculative validation never promotes to formally-proven.
+
+
+---
+
+
+SECTION 4 — CHAT PANEL INTEGRATION
+
+
+Task C1 — /probe Slash Command
+
+
+Extend src/components/chat/ChatPanel.tsx (Sprint 11.0.2):
+
+
+· Add /probe slash command.
+· On invocation, read the current cursor position from Monaco, get the current file path and document version, and call polyglot_probe_tactic with the tactic in the composer.
+· Render the result in a Speculative probe block:
+  · Valid (emerald) or Invalid (rose).
+  · goalsBefore and goalsAfter side by side.
+  · Errors (if any).
+  · Duration.
+  · Actions: "Apply this tactic" (inserts the tactic at the cursor position in the file), "Try another" (keeps the probe block and clears the composer).
+· Guardrail: /probe never modifies the file directly; "Apply" is the only path to mutation, and it uses the normal file-edit tool (not lean-beam).
+
+
+Task C2 — Chat System Prompt Extension
+
+
+Add to the default system prompt (Settings > Chat > System prompt):
+
+
+```
+When the user asks to test a tactic without applying it, use the `polyglot_probe_tactic` tool.
+It returns the goals before and after the tactic, without modifying the file.
+Do not confuse a successful probe with a kernel-verified proof — only `SEAL_KERNEL_VERIFIED_TIER5` certifies.
+```
+
+
+Task C3 — Test Suite 117 (5 sub-tests)
+
+
+· 117.1: /probe reads the cursor position and calls polyglot_probe_tactic.
+· 117.2: The probe block renders goalsBefore and goalsAfter side by side.
+· 117.3: "Apply this tactic" inserts the tactic at the cursor and does not use lean-beam.
+· 117.4: Invalid probes render in rose with errors.
+· 117.5: The system prompt includes the probe guidance.
+
+
+---
+
+
+SECTION 5 — AGENT SKILL BUNDLE
+
+
+Task S1 — polyglot-probe-tactic Skill
+
+
+Add a skill to the Agent Skills bundle (Phase 10.10):
+
+
+assets/skills/polyglot-probe-tactic/SKILL.md:
+
+
+```markdown
+---
+name: polyglot-probe-tactic
+description: Test a Lean tactic at a specific file position without modifying the file, using lean-beam's speculative execution via Polyglot's MCP server.
+---
+
+
+# Probe a tactic
+
+
+Use this skill when you want to test whether a tactic would work at a given
+position, without editing the file.
+
+
+## Prerequisites
+
+
+- `ENABLE_LEAN_BEAM=true` in the Polyglot settings.
+- A saved Lean file with a known cursor position.
+
+
+## Steps
+
+
+1. Call `polyglot_probe_tactic` with `{ filePath, line, character, tactic }`.
+2. Inspect `goalsBefore`, `goalsAfter`, `valid`, and `errors`.
+3. If `valid: true` and `goalsAfter` is empty, the tactic closes the goal.
+4. If `valid: true` and `goalsAfter` is not empty, the tactic progresses but does not close.
+5. If `valid: false`, read `errors` and try a different tactic.
+
+
+## Failure modes
+
+
+- `LEAN_BEAM_UNAVAILABLE` — lean-beam is not installed or `ENABLE_LEAN_BEAM=false`.
+- `LEAN_BEAM_TOOLCHAIN_UNSUPPORTED` — the project's `lean-toolchain` is not in the Beam plugin's validated matrix.
+
+
+## What this skill does NOT do
+
+
+- It does not certify a proof. Only the kernel (`SEAL_KERNEL_VERIFIED_TIER5`) certifies.
+- It does not modify the file. Use the normal file-edit tool to apply a tactic.
+```
+
+
+Task S2 — Extend Skill Generator
+
+
+Extend scripts/generate-skills.ts (Phase 10.10) to include the new skill in the 3 targets (.claude/skills/, .agents/skills/, .cursor/rules/).
+
+
+· Idempotent: re-running does not duplicate.
+· Validates against the AAIF Agent Skills standard (name ≤ 64, description ≤ 1.024, body ≤ 500 lines).
+
+
+Task S3 — Optional: Install lean-beam's Official Skill
+
+
+Document in docs/how-to/use-lean-beam.md:
+
+
+```bash
+npx add-skill ejgallego/lean-beam
+```
+
+
+This installs the official lean-beam skill (Claude Code, Codex CLI, Cursor) which complements Polyglot's polyglot-probe-tactic skill. It is optional: the Polyglot skill alone is sufficient.
+
+
+Task S4 — Test Suite 118 (4 sub-tests)
+
+
+· 118.1: polyglot-probe-tactic/SKILL.md passes the AAIF validator.
+· 118.2: The skill generator emits it to .claude/skills/, .agents/skills/, and .cursor/rules/.
+· 118.3: Re-running the generator is idempotent.
+· 118.4: The npx add-skill ejgallego/lean-beam command is documented in docs/how-to/use-lean-beam.md.
+
+
+---
+
+
+SECTION 6 — REGISTRY EXTENSIONS
+
+
+Task R1 — Feature Flag (+1 flag)
+
+
+Add to src/services/flags/feature-flag-registry.ts:
+
+
+```typescript
+ENABLE_LEAN_BEAM: { default: false, phase: '11.1', category: 'experiment' },
+```
+
+
+· Default false — lean-beam is beta; users opt in.
+· .env.example regenerated (46 flags total).
+
+
+Task R2 — Error Codes (+2 codes)
+
+
+Add to src/services/errors/error-registry.ts:
+
+
+```typescript
+LEAN_BEAM_UNAVAILABLE:            { httpStatus: 503, category: 'container', retryable: true,  problemType: 'https://polyglot.dev/errors/lean-beam-unavailable', userMessage: 'lean-beam is not installed or ENABLE_LEAN_BEAM=false.' },
+LEAN_BEAM_TOOLCHAIN_UNSUPPORTED:  { httpStatus: 422, category: 'bridge',    retryable: false, problemType: 'https://polyglot.dev/errors/lean-beam-toolchain-unsupported', userMessage: 'The project lean-toolchain is not supported by the Beam plugin.' },
+```
+
+
+· docs/reference/error-codes.md regenerated (52 codes total).
+
+
+Task R3 — Toolchain Policy Extension (+1 toolchain, if Option A)
+
+
+If Option A is chosen (add Lean v4.36.0-rc1 to femev-runner), update src/services/toolchains/toolchain-policy.ts:
+
+
+```typescript
+'v4.36.0-rc1': { owner: 'femev-runner', purpose: 'lean-beam default toolchain', stability: 'rc' },
+```
+
+
+· docs/architecture/toolchain-matrix.md regenerated (12 toolchains total).
+· If Option B is chosen (use --custom-toolchain), document the choice in docs/limitations.md and skip this task.
+
+
+Task R4 — Test Suite 119 (3 sub-tests)
+
+
+· 119.1: FeatureFlagRegistry contains 46 flags.
+· 119.2: ErrorRegistry contains 52 codes.
+· 119.3: .env.example and docs/reference/error-codes.md regenerated; toolchain matrix updated (if Option A).
+
+
+---
+
+
+SECTION 7 — DOCUMENTATION
+
+
+Task D1 — docs/how-to/use-lean-beam.md
+
+
+Document:
+
+
+· What lean-beam is (speculative execution, broker, MCP, MCTS).
+· Installation in femev-runner (no lakefile change).
+· Toolchain qualification check.
+· The 5 curated MCP tools (lean_run_at, lean_run_at_handle, lean_run_with, lean_run_with_linear, lean_todo).
+· The 74 projected tools (file operations, semantic navigation, code-action workflows, save/sync operations, version/stats, feedback report cards) as future scope.
+· The CLI handle workflow (run-at-handle → run-with / run-with-linear).
+· Differences from Pantograph (pointwise vs full search) and Duper (speculative vs superposition).
+· Limitations: beta status, toolchain matrix, let rec unsupported, saveUnsupportedSetup, indentation-sensitive probes, handle is not a cross-family LSP concept.
+
+
+Task D2 — docs/architecture/lean-beam-integration.md
+
+
+Document:
+
+
+· Architecture diagram (Polyglot backend → stdio → lean-beam-mcp → broker → Lean LSP sessions with Beam plugin).
+· Why lean-beam starts its own LSP sessions (not attached to Kimina/Pantograph/lean4monaco).
+· MCP 2026-07-28 compliance: server/discover, stateless, per-request metadata, Logging deprecated (stderr).
+· destructiveHint / readOnlyHint mapping to Polyglot permission.
+· Epistemic discipline: speculative ≠ certified.
+· Feature flag and rollback plan.
+
+
+Task D3 — docs/limitations.md update
+
+
+Add a section:
+
+
+· lean-beam is beta (v0.1.0 stable alpha; v0.2.0-beta in development on main).
+· Default toolchain is Lean v4.36.0-rc1; the project must either add it to femev-runner or use --custom-toolchain.
+· let rec unsupported in proof probes.
+· Modules with batch-only moreLeanArgs fail with saveUnsupportedSetup.
+· Indentation-sensitive probes may fail on blank/layout-sensitive lines.
+· Handles are not a cross-family LSP concept.
+· Workspace cap: max 3 active workspaces per lean-beam-mcp subprocess.
+· lean-beam's LSP sessions are separate from Kimina/Pantograph.
+
+
+Task D4 — Test Suite 120 (3 sub-tests)
+
+
+· 120.1: docs/how-to/use-lean-beam.md exists and covers all sections.
+· 120.2: docs/architecture/lean-beam-integration.md exists with the architecture diagram.
+· 120.3: docs/limitations.md updated with the lean-beam section.
+
+
+---
+
+
+SECTION 8 — CONSTRAINTS
+
+
+· Manifesto: no any, no enum, discriminated unions, CQS, SSOT, DIP.
+· No new container: lean-beam is installed in femev-runner.
+· No new mandatory dependency: lean-beam is optional, feature-flagged.
+· No breaking changes: Suites 1–113 must continue to pass.
+· No lakefile modification: lean-beam is installed once, not per project.
+· No file mutation: none of the 5 curated tools writes the file.
+· Epistemic discipline: speculative probe ≠ certified proof; formally-proven still requires SEAL_KERNEL_VERIFIED_TIER5.
+· Toolchain qualification: the Beam plugin must qualify for the project's lean-toolchain; otherwise LEAN_BEAM_TOOLCHAIN_UNSUPPORTED.
+· Workspace cap: max 3 active workspaces per lean-beam-mcp subprocess (memory cost ~2 GB each).
+· Registry extensions: +1 flag (46 total), +2 error codes (52 total), +1 toolchain (12 total, if Option A).
+· Coverage thresholds:
+  · src/services/mcp/lean-beam-client.ts: ≥ 85% lines, ≥ 80% branches.
+  · src/components/chat/ChatPanel.tsx (probe block): ≥ 80% lines, ≥ 75% branches.
+  · src/services/skills/** (new skill): ≥ 90% lines, ≥ 85% branches.
+· PEP compliance: any Python touched uses PEP 8/257/484/585/604/621/695.
+· Verification: npm run lint, npx tsc --noEmit, npm run build, npm run test:verify.
+
+
+---
+
+
+SECTION 9 — TEST EXECUTION PLAN (after implementation, before Phase 11.2)
+
+
+1. Implement Sections 1–7.
+2. Run npm run lint, npx tsc --noEmit, npm run build — must pass.
+3. Run Suites 1–113 (regression) — must pass.
+4. Run Suites 114–120 (installation, client, MCP tools, chat, skills, registries, docs) — must pass.
+5. Produce reports/phase-11.1-summary.md with:
+   · lean-beam installed in femev-runner, toolchain qualification verified.
+   · LeanBeamClient with 5 curated MCP tools (all safe), 79 total tools reported.
+   · polyglot_probe_tactic and extended polyglot_propose_proof.
+   · /probe slash command in the chat panel.
+   · polyglot-probe-tactic skill in 3 targets.
+   · Registry extensions (46 flags, 52 codes, 12 toolchains).
+   · No new containers, no new mandatory dependencies.
+6. Re-emit reports/phase-11.2-baseline.json to confirm the delta against reports/phase-11.1-baseline.json. Any unplanned delta is a regression.
+7. If any Phase 1–11.0.2 suite fails, revert the offending change and re-document.
+
+
+---
+
+
+SECTION 10 — RESPONSE REQUIREMENTS
+
+
+Per task: file paths, code excerpts (mandatory for B2, LB1, M1, M2, C1, S1, R1, R2), test names, pass/fail status.
+
+
+Produce reports/phase-11.1-summary.md with:
+
+
+· Sprint 11.0.1 and 11.0.2 completion verification.
+· Baseline delta (pre vs post).
+· Section-by-section outcome:
+  · S1: lean-beam installation, toolchain qualification (v4.36.0-rc1 or --custom-toolchain).
+  · S2: LeanBeamClient with 5 curated MCP tools; 79 total tools reported.
+  · S3: polyglot_probe_tactic, extended polyglot_propose_proof.
+  · S4: /probe chat integration.
+  · S5: polyglot-probe-tactic skill.
+  · S6: Registry extensions (46 flags, 52 codes, 12 toolchains).
+  · S7: Documentation.
+· Suites 114–120: sub-test counts, pass/fail.
+· Residual risk:
+  · lean-beam is beta (v0.1.0 stable; v0.2.0-beta in development on main).
+  · Toolchain default v4.36.0-rc1 must be added to femev-runner or overridden with --custom-toolchain.
+  · let rec unsupported; saveUnsupportedSetup for batch-only moreLeanArgs.
+  · Workspace cap: max 3 active workspaces (~2 GB RSS each).
+  · lean-beam starts its own LSP sessions (memory cost).
+· Deferred items confirmed in docs/phase-11-deferred.md.
+
+
+Do not claim completion without evidence. If any regression is introduced, revert and re-document.
+
+
+---
+
+
+APPENDICES
+
+
+A1 — New Test Suites
+
+
+Suite Title Sub-tests
+114 lean-beam Installation & Qualification 5
+115 LeanBeamClient (MCP) 6
+116 Polyglot MCP Tools (probe + propose) 5
+117 Chat /probe Integration 5
+118 Agent Skills Bundle 4
+119 Registry Extensions (46 flags, 52 codes, 12 toolchains) 3
+120 Documentation 3
+Total new  31
+
+
+A2 — Files Touched (summary)
+
+
+Area Files
+Container docker/femev-runner/Dockerfile (add lean-beam installer + v4.36.0-rc1 if Option A)
+MCP Client src/services/mcp/lean-beam-client.ts
+MCP Registry src/services/mcp/mcp-client-registry.ts (register lean-beam)
+Polyglot MCP Tools src/services/mcp/mcp-server.ts (add polyglot_probe_tactic, extend polyglot_propose_proof)
+Chat src/components/chat/ChatPanel.tsx (add /probe, probe block)
+Skills assets/skills/polyglot-probe-tactic/SKILL.md, scripts/generate-skills.ts
+Registries src/services/flags/feature-flag-registry.ts, src/services/errors/error-registry.ts, src/services/toolchains/toolchain-policy.ts (if Option A)
+Docs docs/how-to/use-lean-beam.md, docs/architecture/lean-beam-integration.md, docs/limitations.md, docs/reference/error-codes.md, docs/architecture/feature-flags.md, docs/architecture/toolchain-matrix.md (if Option A), .env.example
+
+
+A3 — Explicit Non-Goals
+
+
+· No new container.
+· No new mandatory dependency.
+· No lakefile modification in target projects.
+· No file mutation via lean-beam.
+· No certification via lean-beam (kernel only).
+· No adoption of Lean Tools MCP (different project).
+· No removal of existing test suites.
+
+
+A4 — Rollback Matrix
+
+
+Section Rollback Verification
+1 (Installation) Remove lean-beam from Dockerfile; rebuild femev-runner Suite 114
+2 (Client) Disable ENABLE_LEAN_BEAM; unregister from McpClientRegistry Suite 115
+3 (MCP tools) Hide polyglot_probe_tactic; revert polyglot_propose_proof Suite 116
+4 (Chat) Remove /probe slash command Suite 117
+5 (Skills) Delete polyglot-probe-tactic/; regenerate skills Suite 118
+6 (Registries) Revert registry files; .env.example regenerates Suite 119
+7 (Docs) Revert documentation Suite 120
+
+
+A5 — Phase 11.2 Handoff
+
+
+After Phase 11.1 completes, Phase 11.2 can proceed with:
+
+
+· Full Mathesis implementation (replace the stub).
+· Educational Mode content curation.
+· Yjs CRDT co-editing.
+· OpenTelemetry distributed tracing.
+· Workspace archive (backup/restore).
+· GitHub App integration.
+· Multi-user isolation.
+
+
+lean-beam is now available as an optional speculative execution layer for the agentic chat, the polyglot_propose_proof flow, and external MCP clients that consume the Polyglot MCP server. The project can validate tactics before writing them, closing the gap between proof proposal and proof application.
+
+
+A6 — MCP Tool Surface (5 curated, 74 projected)
+
+
+Tool Inputs Permission readOnlyHint / destructiveHint
+lean_run_at path, version, line, character, text, workspace safe readOnlyHint: true
+lean_run_at_handle same as lean_run_at safe destructiveHint: false
+lean_run_with path, handle, text, workspace safe destructiveHint: false
+lean_run_with_linear path, handle, text, workspace safe destructiveHint: false
+lean_todo path, version, start_line, start_character, end_line, end_character, workspace safe readOnlyHint: true
+(74 projected) file operations, semantic navigation, code-action workflows, save/sync operations, version/stats, feedback report cards — documented in MCP.md

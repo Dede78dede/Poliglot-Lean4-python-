@@ -37,7 +37,7 @@ export interface PaperproofTree {
 
 export class PaperproofClient {
   public isAvailable(): boolean {
-    return featureFlagRegistry.isEnabled('ENABLE_PAPERPROOF');
+    return featureFlagRegistry.isEnabled('ENABLE_PAPERPROOF_PLAYBACK') || featureFlagRegistry.isEnabled('ENABLE_PAPERPROOF');
   }
 
   /**

@@ -8,6 +8,8 @@ import {
   type McpToolResult,
   mcpServerRegistry,
 } from './mcp-server-registry';
+import { featureFlagRegistry } from '../flags/feature-flag-registry';
+import { defaultLeanBeamClient } from './lean-beam-client';
 
 export const MAX_RESPONSE_BYTES = 100 * 1024; // 100 KB cap
 
@@ -431,7 +433,36 @@ export const FULL_MCP_SERVER_TOOLS: readonly McpServerTool[] = [
         };
       }
 
-      const generatedProof = `theorem ${theoremName} : ${goal} := by\n  intro a b h\n  linarith\n`;
+      // Speculative candidate testing when ENABLE_LEAN_BEAM=true
+      let candidates = ['intro a b h\n  linarith', 'intro a b h\n  omega', 'unknown_tactic_fail'];
+      let goalsBefore: readonly string[] = [`1 goal\n⊢ ${goal}`];
+      let goalsAfter: readonly string[] = [];
+
+      if (featureFlagRegistry.isEnabled('ENABLE_LEAN_BEAM')) {
+        const validatedCandidates: string[] = [];
+        for (const candidate of candidates) {
+          try {
+            const probe = await defaultLeanBeamClient.runAt({
+              path: 'Proof.lean',
+              version: 1,
+              line: 1,
+              character: 0,
+              text: candidate,
+            });
+            if (probe.valid) {
+              validatedCandidates.push(candidate);
+              goalsBefore = probe.goalsBefore;
+              goalsAfter = probe.goalsAfter;
+            }
+          } catch {
+            // Discard invalid candidate on error
+          }
+        }
+        candidates = validatedCandidates;
+      }
+
+      const chosenTactic = candidates[0] ?? 'intro a b h\n  linarith';
+      const generatedProof = `theorem ${theoremName} : ${goal} := by\n  ${chosenTactic}\n`;
       const proposalToken = `proof_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
       activeProposals.set(proposalToken, {
@@ -451,9 +482,62 @@ export const FULL_MCP_SERVER_TOOLS: readonly McpServerTool[] = [
           proposalToken,
           message: 'Proof proposal generated. Explicit confirmation required to commit.',
           synthesizedProof: generatedProof,
-          engine: 'Duper / Pantograph Hybrid',
+          engine: 'Duper / Pantograph / lean-beam Hybrid',
+          goalsBefore,
+          goalsAfter,
+          speculativelyTested: featureFlagRegistry.isEnabled('ENABLE_LEAN_BEAM'),
         },
       };
+    },
+  },
+
+  // 11. polyglot_probe_tactic (safe, lean-beam speculative tactic execution)
+  {
+    name: 'polyglot_probe_tactic',
+    description: 'Speculatively evaluates a Lean 4 tactic using lean-beam MCP broker without mutating workspace files.',
+    permission: 'safe',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Relative path to Lean source file' },
+        version: { type: 'number', description: 'Document version' },
+        line: { type: 'number', description: '1-indexed line position' },
+        character: { type: 'number', description: '0-indexed character position' },
+        text: { type: 'string', description: 'Tactic text to evaluate speculatively' },
+        workspace: { type: 'string', description: 'Optional lean-beam workspace name' },
+        toolchain: { type: 'string', description: 'Optional toolchain override' },
+      },
+      required: ['path', 'version', 'line', 'character', 'text'],
+    },
+    handler: async (rawArgs): Promise<McpToolResult> => {
+      const args = (rawArgs ?? {}) as Record<string, unknown>;
+      if (!featureFlagRegistry.isEnabled('ENABLE_LEAN_BEAM')) {
+        return {
+          success: false,
+          toolName: 'polyglot_probe_tactic',
+          error: 'FEATURE_DISABLED: ENABLE_LEAN_BEAM is false. Enable the flag to access lean-beam speculative execution.',
+        };
+      }
+
+      const path = String(args['path'] ?? 'Main.lean');
+      const version = Number(args['version'] ?? 1);
+      const line = Number(args['line'] ?? 1);
+      const character = Number(args['character'] ?? 0);
+      const text = String(args['text'] ?? '');
+      const workspace = args['workspace'] ? String(args['workspace']) : undefined;
+      const toolchain = args['toolchain'] ? String(args['toolchain']) : undefined;
+
+      const probeResult = await defaultLeanBeamClient.runAt({
+        path,
+        version,
+        line,
+        character,
+        text,
+        workspace,
+        toolchain,
+      });
+
+      return enforceSizeLimit('polyglot_probe_tactic', probeResult);
     },
   },
 ];
@@ -466,5 +550,5 @@ export function registerFullMcpServerTools(registry = mcpServerRegistry): void {
   }
 }
 
-// Register all 10 tools on startup into mcpServerRegistry
+// Register all 11 tools on startup into mcpServerRegistry
 registerFullMcpServerTools(mcpServerRegistry);

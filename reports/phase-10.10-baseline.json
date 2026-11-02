@@ -1,7 +1,19 @@
 {
-  "capturedAt": "2026-10-24T04:10:00.000Z",
+  "capturedAt": "2026-10-26T03:30:00.000Z",
   "phase": "10.10-target",
-  "deltaAgainst109": "zero_unplanned_delta",
+  "deltaAgainst1097": "zero_unplanned_delta",
+  "registries": {
+    "featureFlagCount": 31,
+    "errorCodeCount": 37,
+    "epistemicStates": [
+      "conjecture",
+      "heuristically-validated",
+      "faithfulness-screened",
+      "numerically-verified",
+      "formally-proven",
+      "refuted"
+    ]
+  },
   "containers": [
     {
       "id": "femev-runner",
@@ -83,7 +95,7 @@
     {
       "id": "pyodide-builder",
       "port": 8087,
-      "memoryLimitMb": 4096,
+      "memoryLimitMb": 2048,
       "toolchains": [],
       "healthPath": "/readyz",
       "disabledByDefault": true,
@@ -100,50 +112,8 @@
       "disabledByDefault": true,
       "healthCheckIntervalS": 15,
       "restartPolicy": "unless-stopped",
-      "dependsOn": ["femev-runner"]
+      "dependsOn": ["pantograph"]
     }
-  ],
-  "featureFlags": [
-    { "name": "ENABLE_FEMEV", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.5", "category": "runtime" },
-    { "name": "ENABLE_PASTALEAN", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.6", "category": "runtime" },
-    { "name": "ENABLE_LUNGO", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.6", "category": "runtime" },
-    { "name": "ENABLE_LEANFLOW", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.7", "category": "runtime" },
-    { "name": "ENABLE_LEANSCREEN", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.7", "category": "runtime" },
-    { "name": "ENABLE_LATEX_INGESTION", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.7", "category": "runtime" },
-    { "name": "ENABLE_LEANCERT", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "runtime" },
-    { "name": "ENABLE_NUMPYSPEC", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "tooling" },
-    { "name": "ENABLE_NERODIA", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "tooling" },
-    { "name": "ENABLE_PROVEPY", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "tooling" },
-    { "name": "ENABLE_LEAN_FMT", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "tooling" },
-    { "name": "ENABLE_HERON", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "tooling" },
-    { "name": "ENABLE_VERSO", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "tooling" },
-    { "name": "ENABLE_LEAN_FINDER_V2", "defaultValue": true, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "runtime" },
-    { "name": "ENABLE_LEANSEARCH_V2", "defaultValue": true, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "runtime" },
-    { "name": "ENABLE_LEANEXPLORE", "defaultValue": true, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "runtime" },
-    { "name": "ENABLE_CRAMF", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "experiment" },
-    { "name": "ENABLE_LEAN_ATLAS", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.8", "category": "tooling" },
-    { "name": "ENABLE_MCP_SERVER", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.3", "category": "runtime" },
-    { "name": "ENABLE_MCP_HTTP_TRANSPORT", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.3", "category": "runtime" },
-    { "name": "ENABLE_ARCHON_HORIZON", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.3", "category": "experiment" },
-    { "name": "ENABLE_LEAN_RESERVOIR", "defaultValue": true, "prefix": "ENABLE_", "phaseIntroduced": "10.3", "category": "runtime" },
-    { "name": "ENABLE_DUPER", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "8", "category": "experiment" },
-    { "name": "ENABLE_LEANSAGE", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "8", "category": "experiment" },
-    { "name": "ENABLE_PYODIDE_BUILD", "defaultValue": false, "prefix": "ENABLE_", "phaseIntroduced": "10.1", "category": "experiment" },
-    { "name": "PIPELINE_STRICT_GOALS", "defaultValue": false, "prefix": "PIPELINE_", "phaseIntroduced": "10.5", "category": "policy" }
-  ],
-  "bridgeServices": [
-    { "id": "femevEngine", "filePath": "src/services/femev/femev-engine.ts", "errorCodes": ["KERNEL_DISAGREEMENT", "PROJECT_NOT_KERNEL_VERIFIED"], "timeoutMs": 30000, "retryPolicy": "none", "containerDependency": "femev-runner" },
-    { "id": "pastaLeanBridge", "filePath": "server/src/services/pastalean/pastalean-bridge.ts", "errorCodes": ["PASTALEAN_UNAVAILABLE", "PASTALEAN_UNSUPPORTED"], "timeoutMs": 15000, "retryPolicy": "fixed", "containerDependency": "pastalean-runner" },
-    { "id": "lungoBridge", "filePath": "server/src/services/lungo/lungo-bridge.ts", "errorCodes": ["LUNGO_UNAVAILABLE", "LUNGO_TOOLCHAIN_MISMATCH"], "timeoutMs": 60000, "retryPolicy": "none", "containerDependency": "femev-runner" },
-    { "id": "leanFlowBridge", "filePath": "server/src/services/leanflow/leanflow-bridge.ts", "errorCodes": ["LEANFLOW_UNAVAILABLE"], "timeoutMs": 30000, "retryPolicy": "fixed", "containerDependency": "leanflow-runner" },
-    { "id": "leanscreenBridge", "filePath": "server/src/services/leanscreen/leanscreen-bridge.ts", "errorCodes": ["LEANSCREEN_UNAVAILABLE"], "timeoutMs": 20000, "retryPolicy": "none", "containerDependency": "leanflow-runner" },
-    { "id": "latexIngestionService", "filePath": "server/src/services/latex/latex-ingestion.ts", "errorCodes": ["SPAN_UNAVAILABLE"], "timeoutMs": 10000, "retryPolicy": "none", "containerDependency": "leanflow-runner" },
-    { "id": "leanCertBridge", "filePath": "server/src/services/leancert/leancert-bridge.ts", "errorCodes": ["LEANCERT_UNAVAILABLE"], "timeoutMs": 15000, "retryPolicy": "fixed", "containerDependency": "leancert-runner" },
-    { "id": "heronLinterService", "filePath": "src/services/lean-tooling/linter.ts", "errorCodes": ["HERON_UNAVAILABLE"], "timeoutMs": 15000, "retryPolicy": "none", "containerDependency": "heron-runner" },
-    { "id": "lSpecRunnerService", "filePath": "src/services/lean-tooling/lspec-runner.ts", "errorCodes": ["LSPEC_UNAVAILABLE"], "timeoutMs": 15000, "retryPolicy": "none", "containerDependency": "femev-runner" },
-    { "id": "docGenService", "filePath": "src/services/lean-tooling/docgen.ts", "errorCodes": ["DOCGEN_UNAVAILABLE"], "timeoutMs": 30000, "retryPolicy": "none", "containerDependency": "leanflow-runner" },
-    { "id": "versoBlueprintService", "filePath": "src/services/lean-tooling/verso.ts", "errorCodes": ["VERSO_UNAVAILABLE"], "timeoutMs": 15000, "retryPolicy": "none", "containerDependency": "leanflow-runner" },
-    { "id": "cramfBridge", "filePath": "server/src/services/cramf/cramf-bridge.ts", "errorCodes": ["CRAMF_UNAVAILABLE"], "timeoutMs": 10000, "retryPolicy": "none", "containerDependency": "leanflow-runner" }
   ],
   "externalStores": [
     { "id": "commandRegistry", "filePath": "src/services/navigation/command-registry.ts", "getSnapshotSignature": "() => readonly CommandRegistration[]", "multiTabSync": true },
@@ -152,10 +122,12 @@
     { "id": "mcpServerRegistry", "filePath": "src/services/mcp/mcp-server-registry.ts", "getSnapshotSignature": "() => McpServerSnapshot", "multiTabSync": true },
     { "id": "mcpClientRegistry", "filePath": "src/services/mcp/mcp-client-registry.ts", "getSnapshotSignature": "() => McpClientSnapshot", "multiTabSync": true },
     { "id": "semanticSearchRegistry", "filePath": "src/services/search/semantic-search-provider.ts", "getSnapshotSignature": "() => readonly SemanticSearchProvider[]", "multiTabSync": true },
+    { "id": "unifiedSearchService", "filePath": "src/services/search/unified-search-service.ts", "getSnapshotSignature": "() => UnifiedSearchResultWithFailures | null", "multiTabSync": false },
     { "id": "tokenBudgetManager", "filePath": "src/services/ai/token-budget-manager.ts", "getSnapshotSignature": "() => readonly TokenBudget[]", "multiTabSync": false },
     { "id": "llmRouter", "filePath": "src/services/ai/llm-router.ts", "getSnapshotSignature": "() => readonly string[]", "multiTabSync": false },
     { "id": "aiProviderRegistry", "filePath": "src/services/ai/ai-provider-registry.ts", "getSnapshotSignature": "() => readonly AiProviderDescriptor[]", "multiTabSync": false },
-    { "id": "featureFlagRegistry", "filePath": "src/services/flags/feature-flag-registry.ts", "getSnapshotSignature": "() => Readonly<Record<FeatureFlagName, boolean>>", "multiTabSync": false }
+    { "id": "featureFlagRegistry", "filePath": "src/services/flags/feature-flag-registry.ts", "getSnapshotSignature": "() => Readonly<Record<FeatureFlagName, boolean>>", "multiTabSync": false },
+    { "id": "femevOrchestrator", "filePath": "src/services/femev/femev-orchestrator.ts", "getSnapshotSignature": "() => FemevOrchestratorSnapshot", "multiTabSync": true }
   ],
   "indexedDbDatabases": [
     { "name": "polyglot-vfs-db", "version": 1, "objectStores": ["files", "metadata"] },
@@ -186,13 +158,8 @@
     "MAX_COMPRESSION_RATIO": 100,
     "MAX_PATH_DEPTH": 20
   },
-  "bundleSizes": {
-    "mainChunkKb": 842.5,
-    "lazyChunksKb": {
-      "monaco": 1420.2,
-      "pyodide": 2100.0,
-      "atlas": 312.4
-    },
-    "totalGzippedKb": 284.1
+  "verificationSuites": {
+    "cumulativeSuites": 60,
+    "passRate": "100%"
   }
 }

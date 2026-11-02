@@ -42,10 +42,12 @@ export async function runSuite87(): Promise<void> {
   console.log(`  ✓ 87.4 PastaBench round-trip achieved ${benchResult.passed}/10 (${benchResult.successRatePct}%) fidelity`);
 
   // 87.5: Asymmetric Trust Invariant: Python execution alone cannot mark proof as verified
+  femevEngine.reset();
   const pyCode = femevEngine.generatePythonExplorationCode();
   assert.ok(pyCode.includes('import numpy as np'));
+  await femevEngine.executePhase1Simulation();
   const engineState = femevEngine.getState();
-  assert.notEqual(engineState.activePhase, 'formal_proof');
+  assert.equal(engineState.activePhase, 'phase1_visual');
   assert.equal(engineState.phase4Certificate, undefined, 'Python execution cannot create formal proof certificate');
   console.log('  ✓ 87.5 Asymmetric trust invariant verified: Python generates evidence, never formal seals');
 }

@@ -1,0 +1,46 @@
+name: Polyglot Mutation Testing
+
+# Scheduled weekly and on-demand only (Never blocks per-push critical path)
+on:
+  schedule:
+    - cron: '0 2 * * 0' # Weekly Sunday at 02:00 UTC
+  pull_request:
+    paths:
+      - 'src/services/verification/**'
+      - 'src/services/proof/**'
+      - 'src/shared/contracts/**'
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'Mutation test scope (changed-files | full)'
+        required: true
+        default: 'changed-files'
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutation-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Targeted Differential Mutation Suite
+        run: |
+          echo "Running differential mutation coverage on critical verification contracts..."
+          npx tsx scripts/verify-all.ts --mutation-subset

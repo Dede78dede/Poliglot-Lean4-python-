@@ -37,40 +37,40 @@ export interface EpistemicTransition {
   readonly seal?: string;
 }
 
-export const VALID_EPISTEMIC_TRANSITIONS: Readonly<Record<EpistemicStatus, readonly EpistemicStatus[]>> = Object.freeze({
-  conjecture: Object.freeze<EpistemicStatus>([
+export const VALID_EPISTEMIC_TRANSITIONS: Readonly<Record<EpistemicStatus, readonly EpistemicStatus[]>> = {
+  conjecture: [
     'conjecture',
     'heuristically-validated',
     'faithfulness-screened',
     'numerically-verified',
     'refuted',
-  ]),
-  'heuristically-validated': Object.freeze<EpistemicStatus>([
+  ],
+  'heuristically-validated': [
     'heuristically-validated',
     'faithfulness-screened',
     'numerically-verified',
     'formally-proven',
     'refuted',
-  ]),
-  'faithfulness-screened': Object.freeze<EpistemicStatus>([
+  ],
+  'faithfulness-screened': [
     'faithfulness-screened',
     'numerically-verified',
     'formally-proven',
     'refuted',
-  ]),
-  'numerically-verified': Object.freeze<EpistemicStatus>([
+  ],
+  'numerically-verified': [
     'numerically-verified',
     'formally-proven',
     'refuted',
-  ]),
-  'formally-proven': Object.freeze<EpistemicStatus>([
+  ],
+  'formally-proven': [
     'formally-proven',
     'refuted',
-  ]),
-  refuted: Object.freeze<EpistemicStatus>([
+  ],
+  refuted: [
     'refuted',
-  ]),
-});
+  ],
+};
 
 /**
  * Evaluates whether a transition between two epistemic statuses is permitted by integrity rules.
