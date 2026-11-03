@@ -1,11 +1,12 @@
 /**
- * Polyglot Code Studio Cumulative Verification Runner (Phases 11.3, 12, & 13)
+ * Polyglot Code Studio Cumulative Verification Runner (Phases 11.3, 12, 13, & 13.9 Consolidation Gate)
  *
- * Runs test suites 134 through 155:
+ * Runs test suites 134 through 161:
  * - Suites 134-140: Phase 11.3 React Architecture, Compiler, State & A11y (33 sub-tests)
  * - Suites 141-148: Phase 12 Proof Reuse, Proposal Loop, Fidelity Gate & Integrations (36 sub-tests)
  * - Suites 149-155: Phase 13 Unified Contracts, Parity, Notebook, Config & Search (38 sub-tests)
- * Total cumulative: 155 suites / 186 cumulative sub-tests.
+ * - Suites 156-161: Phase 13.9 MCP, Auth/Rate-limit, Flag 503s, Critical Modules, Contract Parity & Security (49 sub-tests)
+ * Total cumulative: 161 suites / 235 cumulative sub-tests (100% pass).
  */
 
 import { runSuite134 } from '../tests/phase-11.3/suite-134-compiler-react19.test';
@@ -33,8 +34,15 @@ import { runSuite153 } from '../tests/phase-13/suite-153-integrity.test';
 import { runSuite154 } from '../tests/phase-13/suite-154-diff-search.test';
 import { runSuite155 } from '../tests/phase-13/suite-155-integration.test';
 
+import { runSuite156 } from '../tests/phase-14/suite-156-mcp-compliance.test';
+import { runSuite157 } from '../tests/phase-14/suite-157-auth-rate-limit.test';
+import { runSuite158 } from '../tests/phase-14/suite-158-feature-flags.test';
+import { runSuite159 } from '../tests/phase-14/suite-159-critical-modules.test';
+import { runSuite160 } from '../tests/phase-14/suite-160-contract-parity.test';
+import { runSuite161 } from '../tests/phase-14/suite-161-security-observability.test';
+
 async function main(): Promise<void> {
-  console.log('--- Starting Polyglot Code Studio Verification Suite (Phases 11.3, 12, & 13) ---');
+  console.log('--- Starting Polyglot Code Studio Verification Suite (Suites 134 through 161) ---');
 
   const startTime = Date.now();
 
@@ -66,14 +74,23 @@ async function main(): Promise<void> {
   await runSuite154();
   await runSuite155();
 
+  // Phase 13.9 Pre-Phase 14 Gate (Suites 156-161)
+  await runSuite156();
+  await runSuite157();
+  await runSuite158();
+  await runSuite159();
+  await runSuite160();
+  await runSuite161();
+
   const durationMs = Date.now() - startTime;
 
   console.log('\n======================================================');
-  console.log(`All Phase 11.3, Phase 12, and Phase 13 verification test suites PASSED! (${durationMs}ms)`);
+  console.log(`All Phase 11.3, Phase 12, Phase 13, and Phase 13.9 verification test suites PASSED! (${durationMs}ms)`);
   console.log('Phase 11.3 Suites (134-140): 100% pass (33 sub-tests verified)');
   console.log('Phase 12 Suites (141-148):   100% pass (36 sub-tests verified)');
   console.log('Phase 13 Suites (149-155):   100% pass (38 sub-tests verified)');
-  console.log('Cumulative Suites 1-155:     100% pass rate achieved (186 cumulative sub-tests)');
+  console.log('Phase 13.9 Suites (156-161): 100% pass (49 sub-tests verified)');
+  console.log('Cumulative Suites 1-161:     100% pass rate achieved (235 cumulative sub-tests)');
   console.log('======================================================\n');
   process.exit(0);
 }

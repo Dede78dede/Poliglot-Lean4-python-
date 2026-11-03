@@ -11,6 +11,7 @@
  */
 
 import { BridgeError } from '../errors/bridge-error';
+import { featureFlagRegistry } from '../flags/feature-flag-registry';
 import { validateProofSearchQuery } from '../proof/proof-search-validator';
 import type {
   McpToolCallRequest,
@@ -269,8 +270,12 @@ export class DefaultLeanBeamClient implements LeanBeamClient {
     this.notify();
   }
 
+  public isEnabled(): boolean {
+    return featureFlagRegistry.isEnabled('ENABLE_LEAN_BEAM');
+  }
+
   public async isAvailable(): Promise<boolean> {
-    return this.available;
+    return this.isEnabled() && this.available;
   }
 
   public checkToolchainQualification(toolchain?: string): void {
@@ -317,6 +322,13 @@ export class DefaultLeanBeamClient implements LeanBeamClient {
 
   public async runAt(request: LeanBeamRunAtRequest): Promise<LeanBeamProbeResult> {
     const startTime = Date.now();
+    if (!this.isEnabled()) {
+      throw new BridgeError('FEATURE_DISABLED', `beam-${Date.now()}`, {
+        feature: 'ENABLE_LEAN_BEAM',
+        message: 'lean-beam is disabled by feature flag ENABLE_LEAN_BEAM',
+      });
+    }
+
     if (!this.available) {
       throw new BridgeError('LEAN_BEAM_UNAVAILABLE', `beam-unavail-${Date.now()}`, {
         path: request.path,

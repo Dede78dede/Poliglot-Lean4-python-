@@ -12,6 +12,8 @@ import {
   OTEL_DEFAULT_ENDPOINT,
 } from './otel-types';
 import { StructuredLogger, type LogEntry } from '../logging/logger';
+import { featureFlagRegistry } from '../flags/feature-flag-registry';
+import { BridgeError } from '../errors/bridge-error';
 
 export class BackendOtelEngine {
   private readonly spansByTrace = new Map<string, OtelSpanRecord[]>();
@@ -23,7 +25,16 @@ export class BackendOtelEngine {
   }
 
   public isEnabled(): boolean {
-    return this.enabled || process.env.ENABLE_OTEL_NODE === 'true';
+    return featureFlagRegistry.isEnabled('ENABLE_OTEL_NODE') || this.enabled || process.env.ENABLE_OTEL_NODE === 'true';
+  }
+
+  public checkEnabled(): void {
+    if (!this.isEnabled()) {
+      throw new BridgeError('FEATURE_DISABLED', `otel-node-${Date.now()}`, {
+        feature: 'ENABLE_OTEL_NODE',
+        message: 'Backend OpenTelemetry is disabled by feature flag ENABLE_OTEL_NODE',
+      });
+    }
   }
 
   public setEnabled(val: boolean): void {

@@ -1,3 +1,4 @@
+# AUTO-GENERATED — do not edit manually. Regenerate via npm run contracts:generate.
 """Generated Pydantic v2 boundary contracts.
 
 Auto-generated from Zod v4 schemas via exportJsonSchema().
@@ -129,4 +130,3 @@ class ProblemDetails(PolyglotBaseModel):
     instance: str | None = None
     correlationId: str
     details: dict[str, Any] = Field(default_factory=dict)
-

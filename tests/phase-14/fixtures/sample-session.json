@@ -1,0 +1,12 @@
+{
+  "id": "session-1793707000-sample",
+  "userId": "user-archon-dev",
+  "createdAt": 1793707000000,
+  "lastActiveAt": 1793707000000,
+  "status": "active",
+  "cellExecutionCount": 3,
+  "metadata": {
+    "toolchain": "v4.34.0",
+    "workspace": "topology-research"
+  }
+}

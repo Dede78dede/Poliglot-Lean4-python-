@@ -20,6 +20,8 @@ import type {
   McpToolDeclaration,
 } from '../../../server/src/services/mcp/mcp-client-types';
 import type { McpClientInterface } from './lean-lsp-client';
+import { featureFlagRegistry } from '../flags/feature-flag-registry';
+import { BridgeError } from '../errors/bridge-error';
 
 export interface ProofStepNode {
   readonly id: string;
@@ -97,7 +99,21 @@ export class PaperproofClient implements McpClientInterface {
     }
   }
 
+  public isEnabled(): boolean {
+    return featureFlagRegistry.isEnabled('ENABLE_PAPERPROOF');
+  }
+
+  public checkEnabled(): void {
+    if (!this.isEnabled()) {
+      throw new BridgeError('FEATURE_DISABLED', `paperproof-${Date.now()}`, {
+        feature: 'ENABLE_PAPERPROOF',
+        message: 'Paperproof MCP client is disabled by feature flag ENABLE_PAPERPROOF',
+      });
+    }
+  }
+
   public async connect(): Promise<void> {
+    this.checkEnabled();
     this.connected = true;
     this.notify();
   }
@@ -121,6 +137,7 @@ export class PaperproofClient implements McpClientInterface {
 
   public async callTool(request: McpToolCallRequest): Promise<McpToolCallResult> {
     const startTime = Date.now();
+    this.checkEnabled();
     const tool = this.toolMap.get(request.toolName);
     if (!tool) {
       return {

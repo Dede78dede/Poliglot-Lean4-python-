@@ -148,3 +148,65 @@ npm run test:verify
 # oppure:
 npx tsx scripts/verify-all.ts
 ```
+
+---
+
+## 8. Feature Status Matrix (Phase 13.9 Reconciled)
+
+| Feature / Subsystem | Status | Engine / Provider | Gating & Policy |
+|---|---|---|---|
+| Dual-Runtime Monaco Editor | ready | Monaco + Pyodide 314.0.7 | Core UI |
+| Formal Verification Formula | ready | 5-term Lean 4 evaluator | Non-bypassable kernel verification |
+| Session & VFS Storage | ready | Memory + Disk SessionManager | 500MB quota / 72h TTL / pinned |
+| Ingestion ZipValidator | ready | ZipValidator (CVE-2018-1002200 safe) | 50MB / 100:1 ratio limit |
+| Unified Result Contract | ready | ResultEnvelope<T> (ok: boolean) | Mandatory on all 18 bridges |
+| Boundary Contract Parity | ready | Zod v4 <-> JSON Schema <-> Pydantic v2 | extra='forbid', Discriminator('ok') |
+| Native Notebook Workspace | ready | Persistent Pyodide Worker | Nbformat v4 (.ipynb) + .polyglot-notebook |
+| Adaptive Config Discovery | ready | 3-signal ConfigManager | Requires userConfirmed: true / 90d cooldown |
+| Proof Retrieval Memory | ready | Hybrid 384-dim dense + BM25 | minSimilarity >= 0.90 / Tier 5 cache |
+| AX-PROVER Proposal Loop | ready | Compiler-guided repair (APOLLO K=1) | Bound budget / no tool spam |
+| Translation Fidelity Gate | ready | Definitional ; rfl + 20 input differential | ENABLE_TRANSLATION_FIDELITY=true |
+| Structural AST Diff | ready | Lean 4 declaration parser | Epistemic invalidation vs non-breaking |
+| Cross-Artifact MiniSearch | ready | MiniSearch across 5 corpora | Sub-millisecond latency (< 1ms) |
+| Token Vault & Bearer Auth | ready | Opaque 32-byte base64 TokenVault | CI bypass strictly test-only |
+| API Rate Limiting | ready | In-memory sliding window (100 rpm) | 429 Retry-After + RFC headers |
+| Security Observability | ready | Standalone security-events emitter | Zero token leakage in logs |
+| MCP 2026-07-28 Server | ready | Stateless JSON-RPC at /mcp | Dedicated 30 rpm rate limit |
+| LeanBeam Bridge | fallback | Client stub | Gated by ENABLE_LEAN_BEAM (off) |
+| Mathesis Integration | fallback | Remote endpoint client | Gated by ENABLE_MATHESIS (off) |
+| LP2 Transpiler | fallback | Lossy transpiler | Gated by ENABLE_LP2 (off) |
+| TreeThink Inference | fallback | vLLM GPU engine | Gated by ENABLE_TREETHINK (off) |
+| OpenTelemetry Browser | partial | Tracing bridge | Gated by ENABLE_OTEL_BROWSER (off) |
+| OpenTelemetry Node | partial | Server trace bridge | Gated by ENABLE_OTEL_NODE (off) |
+| Yjs Collaborative Editing | partial | Hocuspocus WebSocket | Gated by ENABLE_YJS_COLLABORATION (off) |
+| Paperproof Visualizer | partial | Playback service | Gated by ENABLE_PAPERPROOF_PLAYBACK (off) |
+| Proof-State Snapshotting | future | A2DR1/Lean_Snapshot | Deferred to Phase 14 pending release |
+| Distributed Multi-pod Rate Limit | future | Redis sliding-window cluster | Architecture note / Phase 14 |
+
+---
+
+## 9. Python Development Standards
+
+- **Formatting & Style**: PEP 8 compliance, 4-space indentation, max 88 chars (team standard), two blank lines between top-level definitions.
+- **Toolchain**: `uv` for local development, `pip` for CI parity, `ruff format` and `ruff check --select E,F,I,UP,B,SIM`.
+- **Type Checking**: PEP 484 type hints with `from __future__ import annotations`, `mypy --strict` (`disallow_untyped_defs = true`, `warn_return_any = true`).
+- **Pydantic v2 Boundaries**: Strict models with `ConfigDict(strict=True, extra="forbid", validate_assignment=True, frozen=True)` and `Discriminator('ok')` with `Tag`.
+- **Testing**: `pytest` with coverage `>= 80%` on touched files (`--cov=schemas --cov-fail-under=80`).
+
+---
+
+## 10. Phase 13 Contract Discipline
+
+- **Single Bridge Return Shape**: All bridge services and verification modules strictly return `ResultEnvelope<T>` (`ok: true` with `value` or `ok: false` with `SerializedBridgeError`).
+- **Error Registry Grounding**: All error representations conform to RFC 9457 Problem Details using registered codes from `src/services/errors/error-registry.ts`.
+- **Automated Generation**: Boundary models in `schemas/generated_contracts.py` are strictly generated via `npm run contracts:generate` from `exportJsonSchema()`. Hand-editing contract logic is forbidden.
+
+---
+
+## 11. Security, Rate Limiting & Secret Handling
+
+- **Authentication**: Protected API routes require `Authorization: Bearer <token>` validated against `TokenVault`.
+- **CI Test Bypass Guard**: Header `X-Polyglot-Test-Secret: polyglot-ci-test-2026` is accepted **exclusively** when `process.env.NODE_ENV === "test"` AND `process.env.ALLOW_CI_BYPASS === "true"`. Any bypass attempt in `production` immediately yields HTTP 401 and emits a `bypass_attempt` security event.
+- **Rate Limiting**: In-memory sliding-window limiter enforcing 100 requests/minute on standard endpoints and 30 requests/minute on `/mcp`. Exhaustion emits HTTP 429 with `Retry-After`.
+- **Security Observability**: All security denials (401, 403, 429, bypass attempts) are logged via `src/services/auth/security-events.ts` without printing raw secret keys or tokens.
+

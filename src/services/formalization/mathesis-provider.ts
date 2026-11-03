@@ -92,6 +92,14 @@ export class MathesisProvider {
   public async formalize(request: MathesisFormalizeRequest): Promise<MathesisFormalizeResult> {
     const correlationId = request.correlationId ?? StructuredLogger.generateCorrelationId();
     const startTime = Date.now();
+
+    if (!featureFlagRegistry.isEnabled('ENABLE_MATHESIS')) {
+      throw new BridgeError('FEATURE_DISABLED', correlationId, {
+        feature: 'ENABLE_MATHESIS',
+        message: 'Mathesis autoformalization is disabled by feature flag ENABLE_MATHESIS',
+      });
+    }
+
     const endpoint = this.getEndpoint(request.endpointOverride);
 
     // Fail-fast check on unconfigured endpoint

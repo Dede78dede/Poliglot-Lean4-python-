@@ -1,6 +1,7 @@
 {
   "baselinePhase": "14",
-  "generatedAt": "2026-11-02T12:50:00Z",
+  "generatedAt": "2026-11-03T03:45:00Z",
+  "annotation": "Generated at Phase 13.9 start on 2026-11-03. Baseline metrics reconciled across Suites 1-155 (186 sub-tests) prior to Phase 13.9 hardening expansion to 161 suites (235 sub-tests).",
   "precedingPhase": "13",
   "testSuites": {
     "totalSuites": 155,

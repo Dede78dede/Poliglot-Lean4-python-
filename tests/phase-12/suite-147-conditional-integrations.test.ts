@@ -26,6 +26,7 @@ export async function runSuite147(): Promise<void> {
   console.log('  ✓ 147.1 MathesisProvider.isAvailable() returns false when MATHESIS_ENDPOINT is empty');
 
   // 147.2: Configured Mathesis evaluates LeanScorer threshold (0.8)
+  featureFlagRegistry.set('ENABLE_MATHESIS', true);
   const highScoringResult = await mathesisProvider.formalize({
     naturalLanguagePrompt: 'Prove that the sum of two even numbers is even',
     endpointOverride: 'http://localhost:8088/v1/mathesis',
@@ -42,6 +43,7 @@ export async function runSuite147(): Promise<void> {
   });
   assert.equal(lowScoringResult.accepted, false);
   assert.equal(lowScoringResult.candidates[0].passedThreshold, false);
+  featureFlagRegistry.reset('ENABLE_MATHESIS');
   console.log('  ✓ 147.2 LeanScorer threshold 0.8 enforced; candidates below 0.8 rejected');
 
   // 147.3: ENABLE_TREETHINK=false blocks TreeThink with TREETHINK_UNAVAILABLE

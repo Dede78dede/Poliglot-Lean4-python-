@@ -15,10 +15,12 @@ import { translationFidelityGate } from '../../src/services/translation/fidelity
 import { DefaultProposalLoop } from '../../src/services/proof/proposal-loop/proposal-loop';
 import { DefaultProofReuseService } from '../../src/services/proof/reuse/proof-reuse-service';
 import { automationMetrics } from '../../src/services/proof/metrics/automation-metrics';
+import { featureFlagRegistry } from '../../src/services/flags/feature-flag-registry';
 
 export async function runSuite148(): Promise<void> {
   console.log('\n[Suite 148] End-to-End Proof Pipeline & Metrics Integration Tests:');
 
+  featureFlagRegistry.set('ENABLE_MATHESIS', true);
   const proposalLoop = new DefaultProposalLoop();
   const reuseService = new DefaultProofReuseService();
 
@@ -131,5 +133,6 @@ export async function runSuite148(): Promise<void> {
   assert.ok(metrics.proofReuseRate > 0);
   assert.ok(metrics.proposalLoopSuccessRate > 0);
   assert.ok(metrics.timeSavedByReuseMs >= 380);
+  featureFlagRegistry.reset();
   console.log('  ✓ 148.6 AutomationMetrics records rates, cost per theorem, and time saved');
 }

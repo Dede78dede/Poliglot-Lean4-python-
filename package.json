@@ -1,7 +1,7 @@
 {
   "name": "polyglot-code-studio",
   "private": true,
-  "version": "1.1.0",
+  "version": "2.1.0",
   "description": "A browser-based dual-runtime code editor and formal verification studio for Python 3.14 and Lean 4.",
   "license": "MIT",
   "repository": {
@@ -23,6 +23,11 @@
     "lint": "tsc --noEmit",
     "test": "tsx scripts/verify-all.ts",
     "test:verify": "tsx scripts/verify-all.ts",
+    "test:mcp": "tsx tests/phase-14/suite-156-mcp-compliance.test.ts",
+    "contracts:generate": "tsx scripts/generate-contracts.ts",
+    "bundle:measure": "tsx scripts/measure-bundle.ts",
+    "tokens:rotate": "tsx scripts/tokens-cli.ts rotate",
+    "tokens:revoke": "tsx scripts/tokens-cli.ts revoke",
     "audit": "npm audit --audit-level=high",
     "sbom": "npm sbom --sbom-format=cyclonedx > sbom.cdx.json && npm sbom --sbom-format=spdx > sbom.spdx.json"
   },

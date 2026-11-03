@@ -68,3 +68,7 @@ Cumulative Suites 1-155:     100% pass rate achieved (186 cumulative sub-tests)
 3. **Isolated Persistent Notebook**: `notebook.worker.ts` maintains persistent namespace across cells; timeout interruptions abort execution without resetting variables or restarting the kernel.
 4. **Structural AST Diff Awareness**: Altering theorem propositions or binders is classified as `epistemic_invalidation`, flagging dependent proofs for re-verification, whereas internal proof term changes are classified as `non_breaking`.
 5. **Deferred Upstream Dependencies**: Proof-state snapshotting via `A2DR1/Lean_Snapshot` remains cleanly deferred to Phase 14 pending upstream publication.
+
+---
+
+> **Annotated on 2026-11-03**: Reconciled and verified during Phase 13.9 consolidation gate. Baseline metrics confirmed across all 155 suites prior to Phase 13.9 security hardening and suite expansion. Superseded by reports/phase-14-baseline.json for subsequent phase milestones.

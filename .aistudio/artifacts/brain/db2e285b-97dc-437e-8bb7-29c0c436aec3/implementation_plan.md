@@ -1,181 +1,187 @@
-# Phase 13 — Unified Result Contracts, Contract Parity, Native Notebook, Config Discovery & Verification Hardening
+# Phase 13.9 — Pre-Phase 14 Consolidation, Security Hardening & Observability Gate
 
-Phase 13 closes three fundamental structural debts in Polyglot Code Studio: (1) fragmenting `Result<T>` implicit contracts across 18 bridge services; (2) manual TS↔Python contract synchronization; and (3) lack of a persistent interactive notebook execution mode. It introduces a unified `ResultEnvelope<T>` discriminated union, automated contract parity verification, an isolated native notebook engine, evidence-driven config proposals, and verification hardening.
-
----
+Phase 13.9 serves as the mandatory consolidation, verification, and hardening gate before Phase 14 begins. It establishes rigorous repository-to-state parity, security middleware, complete feature-flag gating, strict Python PEP 8/toolchain standards, zero-drift contract parity, secret management auditing, and structured security observability, bringing cumulative verification from 155 suites to 161 suites (encompassing 235 cumulative sub-tests, 100% passing) while maintaining the bundle strictly within gzip limits.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> The following architectural and user experience decisions were confirmed through Phase 1 clarification:
+> The architectural decisions have been refined with operational safeguards and feedback:
 
-- **Confirmed Decision 1 (Notebook Workspace)**: Dedicated full-screen route `/notebook` with dual editor-output layout, featuring cell-level execution, persistent Python globals across cells, and session export/import.
-- **Confirmed Decision 2 (Dense Embeddings Upgrade)**: Dense embeddings upgrade (`all-MiniLM-L6-v2` via `@huggingface/transformers` web worker with `minSimilarity ≥ 0.90` and HNSW indexing) will be implemented directly in Sprint 13.5 with worker offloading, upgrading the Phase 12 Dice similarity engine.
-- **Confirmed Decision 3 (Cross-Artifact Search Scope)**: Full unified corpus indexed by `MiniSearch` worker across workspace files, evidence entries, formal proofs, chat threads, and notebooks.
+- **Confirmed Decision 1 (Authentication & Token Vault)**:
+  - Bearer token verification backed by `src/services/auth/token-vault.ts` storing hashed tokens in `data/tokens.json` (opaque 32-byte base64).
+  - CLI rotation (`npm run tokens:rotate`) and revocation (`npm run tokens:revoke <id>`).
+  - **CI Bypass Security Guard**: The `X-Polyglot-Test-Secret: polyglot-ci-test-2026` header is permitted **strictly** when `process.env.NODE_ENV === "test"` **AND** `process.env.ALLOW_CI_BYPASS === "true"`. Any bypass attempt in `production` immediately yields HTTP 401 and emits a structured `bypass_attempt` security log.
+- **Confirmed Decision 2 (Rate Limiting & Multi-Process Architecture)**:
+  - In-memory sliding-window rate limiter enforcing 100 requests/minute per token (or IP fallback).
+  - Emits standard RFC headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`) and returns HTTP 429 with `Retry-After`.
+  - Documented as **single-process only** in `docs/architecture/rate-limiting.md` with an ADR for distributed Redis backing in multi-instance deployments.
+- **Confirmed Decision 3 (MCP Interoperability & Route Isolation)**:
+  - Standard MCP clients (`lean-lsp-mcp`, `paperproof-mcp`, `lean-beam`) use `Mcp-Method` and `Mcp-Name` headers.
+  - To prevent breaking third-party MCP 2026-07-28 clients while hardening REST APIs: `/mcp` is mounted outside Bearer auth but with a dedicated stricter rate limit (30 req/min) and protocol inspection.
+- **Confirmed Decision 4 (SSE & WebSocket Token Passing)**:
+  - SSE streams accept `Authorization: Bearer <token>` header primarily, with query param `?token=<token>` as authenticated fallback (emitting an audit warning). Missing token returns HTTP 401 before stream open.
+  - WebSocket (Yjs) endpoints remain completely closed when `ENABLE_YJS_COLLABORATION === false`.
+- **Confirmed Decision 5 (Numerical Baseline Reconciliation)**:
+  - Harmonized baseline: **161 cumulative suites / 235 sub-tests / 100% pass rate** (155 existing suites + 6 new suites: 156, 157, 158, 159, 160, 161). Deprecated ambiguous milestone unit terminology.
 
 ---
 
 ## 1. Overview & Core Concept
 
-- **What It Delivers**:
-  - **`ResultEnvelope<T>`**: Standardized discriminated union on `ok: boolean` with RFC 9457 `SerializedBridgeError`, correlation ID propagation, and non-breaking `withEnvelope()` wrapper across 18 bridge services.
-  - **Contract Parity**: Automated pipeline exporting Zod v4 schemas to JSON Schema with explicit `discriminator: { propertyName }` and compiling to Pydantic v2 BaseModels with strict validation and round-trip verification.
-  - **Native Notebook Mode**: Client-side interactive Python cells running inside a dedicated `notebook.worker` that persists globals across cell executions, provides cell timeout recovery without kernel death, and serializes to IndexedDB (`polyglot-notebooks`) and `.ipynb`.
-  - **Config Manager**: 3-signal discovery engine (Hardware RAM/VRAM, Usage patterns, Benchmark baselines) presenting up to 3 evidence-backed configuration proposals with mandatory explicit user confirmation (zero auto-application).
-  - **Verification Hardening**: Mutation testing harness (nightly Stryker/mutmut, minimal PR diff configuration), meta-scan for flaky/slow/dead tests, integrity checks, and AST-level structural diffing for Lean 4 using `tree-sitter-lean`.
-- **Target Audience**: Mathematicians and Python developers requiring interactive notebook exploration, reliable dual-language contracts, and provable formal verification without unexpected runtime failures.
-- **Epistemic Invariant**: **Only `SEAL_KERNEL_VERIFIED_TIER5` certifies truth.** No envelope, notebook cell, contract parity check, or config proposal can grant certified status.
+- **What It Does**: Phase 13.9 consolidates and hardens the Polyglot Code Studio platform following the delivery of Phase 13. It introduces zero unstable experimental features; instead, it enforces security middleware, validates existing MCP server compliance without rewriting working logic, ensures all 8 major optional engines are cleanly feature-gated (default false except `ENABLE_TRANSLATION_FIDELITY`), standardizes Python toolchains and generated contracts, audits secret management, emits structured security observability events, and synchronizes documentation (SemVer `2.1.0`, `CHANGELOG.md`, `README.md`).
+- **Target Audience & Context**: Formal verification researchers, Lean 4 mathematicians, and Python numerical engineers who depend on bulletproof epistemic guarantees, non-forgeable certificates, and stable runtime boundaries.
+- **Key Value**: Guarantees zero regression on foundational modules (`verification-formula.ts`, `session-manager.ts`, `zip-validator.ts`), certifies contract parity between TypeScript and Python, hardens all HTTP routes, and establishes clean baselines for Phase 14.
 
 ---
 
 ## 2. User Experience & Visual Design
 
-- **Dedicated Notebook Route (`/notebook`)**:
-  - Full-width workspace canvas adhering to SaaS dashboard guidelines with breadcrumbs: `Workspace / Notebook / [Session Title]`.
-  - Dual-column or vertical stack layout: cell code editor on the left/top, real-time output and stdout/stderr on the right/bottom.
-  - Cell header with execution order `[In 1]`, duration badge with tabular numerals (`142ms`), run button, and cell deletion.
-  - Global notebook toolbar: `Run All`, `Restart Kernel` (with explicit confirmation), `Export .ipynb`, `Export .polyglot-notebook`, and kernel status indicator (`Ready`, `Running Cell 2`, `Kernel Restarted`).
-- **Settings Recommendations Panel (`RecommendationsPanel.tsx`)**:
-  - Clean card surface inside Settings modal presenting up to 3 pending proposals.
-  - Each proposal displays title, evidence-based rationale (e.g., `Detected 8 GB RAM and 6.2 GB VRAM`), confidence badge, and explicit action buttons (`Apply`, `Dismiss`, `Do not show again`).
-  - No "Apply All" affordance to prevent accidental configuration shifts.
-- **Structural Diff Viewer (`DiffViewer.tsx`)**:
-  - Mode toggle: `Line` (Monaco DiffEditor) vs `Structural` (AST node-level tree diff) vs `Semantic` (Kernel equivalence check).
-  - Highlighting added/removed/modified theorem signatures, lemma binders, and tactic blocks with unboxed metadata tags.
-- **Unified Cross-Artifact Search Modal**:
-  - `Cmd+Shift+F` command palette modal searching across files, evidence items, proof certificates, chat logs, and notebook cells with instant (<50ms) MiniSearch ranking.
+- **Security & Status Visualization**:
+  - Studio Settings drawer surfaces Token Vault status, active rate-limiting policy (100 req/min), and CORS origins.
+  - Rate-limit exhaustion displays an accessible, non-intrusive notification banner displaying the exact countdown (`Retry-After: N seconds`) without modal interruption.
+- **Visual Theme & Typography Conformance**:
+  - All status badges follow zero-pill discipline (sharp, rounded 2px borders, uppercase monospace labels `text-[10px] tracking-wider font-mono`).
+  - Colors adhere to standard Tailwind dark tokens: emerald (`text-emerald-400 bg-emerald-950/60 border-emerald-800/80`) for verified integrity, amber for rate-limiting cooldown, and slate for neutral metadata.
+  - Interactive controls strictly use React Aria accessible primitives and WCAG 2.2 AA compliant contrast.
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-- **Decision 1: `ResultEnvelope<T>` Discriminant on `ok: boolean` (not `success`)**:
-  - *Chosen Approach*: Standard Rust/TypeScript Result monad `{ ok: true, value: T } | { ok: false, error: SerializedBridgeError }`.
-  - *Why*: Eliminates ambiguity; TypeScript narrows `value` only after `if (res.ok)` is checked, preventing property access bugs.
-- **Decision 2: Explicit Discriminator in `z.toJSONSchema()`**:
-  - *Chosen Approach*: Override callback injecting `discriminator: { propertyName }` for `z.discriminatedUnion()`.
-  - *Why*: Zod v4 emits `oneOf` with `const` literals by default without the OpenAPI `discriminator` object; without it, `datamodel-code-generator` fails to generate Pydantic v2 `Discriminator` models.
-- **Decision 3: Isolated `notebook.worker` vs `pyodide.worker`**:
-  - *Chosen Approach*: Create a dedicated `notebook.worker` that maintains a persistent Python namespace, leaving `pyodide.worker` with its strict terminate-on-timeout policy for one-shot scripts and `/probe`.
-  - *Why*: Prevents long-running notebook sessions from being interrupted by one-shot execution timeouts, while ensuring cell timeouts in the notebook do not wipe user variables.
-- **Decision 4: MiniSearch over FlexSearch**:
-  - *Chosen Approach*: ~7 KB bundle, 0.89 ms search latency, indexed in a dedicated `search.worker.ts`.
-  - *Why*: Polyglot's typical workspace corpus (<10,000 documents) runs faster and uses less memory in MiniSearch, without the 20 KB bundle overhead of FlexSearch.
+- **Decision 1: SemVer 2.1.0 Justification**
+  - *Chosen Approach*: Bump `package.json` to version `2.1.0` (MINOR bump from `2.0.0`).
+  - *Why*: Phases 10–13 introduced significant backward-compatible features behind feature flags (ResultEnvelope, Native Notebook, Config Discovery, Structural Diff, MiniSearch) with zero breaking changes to public verification contracts.
+- **Decision 2: Gated Feature Responses (HTTP 503 vs 404)**
+  - *Chosen Approach*: When a feature flag is disabled, its service or endpoint strictly returns HTTP 503 with RFC 9457 error code `FEATURE_DISABLED` from `error-registry.ts`.
+  - *Why*: HTTP 404 implies non-existence, whereas HTTP 503 correctly communicates temporary unavailability due to disabled configuration.
+- **Decision 3: Standalone Security Observability Emitter**
+  - *Chosen Approach*: `src/services/auth/security-events.ts` logs structured security events (`auth_denied`, `rate_limited`, `bypass_attempt`) to standard logging output independent of OpenTelemetry flags (`ENABLE_OTEL_BROWSER` / `ENABLE_OTEL_NODE`).
+  - *Why*: Security events must never be silenced by disabled telemetry flags, while strictly omitting raw secret keys or tokens from logs.
 
 ---
 
 ## 4. Technical Architecture & Data Strategy
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                                 POLYGLOT CODE STUDIO                                    │
-│                                                                                         │
-│  ┌───────────────────────┐   ┌──────────────────────────┐   ┌────────────────────────┐  │
-│  │   Monaco Studio IDE   │   │  Notebook View (/notebook│   │ Settings / Proposals   │  │
-│  │  (Dual Lean 4/Python) │   │ (Interactive Cells/State)│   │ (3-Signal Discovery)   │  │
-│  └───────────┬───────────┘   └────────────┬─────────────┘   └───────────┬────────────┘  │
-│              │                            │                             │               │
-│              ▼                            ▼                             ▼               │
-│  ┌───────────────────────────────────────────────────────────────────────────────────┐  │
-│  │                          Unified ResultEnvelope<T> Layer                          │  │
-│  │      { ok: true, value, correlationId } | { ok: false, error, correlationId }      │  │
-│  └────────────────────────────────────────┬──────────────────────────────────────────┘  │
-│                                           │                                             │
-│       ┌───────────────────────────────────┼───────────────────────────────────┐         │
-│       ▼                                   ▼                                   ▼         │
-│  ┌─────────────────────────┐ ┌─────────────────────────┐ ┌───────────────────────────┐  │
-│  │  18 Bridge Services     │ │  notebook.worker (WASM) │ │  search.worker (MiniSearch)│  │
-│  │  - ProofReuseService    │ │  - Persistent globals   │ │  - Files, evidence, chat  │  │
-│  │  - ProposalLoop         │ │  - Pyodide runtime      │ │  - Proofs, notebooks      │  │
-│  │  - TranslationGate      │ │  - Safe cell timeout    │ │  - Fast client search     │  │
-│  │  - PastaLean / Lungo    │ │  - .ipynb export/import │ │  - Off-main-thread index  │  │
-│  └────────────┬────────────┘ └────────────┬────────────┘ └─────────────┬─────────────┘  │
-│               │                           │                            │                │
-│               ▼                           ▼                            ▼                │
-│  ┌───────────────────────────────────────────────────────────────────────────────────┐  │
-│  │                        Tier 3 Persistence (IndexedDB)                             │  │
-│  │        polyglot-notebooks · polyglot-search-index · polyglot-config-dismissed     │  │
-│  └────────────────────────────────────────┬──────────────────────────────────────────┘  │
-│                                           │                                             │
-│                                           ▼                                             │
-│  ┌───────────────────────────────────────────────────────────────────────────────────┐  │
-│  │                           Express API & Contract Boundary                         │  │
-│  │   /api/v1/contracts/parity-check · /api/v1/config/proposals · /api/v1/notebook    │  │
-│  └───────────────────────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       Express 4.21 Gateway (server.ts)                       │
+│                                                                             │
+│  Public Routes:                                                             │
+│   ├── GET /api/health (Unauthenticated)                                      │
+│   └── POST /mcp (Stateless MCP 2026-07-28; Strict 30 req/min rate limit)     │
+│                                                                             │
+│  Protected Routes (AuthMiddleware + RateLimitMiddleware: 100 req/min):      │
+│   ├── /api/v1/contracts      ├── /api/v1/proof/reuse                        │
+│   ├── /api/v1/notebook       ├── /api/v1/proof/proposal-loop                │
+│   ├── /api/v1/config         ├── /api/v1/translation                       │
+│   ├── /api/v1/diff           ├── /api/v1/search/cross                       │
+│   └── GET /api/v1/proof/metrics                                             │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+        ┌──────────────────────────────┴──────────────────────────────┐
+        ▼                                                             ▼
+┌───────────────────────────────┐             ┌───────────────────────────────┐
+│     Security Observability    │             │   Python Boundary Schemas     │
+│ - emitAuthDenied()            │  Parity     │ - Pydantic v2 (extra='forbid')│
+│ - emitRateLimited()           │ ◄─────────► │ - Discriminator('ok')         │
+│ - emitBypassAttempt()         │  Check      │ - strict=True, frozen=True    │
+│ - zero token leakage in logs  │             │ - schemas/generated_contracts │
+└───────────────────────────────┘             └───────────────────────────────┘
 ```
 
-### Detailed Sprint Breakdown
+### Detailed Task Plan (Tasks 01–10)
 
-#### Sprint 13.1 — Unified `ResultEnvelope<T>` (Suite 149, 6 Sub-tests)
-1. **Contract Definitions (`src/shared/contracts/result-envelope.ts`)**:
-   - `SerializedBridgeError` conforming to RFC 9457 `ProblemDetails`.
-   - `ResultEnvelope<T>` discriminated union on `ok: boolean`.
-   - `VoidEnvelope` with explicit `value: null`.
-   - `serializeBridgeError(error, correlationId)` and `unwrapEnvelope(envelope)` helpers.
-2. **`withEnvelope()` Wrapper (`src/shared/contracts/with-envelope.ts`)**:
-   - Intercepts calls, handles `BridgeError` and unforeseen exceptions gracefully with proper correlation IDs.
-3. **Bridge Migration**:
-   - Migrate 18 bridge services to return `ResultEnvelope<T>`.
-4. **HTTP Serialization & Validation**:
-   - Routes serialize envelopes directly, mapping `ok: false` to `error.httpStatus`.
+#### Task 01: Repository–Declared State Reconciliation
+- Align `package.json` version to `2.1.0` with documented SemVer justification in `CHANGELOG.md`.
+- Create `CHANGELOG.md` adhering to Keep a Changelog 1.1.0 (`[Unreleased]`, `[2.1.0]`, `[2.0.0]`, `[1.1.0]`).
+- Reconcile `reports/phase-13-summary.md` and `reports/phase-14-baseline.json` ensuring exact sync with current codebase metrics (annotated on `2026-11-03`).
+- Create `scripts/measure-bundle.ts` outputting `reports/bundle-post-13.9.json` (verifying main gzip ≤ 180 KB, total JS ≤ 260 KB).
+- Update `README.md` with feature status table (`ready`, `partial`, `fallback`, `future`).
 
-#### Sprint 13.2 — Contract Parity: Zod v4 → JSON Schema → Pydantic v2 (Suite 150, 6 Sub-tests)
-1. **JSON Schema Exporter (`src/services/contracts/json-schema-exporter.ts`)**:
-   - Native `z.toJSONSchema()` with override injecting `discriminator: { propertyName }` for `ZodDiscriminatedUnion`.
-   - Strict ban on `z.union()` for boundary schemas.
-2. **Pydantic Generation Script (`scripts/generate-pydantic.py`)**:
-   - Uses `datamodel-code-generator` without `--reuse-model` (preventing bug #3092).
-   - Generates `schemas/generated_contracts.py` with `strict=True` and `extra='forbid'`.
-3. **Parity Check Workflow & API (`server/src/routes/contracts.ts`)**:
-   - Endpoint `POST /api/v1/contracts/parity-check` testing bidirectional validation of 10 boundary fixtures.
+#### Task 02: MCP 2026-07-28 Verification (Suite 156)
+- Create `tests/phase-14/suite-156-mcp-compliance.test.ts` with 6 sub-tests:
+  - 156.1: `server/discover` snapshot validates exact payload: `{ supportedVersions, capabilities, serverInfo, instructions }`.
+  - 156.2: Missing `Mcp-Method` or `Mcp-Name` header returns 400 with RFC 9457 `INVALID_JSON_INPUT`.
+  - 156.3: HTTP `GET` requests to MCP endpoint return 405 Method Not Allowed with `Allow: POST`.
+  - 156.4: HTTP `DELETE` requests to MCP endpoint return 405 Method Not Allowed with `Allow: POST`.
+  - 156.5: Rate limit enforcement returns 429 with `X-RateLimit-*` headers upon request limit (30 req/min on `/mcp`).
+  - 156.6: MCP responses are strictly stateless: no `Mcp-Session-Id` header is ever set.
 
-#### Sprint 13.3 — Native Notebook (Monaco + Pyodide, `notebook.worker`) (Suite 151, 6 Sub-tests)
-1. **Isolated Worker (`src/workers/notebook.worker.ts`)**:
-   - Persistent globals across cells (`import numpy as np` in cell 1 remains available in cell 2).
-   - Cell timeout handling without killing user variables.
-   - Explicit `RESTART_KERNEL` action returning `variablesLost: true`.
-2. **Data Model & IndexedDB (`src/types/notebook.ts`)**:
-   - `Notebook` and `NotebookCell` entities persisted in `polyglot-notebooks`.
-   - Import/export for `.ipynb` and `.polyglot-notebook`.
-3. **UI Implementation (`src/components/notebook/NotebookPanel.tsx` & `/notebook` Route)**:
-   - Full-screen notebook workspace with cell execution, per-cell outputs, tabular duration badges, and status bar indicator.
+#### Task 03: Authentication, CORS and Rate Limiting Middleware (Suite 157)
+- Implement `src/services/auth/token-vault.ts`:
+  - Storage in `data/tokens.json`, managing opaque 32-byte base64 tokens with SHA-256 storage hashing.
+  - Exposes `validateToken(token: string): boolean`, `rotateToken(id: string)`, `revokeToken(id: string)`.
+- Implement `src/middleware/auth.ts`:
+  - Validates Bearer token via Token Vault.
+  - Evaluates `X-Polyglot-Test-Secret`: permits bypass **only** if `process.env.NODE_ENV === "test"` and `process.env.ALLOW_CI_BYPASS === "true"`.
+  - Emits `emitAuthDenied` on failure.
+- Implement `src/middleware/rate-limit.ts`:
+  - In-memory sliding-window limiter (100 req/min per token/IP).
+  - Sets `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, returns 429 with `Retry-After`.
+  - Emits `emitRateLimited` on exhaustion.
+- Implement CORS middleware with `process.env.CORS_ORIGINS` (default same-origin).
+- Create `tests/phase-14/suite-157-auth-rate-limit.test.ts` with 8 sub-tests (including production CI bypass rejection, SSE token check, and CORS rejection).
 
-#### Sprint 13.4 — Config Manager: Preset + Discovery + Proposal (Suite 152, 5 Sub-tests)
-1. **Config Manager Core (`src/services/config/config-manager.ts`)**:
-   - Evaluates Hardware (RAM, WebGPU VRAM), Usage (probe frequency, search frequency), and Benchmarks (cold load, INP).
-   - Generates at most 3 sorted proposals with confidence ratings and numeric evidence.
-   - Enforces `applyProposal(id, userConfirmed: true)` literal requirement (zero auto-apply).
-   - 90-day dismissal persistence in `localStorage`.
-2. **API & UI (`server/src/routes/config.ts` & `RecommendationsPanel.tsx`)**:
-   - Integrated into Settings modal with individual apply/dismiss actions.
+#### Task 04: Feature Flag Wiring Verification (Suite 158)
+- Verify explicit feature-gating across the 8 major engines:
+  1. LeanBeam — `ENABLE_LEAN_BEAM` — `src/services/mcp/lean-beam-client.ts`
+  2. Mathesis — `ENABLE_MATHESIS` — `src/services/formalization/mathesis-provider.ts`
+  3. LP2 — `ENABLE_LP2` — `src/services/translation/lp2-adapter.ts`
+  4. TreeThink — `ENABLE_TREETHINK` — `src/services/proof/treethink/treethink-provider.ts`
+  5. OTel Browser — `ENABLE_OTEL_BROWSER` — `src/services/telemetry/otel-browser.ts`
+  6. OTel Node — `ENABLE_OTEL_NODE` — `src/services/telemetry/otel-node.ts`
+  7. Yjs Collaboration — `ENABLE_YJS_COLLABORATION` — `src/services/collaboration/hocuspocus-server.ts`
+  8. Paperproof — `ENABLE_PAPERPROOF_PLAYBACK` — `src/services/paperproof/playback-service.ts`
+  *(Exception: `ENABLE_TRANSLATION_FIDELITY` defaults to `true`).*
+- Disabled features strictly return 503 with RFC 9457 code `FEATURE_DISABLED`.
+- Create `tests/phase-14/suite-158-feature-flags.test.ts` with 16 sub-tests (8 tools × off/on states).
 
-#### Sprint 13.5 — Verification Hardening & Dense Embeddings (Suite 153, 5 Sub-tests)
-1. **Integrity Tests (`tests/phase-13/suite-153-integrity.test.ts`)**:
-   - Archive SHA-256 round-trip, contract parity, hash-chain ledger, audit logs, and proof reuse certificate consistency.
-2. **Dense Embeddings Worker Integration**:
-   - Offloads `all-MiniLM-L6-v2` embedding generation to worker with HNSW fallback and `minSimilarity ≥ 0.90`.
-3. **Mutation Testing & Meta-Scan Workflows**:
-   - `.github/workflows/mutation.yml` (nightly Stryker/mutmut) and `.github/workflows/meta-scan.yml` (flaky/slow/dead tests).
+#### Task 05: Critical Module Test Coverage (Suite 159)
+- Validate zero-regression on:
+  - `src/services/verification/verification-formula.ts` (terms: exit code, sorry detection, simulated state, verified seal).
+  - `src/services/execution/session-manager.ts` (quota, TTL, namespace isolation).
+  - `src/services/zip-validator.ts` (path traversal, zip bomb, symlink rejection).
+  - `src/shared/contracts/result-envelope.ts`, `src/services/config/config-manager.ts`, `src/services/diff/structural-diff.ts`.
+- Use test fixtures under `tests/phase-14/fixtures/` and Pyodide mock under `tests/phase-14/mocks/pyodide.ts`.
+- Create `tests/phase-14/suite-159-critical-modules.test.ts` with 10 sub-tests.
 
-#### Sprint 13.6 — Structural Diff & Cross-Artifact Search (Suite 154, 5 Sub-tests)
-1. **Structural Diff Engine (`src/services/diff/structural-diff.ts`)**:
-   - Uses `tree-sitter-lean` for AST-level semantic diffing of theorem bodies, binders, and proofs.
-2. **Cross-Artifact Search Engine (`src/services/search/cross-artifact-search.ts` & `search.worker.ts`)**:
-   - MiniSearch index over files, evidence, proofs, chat, and notebooks (<50ms query latency).
+#### Task 06: Documentation and Reports Alignment
+- Annotate outdated reports with: `> **Annotated on 2026-11-03**: Reconciled for Phase 13.9. Superseded by reports/phase-14-baseline.json.`
+- Add "Python Development Standards", "Phase 13 Contract Discipline", and "Security & Rate Limiting" to `README.md` while preserving existing sections verbatim.
+- Validate `.github/workflows/ci.yml` and ensure coverage across Phase 11–14 suites.
 
-#### Cross-Cutting Integration (Suite 155, 5 Sub-tests)
-- End-to-end integration across notebook execution, config proposals, ResultEnvelope unwrapping, contract parity, and kernel verification.
-- Cumulative suite count: **186/186 suites passing (100%)**.
+#### Task 07: Contract Parity and Pydantic Boundary Validation (Suite 160 & Pytest)
+- Validate `schemas/generated_contracts.py` boundary models:
+  - `extra='forbid'`, `strict=True`, `frozen=True`, `Discriminator('ok')` with `Tag(True)` / `Tag(False)`.
+  - Header: `# AUTO-GENERATED — do not edit manually. Regenerate via npm run contracts:generate.`
+- Authoritative schemas: exported by `exportJsonSchema()` from `src/services/contracts/`.
+- Add script `scripts/generate-contracts.ts` and npm script `"contracts:generate": "tsx scripts/generate-contracts.ts"`.
+- Create `tests/phase-14/suite-160-contract-parity.test.ts` (4 sub-tests).
+- Create `tests/phase-14/python/test_generated_contracts.py` (pytest with `--cov-fail-under=80`).
 
----
+#### Task 08: Python PEP 8 and Toolchain Compliance
+- Reformat `schemas/generated_contracts.py` to satisfy PEP 8 (two blank lines around top-level classes, max line length 88).
+- Create `pyproject.toml` with `[project]`, `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]`.
+- Create `.pre-commit-config.yaml` for pre-commit linting (Ruff and Mypy).
 
-## 5. Verification Plan & Rollback Strategy
+#### Task 09: Phase 13.9 Roadmap and Consolidation Gate
+- Produce `docs/architecture/phase-13.9-roadmap.md` with milestones M1–M10, entry/exit criteria, owners, and rollback plans.
+- Produce `reports/phase-13.9-gap-analysis.md` summarizing declared vs actual status.
+- Update `scripts/verify-all.ts` to execute all 161 suites (235 cumulative sub-tests) with 100% pass rate.
+- Run `scripts/measure-bundle.ts` verifying gzip ≤ 180 KB main and ≤ 260 KB total.
 
-1. **Compilation & Type Check**: `npx tsc --noEmit` and `npm run lint`.
-2. **Production Bundle Verification**: `npm run build` maintaining main bundle gzip $\le 180$ KB and total JS $\le 260$ KB.
-3. **Test Suite Verification**: Run `npm test` verifying all 186 cumulative suites (1–148 regression suites + 149–155 new suites).
-4. **Epistemic Audit**: Ensure no unverified declaration can achieve `SEAL_KERNEL_VERIFIED_TIER5`.
-5. **Rollback Plan**:
-   - Disable `ENABLE_RESULT_ENVELOPE` to fall back to `withEnvelope` compatibility shim.
-   - Disable `ENABLE_CONTRACT_PARITY`, `ENABLE_NOTEBOOK`, and `ENABLE_CONFIG_MANAGER` via standard feature flag toggles.
+#### Task 10: Secret Management and Security Observability (Suite 161)
+- Create `docs/architecture/secrets-management.md` documenting storage (env vars in production, `.env.local` in dev), key rotation procedures for 14 AI provider keys, Token Vault, and no-log policy.
+- Annotate `.env.example` marking secret variables, rotation cadence, and format.
+- Implement `src/services/auth/security-events.ts`:
+  - `emitAuthDenied(tokenId?: string, ip?: string, path?: string)`
+  - `emitRateLimited(tokenId?: string, ip?: string, path?: string)`
+  - `emitBypassAttempt(ip?: string, path?: string)`
+  - Zero token leakage: tokens are never printed in plaintext in log payloads.
+  - Active regardless of OpenTelemetry feature flags.
+- Create `tests/phase-14/suite-161-security-observability.test.ts` with 5 sub-tests:
+  - 161.1: Auth denial emits `auth_denied` without exposing raw token values.
+  - 161.2: Rate limiting emits `rate_limited` with ip and path.
+  - 161.3: CI bypass attempt in `NODE_ENV=production` emits `bypass_attempt` and returns 401.
+  - 161.4: No log output contains test secret or 32-byte base64 token substrings.
+  - 161.5: Security events are emitted when `ENABLE_OTEL_BROWSER` and `ENABLE_OTEL_NODE` are false.

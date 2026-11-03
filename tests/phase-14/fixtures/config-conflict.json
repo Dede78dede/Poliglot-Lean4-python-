@@ -1,0 +1,32 @@
+{
+  "proposals": [
+    {
+      "id": "prop-mem-high",
+      "title": "Allocate 16GB Memory for Prover Cache",
+      "description": "Increase cache size for dense embedding index",
+      "category": "cache",
+      "targetSetting": "prover.cacheMemoryMb",
+      "currentValue": 2048,
+      "proposedValue": 16384,
+      "diffSummary": "2048 -> 16384 MB",
+      "expectedUtility": 0.88,
+      "sourceSignal": "hardware",
+      "conflictsWith": ["prop-mem-low"],
+      "generatedAt": "2026-11-03T12:00:00Z"
+    },
+    {
+      "id": "prop-mem-low",
+      "title": "Throttle Cache for Low Resource Environment",
+      "description": "Keep memory footprint minimal",
+      "category": "cache",
+      "targetSetting": "prover.cacheMemoryMb",
+      "currentValue": 2048,
+      "proposedValue": 1024,
+      "diffSummary": "2048 -> 1024 MB",
+      "expectedUtility": 0.45,
+      "sourceSignal": "benchmark",
+      "conflictsWith": ["prop-mem-high"],
+      "generatedAt": "2026-11-03T12:05:00Z"
+    }
+  ]
+}

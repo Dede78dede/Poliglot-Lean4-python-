@@ -12,6 +12,7 @@
  */
 
 import { featureFlagRegistry } from '../flags/feature-flag-registry';
+import { BridgeError } from '../errors/bridge-error';
 
 export interface LP2TranslationResult {
   readonly translated: string;
@@ -34,7 +35,12 @@ export class LP2Adapter {
 
   public async pyToLean(pythonCode: string): Promise<LP2TranslationResult> {
     if (!this.isEnabled()) {
-      throw new Error('LP2_DISABLED: ENABLE_LP2 feature flag is disabled');
+      const err = new BridgeError('FEATURE_DISABLED', `lp2-${Date.now()}`, {
+        feature: 'ENABLE_LP2',
+        message: 'LP2_DISABLED: ENABLE_LP2 feature flag is disabled',
+      });
+      (err as any).message = 'LP2_DISABLED: ENABLE_LP2 feature flag is disabled';
+      throw err;
     }
 
     // High-level transpilation mapping with lossy warning headers
@@ -64,7 +70,12 @@ export class LP2Adapter {
 
   public async leanToPy(leanCode: string): Promise<LP2TranslationResult> {
     if (!this.isEnabled()) {
-      throw new Error('LP2_DISABLED: ENABLE_LP2 feature flag is disabled');
+      const err = new BridgeError('FEATURE_DISABLED', `lp2-${Date.now()}`, {
+        feature: 'ENABLE_LP2',
+        message: 'LP2_DISABLED: ENABLE_LP2 feature flag is disabled',
+      });
+      (err as any).message = 'LP2_DISABLED: ENABLE_LP2 feature flag is disabled';
+      throw err;
     }
 
     const lines = leanCode.split('\n');

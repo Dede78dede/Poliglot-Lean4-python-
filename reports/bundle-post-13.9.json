@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-11-03T11:59:41.672Z",
+  "phase": "13.9",
+  "budgetLimits": {
+    "mainBundleGzipMaxKb": 180,
+    "totalJsGzipMaxKb": 260
+  },
+  "measured": {
+    "mainEntryGzipKb": 154.32,
+    "totalJsGzipKb": 216.08,
+    "totalJsRawKb": 737.04,
+    "cssGzipKb": 15.76,
+    "htmlGzipKb": 0.73
+  },
+  "files": {
+    "index-DBZMOaGx.js": {
+      "rawBytes": 550926,
+      "gzipBytes": 158028,
+      "gzipKb": 154.32
+    },
+    "index-dEREQ5cL.css": {
+      "rawBytes": 105814,
+      "gzipBytes": 16137,
+      "gzipKb": 15.76
+    },
+    "react-aria-vendor-Do_oFdx0.js": {
+      "rawBytes": 203216,
+      "gzipBytes": 62865,
+      "gzipKb": 61.39
+    },
+    "rolldown-runtime-CbXtAM7H.js": {
+      "rawBytes": 589,
+      "gzipBytes": 368,
+      "gzipKb": 0.36
+    },
+    "index.html": {
+      "rawBytes": 1576,
+      "gzipBytes": 752,
+      "gzipKb": 0.73
+    }
+  },
+  "status": "PASS",
+  "marginMainKb": 25.68,
+  "marginTotalKb": 43.92
+}

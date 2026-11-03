@@ -670,6 +670,14 @@ export const ERROR_REGISTRY = {
     retryable: true,
     userMessage: 'Upstream gateway or proxy returned an invalid response.',
   },
+  FEATURE_DISABLED: {
+    code: 'FEATURE_DISABLED',
+    httpStatus: 503,
+    problemType: 'https://polyglot.dev/errors/feature-disabled',
+    category: 'policy',
+    retryable: false,
+    userMessage: 'This feature or tool is currently disabled by configuration policy.',
+  },
   SERVICE_UNAVAILABLE: {
     code: 'SERVICE_UNAVAILABLE',
     httpStatus: 503,

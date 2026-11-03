@@ -7,6 +7,7 @@
  */
 
 import { featureFlagRegistry } from '../flags/feature-flag-registry';
+import { BridgeError } from '../errors/bridge-error';
 import {
   OTEL_PINNED_VERSION,
   OTEL_DEFAULT_ENDPOINT,
@@ -28,6 +29,15 @@ export class BrowserOtelTracer {
     return featureFlagRegistry.isEnabled('ENABLE_OTEL_BROWSER');
   }
 
+  public checkEnabled(): void {
+    if (!this.isEnabled()) {
+      throw new BridgeError('FEATURE_DISABLED', `otel-browser-${Date.now()}`, {
+        feature: 'ENABLE_OTEL_BROWSER',
+        message: 'Browser OpenTelemetry is disabled by feature flag ENABLE_OTEL_BROWSER',
+      });
+    }
+  }
+
   public getVersion(): string {
     return OTEL_PINNED_VERSION;
   }
@@ -36,8 +46,11 @@ export class BrowserOtelTracer {
     return this.endpoint;
   }
 
-  public initialize(): boolean {
+  public initialize(strict = false): boolean {
     if (!this.isEnabled()) {
+      if (strict) {
+        this.checkEnabled();
+      }
       this.active = false;
       return false;
     }

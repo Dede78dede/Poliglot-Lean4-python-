@@ -1,0 +1,33 @@
+{
+  "pathTraversalEntries": [
+    {
+      "path": "safe_folder/file1.txt",
+      "uncompressedSize": 100,
+      "compressedSize": 50
+    },
+    {
+      "path": "../../etc/shadow",
+      "uncompressedSize": 1024,
+      "compressedSize": 200
+    }
+  ],
+  "zipBombEntries": [
+    {
+      "path": "bomb.bin",
+      "uncompressedSize": 1500000000,
+      "compressedSize": 1000
+    }
+  ],
+  "validEntries": [
+    {
+      "path": "lean_project/lakefile.lean",
+      "uncompressedSize": 250,
+      "compressedSize": 120
+    },
+    {
+      "path": "lean_project/Main.lean",
+      "uncompressedSize": 500,
+      "compressedSize": 210
+    }
+  ]
+}

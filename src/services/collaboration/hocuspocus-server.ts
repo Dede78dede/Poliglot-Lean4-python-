@@ -12,6 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { featureFlagRegistry } from '../flags/feature-flag-registry';
+import { BridgeError } from '../errors/bridge-error';
 import { createLogger, StructuredLogger } from '../logging/logger';
 
 const logger = createLogger('hocuspocus-server');
@@ -47,7 +48,23 @@ export class HocuspocusServer {
     return featureFlagRegistry.isEnabled('ENABLE_YJS_COLLABORATION');
   }
 
+  public checkEnabled(): void {
+    if (!this.isEnabled()) {
+      throw new BridgeError('FEATURE_DISABLED', `yjs-${Date.now()}`, {
+        feature: 'ENABLE_YJS_COLLABORATION',
+        message: 'Yjs collaboration is disabled by feature flag ENABLE_YJS_COLLABORATION',
+      });
+    }
+  }
+
   public authenticate(token: string, origin?: string): { success: boolean; error?: string } {
+    if (!this.isEnabled()) {
+      throw new BridgeError('FEATURE_DISABLED', `yjs-${Date.now()}`, {
+        feature: 'ENABLE_YJS_COLLABORATION',
+        message: 'Yjs collaboration is disabled by feature flag ENABLE_YJS_COLLABORATION',
+      });
+    }
+
     // 1. Origin verification
     if (origin && !this.config.allowedOrigins.includes(origin)) {
       return { success: false, error: 'HOCUSPOCUS_AUTH_FAILED: Origin not permitted by CORS allowlist' };

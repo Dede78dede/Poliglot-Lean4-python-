@@ -42,11 +42,13 @@ export class TreeThinkProvider {
     const correlationId = request.correlationId ?? StructuredLogger.generateCorrelationId();
     const startTime = Date.now();
 
-    if (!this.isAvailable()) {
-      throw new BridgeError('TREETHINK_UNAVAILABLE', correlationId, {
-        reason: 'ENABLE_TREETHINK feature flag is disabled or vLLM/GPU backend is unavailable.',
-        instructions: 'Enable ENABLE_TREETHINK in settings or ensure vllm service is running on port 8000.',
+    if (!featureFlagRegistry.isEnabled('ENABLE_TREETHINK')) {
+      const err = new BridgeError('FEATURE_DISABLED', correlationId, {
+        feature: 'ENABLE_TREETHINK',
+        message: 'TREETHINK_UNAVAILABLE: ENABLE_TREETHINK feature flag is disabled',
       });
+      (err as any).message = 'TREETHINK_UNAVAILABLE: TreeThink search is disabled by feature flag ENABLE_TREETHINK';
+      throw err;
     }
 
     const method = request.method ?? 'mcts';

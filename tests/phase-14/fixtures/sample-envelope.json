@@ -1,0 +1,26 @@
+{
+  "successEnvelope": {
+    "ok": true,
+    "value": {
+      "theoremName": "nat_add_comm",
+      "proved": true,
+      "tacticCount": 3
+    },
+    "correlationId": "corr-test-success-001",
+    "timestamp": "2026-11-03T12:00:00.000Z"
+  },
+  "errorEnvelope": {
+    "ok": false,
+    "error": {
+      "code": "FEATURE_DISABLED",
+      "problemType": "https://polyglot.dev/errors/feature-disabled",
+      "httpStatus": 503,
+      "message": "The requested feature is disabled by feature flag policy",
+      "details": {
+        "feature": "ENABLE_LEAN_BEAM"
+      }
+    },
+    "correlationId": "corr-test-error-002",
+    "timestamp": "2026-11-03T12:00:01.000Z"
+  }
+}

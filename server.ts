@@ -16,6 +16,9 @@ import { notebookRouter } from './server/src/routes/notebook';
 import { configRouter } from './server/src/routes/config';
 import { searchRouter } from './server/src/routes/search';
 import { diffRouter } from './server/src/routes/diff';
+import { createMcpServerRouter } from './server/src/routes/mcp-server-router';
+import { authMiddleware } from './src/middleware/auth';
+import { standardRateLimiter, mcpRateLimiter } from './src/middleware/rate-limit';
 import { automationMetrics } from './src/services/proof/metrics/automation-metrics';
 
 const PORT = 3000;
@@ -26,11 +29,27 @@ async function startServer(): Promise<void> {
 
   app.use(express.json());
 
-  // Health and readiness endpoints
+  // CORS Origin Enforcement
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()) : null;
+    if (allowedOrigins && origin) {
+      if (!allowedOrigins.includes(origin)) {
+        return res.status(403).json({ error: 'CORS policy violation: Origin not allowed.' });
+      }
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Polyglot-Test-Secret, Mcp-Method, Mcp-Name, X-Correlation-ID');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  });
+
+  // Health and readiness endpoints (Public, Unauthenticated)
   app.get('/api/health', (_req, res) => {
     res.json({
       status: 'healthy',
-      phase: '13',
+      phase: '13.9',
       compiler: 'annotation',
       virtualization: 'react-window-v2',
       wcag: '2.2-AA',
@@ -43,8 +62,18 @@ async function startServer(): Promise<void> {
       configManager: true,
       crossArtifactSearch: true,
       structuralDiff: true,
+      tokenVault: true,
+      securityObservability: true,
     });
   });
+
+  // MCP 2026-07-28 Endpoint (Mounted outside Bearer auth with strict 30 req/min rate limit)
+  const mcpRouter = createMcpServerRouter();
+  app.use('/mcp', mcpRateLimiter, mcpRouter);
+  app.use('/api/v1/mcp', mcpRateLimiter, mcpRouter);
+
+  // Protected Routes under Auth & Rate Limiting Middleware
+  app.use('/api/v1', standardRateLimiter, authMiddleware);
 
   // Modular Routers
   app.use('/api/v1/proof/reuse', proofReuseRouter);
