@@ -1,6 +1,13 @@
-import os
+"""Archived Test Suites 104-108 Generator Script (Phase 11.0.1).
 
-suite104 = """/**
+Historical utility used to bootstrap test fixtures for the status bar,
+advanced editing snippets, file manager, registries, and Diataxis documentation.
+Archived in Phase 14 in compliance with PEP 257.
+"""
+
+from pathlib import Path
+
+SUITE104 = """/**
  * Test Suite 104: Status Bar Zone Segregation & Telemetry (Sprint 11.0.1)
  */
 
@@ -357,19 +364,20 @@ export async function runSuite108(): Promise<void> {
 }
 """
 
-with open('tests/phase-11.0.1/suite-104-status-bar.test.ts', 'w') as f:
-    f.write(suite104)
 
-with open('tests/phase-11.0.1/suite-105-editing.test.ts', 'w') as f:
-    f.write(suite105)
+def write_all_suites() -> None:
+    """Write out the archived test suite fixtures if invoked directly."""
+    target_dir = Path("tests/phase-11.0.1")
+    if not target_dir.exists():
+        return
 
-with open('tests/phase-11.0.1/suite-106-file-manager.test.ts', 'w') as f:
-    f.write(suite106)
+    (target_dir / "suite-104-status-bar.test.ts").write_text(SUITE104, encoding="utf-8")
+    (target_dir / "suite-105-editing.test.ts").write_text(suite105, encoding="utf-8")
+    (target_dir / "suite-106-file-manager.test.ts").write_text(suite106, encoding="utf-8")
+    (target_dir / "suite-107-registries.test.ts").write_text(suite107, encoding="utf-8")
+    (target_dir / "suite-108-docs.test.ts").write_text(suite108, encoding="utf-8")
+    print("Successfully written Suites 104, 105, 106, 107, 108!")
 
-with open('tests/phase-11.0.1/suite-107-registries.test.ts', 'w') as f:
-    f.write(suite107)
 
-with open('tests/phase-11.0.1/suite-108-docs.test.ts', 'w') as f:
-    f.write(suite108)
-
-print("Successfully written Suites 104, 105, 106, 107, 108!")
+if __name__ == "__main__":
+    write_all_suites()

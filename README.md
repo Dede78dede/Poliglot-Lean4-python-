@@ -62,10 +62,14 @@ $$\text{verified} \iff (\text{exitCode} = 0) \land \text{contains\_proof\_obliga
 
 ### Dettaglio dei Termini:
 1. **`exitCode === 0`**: Il processo di compilazione Lake/Lean è terminato con successo.
-2. **`contains_proof_obligation`**: Il codice deve contenere almeno una dichiarazione di prova (`theorem`, `lemma` o `example`). Direttive puramente esplorative (`#check`, `#eval`, `#print`) restituiscono tassativamente `verified: false`.
+2. **`contains_proof_obligation`**: Il codice deve contenere almeno una dichiarazione di prova formale (`theorem`, `lemma` o `example`). Direttive puramente esplorative (`#check`, `#eval`, `#print`) o definizioni non vincolate (`def foo : Nat := 42`) restituiscono tassativamente `verified: false`.
 3. **`¬hasSorry`**: Assenza di assiomi provvisori o dimostrazioni incomplete (`sorry`, `declaration uses 'sorry'`).
 4. **`¬hasError`**: Assenza di messaggi diagnostici con severità `error` o `fail`.
 5. **`¬simulated`**: Nessun fallback sintattico o simulatore può attestare una verifica formale (`simulated: true` implica sempre `verified: false`).
+
+### Architettura Modulare a Due Livelli (ADR 014):
+- **Canonical Evaluator (Autorità Unica)**: `server/src/services/verification-formula.ts` — è l'unica autorità certificante abilitata a rilasciare `verified: true` sulla base dell'output del kernel Lean.
+- **Pre-Flight Syntax Guard (Non-Certificante)**: `src/services/verification/preflight-syntax-guard.ts` — modulo client-side per screening rapido di igiene sintattica ($T_{\text{code}} \land T_{\text{sorry}} \land T_{\text{syntax}} \land T_{\text{toolchain}}$); non emette mai `verified: true` e delega la certificazione finale al modulo server.
 
 ---
 

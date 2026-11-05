@@ -110,8 +110,8 @@ export function evaluateFormalVerification(input: VerificationCheckInput): Verif
   const hasError =
     exitCode !== 0 ||
     Boolean(hasErrorSeverity) ||
-    /\berror:\b/i.test(stderr) ||
-    /\berror:\b/i.test(stdout);
+    /\berror:/i.test(stderr) ||
+    /\berror:/i.test(stdout);
 
   if (!hasProofObligation) {
     return {

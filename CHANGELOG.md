@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ## [Unreleased]
 
+### Fixed
+- **Python 3.11 Runtime Parity (PEP 484/585/604)**: Refactored `server/src/services/leancert/leancert_wrapper.py` from PEP 695 syntax (`type MethodKind` and generic function `[T]`) to `TypeAlias` and `TypeVar("T", int, float)`, ensuring clean execution across Python 3.10 and 3.11 without syntax errors.
+- **Frontend Directive Remediation**: Removed non-standard module-level `"use memo"` directive in `src/App.tsx`, eliminating bundler compilation warnings in Rolldown / Vite.
+- **Legacy Script Archival & PEP 257**: Moved temporary generator scripts `fix_suite103.py` and `generate_suites.py` to `scripts/archive/`, enriched with PEP 257 docstrings and `if __name__ == "__main__":` entry points; updated `pyproject.toml` tool overrides to exclude archive paths from strict audits.
+- **WAI-ARIA Security Feedback**: Added `src/shared/ui/security-alert.tsx` and updated `error-boundary.tsx` to enforce `role="alert"` and `aria-live="assertive"` for instantaneous screen-reader announcement of rate-limiting and authorization events.
+
 ### Added
-- Phase 14 preparation: Proof-state snapshotting design and upstream Lean binary integration triggers.
+- **Autonomous Python Contract Runner**: Created `scripts/verify-python-contracts.py` using Python's standard library `unittest` (with fallback-safe Pydantic execution), validating AST compilation and contract parity without external pytest dependencies.
+- **Suite 165 (Python Runtime Parity & Phase 14 Hardening)**: 5 sub-tests verifying Python 3.11 subprocess execution, unittest runner execution, archive script PEP 257 structure, directive cleanliness, and accessible ARIA live alert attributes.
+- **Cumulative Test Verification**: Expanded cumulative test suite to 165 suites / 260 sub-tests at 100% pass rate.
 
 ## [2.1.0] - 2026-11-03
 

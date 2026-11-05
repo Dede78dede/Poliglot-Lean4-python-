@@ -1,45 +1,51 @@
 {
-  "timestamp": "2026-11-03T11:59:41.672Z",
-  "phase": "13.9",
+  "timestamp": "2026-11-04T17:28:05.196Z",
+  "phase": "13.9.1",
+  "methodology": {
+    "scope": "dist/assets",
+    "compression": "zlib.gzipSync (default)",
+    "mainEntryPattern": "index-*.js",
+    "excludesServer": true
+  },
   "budgetLimits": {
     "mainBundleGzipMaxKb": 180,
     "totalJsGzipMaxKb": 260
   },
   "measured": {
-    "mainEntryGzipKb": 154.32,
-    "totalJsGzipKb": 216.08,
-    "totalJsRawKb": 737.04,
-    "cssGzipKb": 15.76,
+    "mainEntryGzipKb": 150.01,
+    "totalJsGzipKb": 243.12,
+    "totalJsRawKb": 1199.58,
+    "cssGzipKb": 16.95,
     "htmlGzipKb": 0.73
   },
   "files": {
-    "index-DBZMOaGx.js": {
-      "rawBytes": 550926,
-      "gzipBytes": 158028,
-      "gzipKb": 154.32
+    "index-6PimINjn.js": {
+      "rawBytes": 785716,
+      "gzipBytes": 153613,
+      "gzipKb": 150.01
     },
-    "index-dEREQ5cL.css": {
-      "rawBytes": 105814,
-      "gzipBytes": 16137,
-      "gzipKb": 15.76
+    "index-CQKDbGgE.css": {
+      "rawBytes": 134435,
+      "gzipBytes": 17355,
+      "gzipKb": 16.95
     },
-    "react-aria-vendor-Do_oFdx0.js": {
-      "rawBytes": 203216,
-      "gzipBytes": 62865,
-      "gzipKb": 61.39
+    "react-aria-vendor-fFkBbaN4.js": {
+      "rawBytes": 441472,
+      "gzipBytes": 94760,
+      "gzipKb": 92.54
     },
-    "rolldown-runtime-CbXtAM7H.js": {
-      "rawBytes": 589,
-      "gzipBytes": 368,
-      "gzipKb": 0.36
+    "rolldown-runtime-BPOCksWG.js": {
+      "rawBytes": 1180,
+      "gzipBytes": 578,
+      "gzipKb": 0.56
     },
     "index.html": {
       "rawBytes": 1576,
-      "gzipBytes": 752,
+      "gzipBytes": 751,
       "gzipKb": 0.73
     }
   },
   "status": "PASS",
-  "marginMainKb": 25.68,
-  "marginTotalKb": 43.92
+  "marginMainKb": 29.99,
+  "marginTotalKb": 16.88
 }

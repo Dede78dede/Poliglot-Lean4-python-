@@ -1,4 +1,13 @@
-suite103_code = '''/**
+"""Archived Test Suite 103 Generator Script (Phase 11.0.1).
+
+Historical utility used during Phase 11.0.1 migration to generate
+the TypeScript test fixture for EditorTabsStore and symbol extraction.
+Archived in Phase 14 in compliance with PEP 257.
+"""
+
+from pathlib import Path
+
+SUITE103_CODE = '''/**
  * Test Suite 103: Tabs, Breadcrumbs, Diff Viewer & Outline (Sprint 11.0.1)
  */
 
@@ -118,6 +127,14 @@ inductive Color where
 }
 '''
 
-with open('tests/phase-11.0.1/suite-103-tabs-diff-outline.test.ts', 'w') as f:
-    f.write(suite103_code)
-print("Fixed suite 103 successfully")
+
+def write_suite() -> None:
+    """Write out the archived test suite fixture if invoked directly."""
+    target_path = Path("tests/phase-11.0.1/suite-103-tabs-diff-outline.test.ts")
+    if target_path.parent.exists():
+        target_path.write_text(SUITE103_CODE, encoding="utf-8")
+        print("Fixed suite 103 successfully")
+
+
+if __name__ == "__main__":
+    write_suite()

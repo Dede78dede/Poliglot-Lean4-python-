@@ -15,7 +15,10 @@
  */
 
 import assert from 'node:assert/strict';
-import { evaluateFiveTermFormula } from '../../src/services/verification/verification-formula';
+import {
+  evaluatePreflightSyntax,
+  certifyWithKernel,
+} from '../../src/services/verification/preflight-syntax-guard';
 import { NotebookSessionManager } from '../../src/services/notebook/session-manager';
 import { validateZipEntries } from '../../src/services/zip-validator';
 import {
@@ -31,45 +34,45 @@ import { StructuralDiffEngine } from '../../src/services/diff/structural-diff';
 export async function runSuite159(): Promise<void> {
   console.log('Running Suite 159: Critical Module Coverage (10 sub-tests)...');
 
-  // 159.1: 5-term verification formula - Happy path
-  const verifiedProof = evaluateFiveTermFormula({
-    code: 'theorem add_comm (n m : Nat) : n + m = m + n := by omega',
-    toolchain: 'v4.34.0',
-    openGoalsCount: 0,
+  // 159.1: Pre-flight syntax guard and canonical certification
+  const code = 'theorem add_comm (n m : Nat) : n + m = m + n := by omega';
+  const preflightProof = evaluatePreflightSyntax({
+    code,
+    toolchainHint: 'v4.34.0',
+  });
+  assert.equal(preflightProof.rejectedTerms.length, 0);
+  assert.equal(preflightProof.codeValid, true);
+  assert.equal(preflightProof.sorryFree, true);
+  assert.equal(preflightProof.syntaxValid, true);
+  assert.equal(preflightProof.toolchainHint, true);
+
+  const certifiedProof = certifyWithKernel({
+    codeOrFiles: code,
+    stdout: '',
+    stderr: '',
     exitCode: 0,
     simulated: false,
   });
-  assert.equal(verifiedProof.verified, true);
-  assert.equal(verifiedProof.rejectedTerms.length, 0);
-  assert.equal(verifiedProof.terms.code, true);
-  assert.equal(verifiedProof.terms.sorryFree, true);
-  assert.equal(verifiedProof.terms.syntaxValid, true);
-  assert.equal(verifiedProof.terms.toolchainAligned, true);
-  assert.equal(verifiedProof.terms.goalsClosed, true);
-  console.log('  ✓ 159.1 verification-formula: all 5 terms pass on valid Lean 4 theorem');
+  assert.equal(certifiedProof.verified, true);
+  console.log('  ✓ 159.1 preflight-syntax-guard and canonical kernel evaluator certify clean theorem');
 
-  // 159.2: sorry detection rejects proof
-  const sorryProof = evaluateFiveTermFormula({
+  // 159.2: sorry detection rejects proof in preflight
+  const sorryProof = evaluatePreflightSyntax({
     code: 'theorem add_comm (n m : Nat) : n + m = m + n := by sorry',
-    toolchain: 'v4.34.0',
-    openGoalsCount: 0,
-    exitCode: 0,
+    toolchainHint: 'v4.34.0',
   });
-  assert.equal(sorryProof.verified, false);
   assert.ok(sorryProof.rejectedTerms.includes('T_sorry'));
-  assert.equal(sorryProof.terms.sorryFree, false);
-  console.log('  ✓ 159.2 verification-formula: sorry rejected by T_sorry');
+  assert.equal(sorryProof.sorryFree, false);
+  console.log('  ✓ 159.2 preflight-syntax-guard: sorry detected and rejected by T_sorry');
 
   // 159.3: toolchain mismatch rejects proof
-  const mismatchToolchain = evaluateFiveTermFormula({
+  const mismatchToolchain = evaluatePreflightSyntax({
     code: 'theorem add_comm (n m : Nat) : n + m = m + n := by omega',
-    toolchain: 'v4.12.0', // Unsupported legacy toolchain
-    openGoalsCount: 0,
-    exitCode: 0,
+    toolchainHint: 'v4.12.0', // Unsupported legacy toolchain
   });
-  assert.equal(mismatchToolchain.verified, false);
+  assert.equal(mismatchToolchain.toolchainHint, false);
   assert.ok(mismatchToolchain.rejectedTerms.includes('T_toolchain'));
-  console.log('  ✓ 159.3 verification-formula: unaligned toolchain rejected by T_toolchain');
+  console.log('  ✓ 159.3 preflight-syntax-guard: unaligned toolchain rejected by T_toolchain');
 
   // 159.4: session-manager quota limit
   const mgr = new NotebookSessionManager({ maxSessionsPerUser: 2, maxTotalSessions: 10 });

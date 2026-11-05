@@ -7,6 +7,10 @@
  * - Safe termination and variable disposal
  */
 
+import { NOTEBOOK_POLICY } from '../session/policy';
+
+export { NOTEBOOK_POLICY };
+
 export interface NotebookSession {
   readonly id: string;
   readonly userId: string;
@@ -30,9 +34,9 @@ export class NotebookSessionManager {
   private readonly sessionIdleTtlMs: number;
 
   constructor(options?: SessionManagerOptions) {
-    this.maxSessionsPerUser = options?.maxSessionsPerUser ?? 5;
-    this.maxTotalSessions = options?.maxTotalSessions ?? 20;
-    this.sessionIdleTtlMs = options?.sessionIdleTtlMs ?? 30 * 60 * 1000; // 30 minutes
+    this.maxSessionsPerUser = options?.maxSessionsPerUser ?? NOTEBOOK_POLICY.maxSessionsPerUser;
+    this.maxTotalSessions = options?.maxTotalSessions ?? NOTEBOOK_POLICY.maxSessionsTotal;
+    this.sessionIdleTtlMs = options?.sessionIdleTtlMs ?? NOTEBOOK_POLICY.idleTtlMs;
   }
 
   public createSession(userId: string, metadata?: Record<string, unknown>): NotebookSession {

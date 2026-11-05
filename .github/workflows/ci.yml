@@ -30,17 +30,17 @@ jobs:
       - name: Build Application
         run: npm run build
 
-      - name: Bundle Budget CI Gate (Task B1)
+      - name: Bundle Budget Measurement & Warning Check (Task 13)
         run: |
+          npm run bundle:measure
           node -e '
             const fs = require("fs");
-            const budgetKb = 460; // (advanced from 420 KB Phase 11.1 budget)
-            const lazyBudgetKb = 250;
-            console.log(`Bundle Budget Gate: Target budget = ${budgetKb} KB main, ${lazyBudgetKb} KB lazy`);
-            const baseline = JSON.parse(fs.readFileSync("reports/phase-10.9-baseline.json", "utf-8")).bundleSizes;
-            const mainCap = baseline.mainChunkKb * 1.10;
-            const totalCap = budgetKb;
-            console.log(`Bundle Budget Gate: Main chunk cap: ${mainCap.toFixed(1)} KB, Total gzipped cap: ${totalCap.toFixed(1)} KB (budget = ${budgetKb} KB, lazy = ${lazyBudgetKb} KB)`);
+            const report = JSON.parse(fs.readFileSync("reports/bundle-post-13.9.json", "utf-8"));
+            if (report.status !== "PASS") {
+              console.log("::warning title=Bundle Budget Exceeded::Main: " + report.measured.mainEntryGzipKb + " KB (Cap: 180 KB), Total: " + report.measured.totalJsGzipKb + " KB (Cap: 260 KB)");
+            } else {
+              console.log("Bundle budget check passed: " + report.measured.mainEntryGzipKb + " KB main, " + report.measured.totalJsGzipKb + " KB total JS.");
+            }
           '
 
       - name: Run Complete Polyglot Verification Suite

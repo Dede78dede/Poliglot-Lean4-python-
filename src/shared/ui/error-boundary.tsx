@@ -36,6 +36,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <div
           role="alert"
+          aria-live="assertive"
           className="p-6 m-4 rounded-lg border border-rose-800 bg-rose-950/30 text-rose-200 flex flex-col gap-3"
         >
           <div className="flex items-center gap-2">

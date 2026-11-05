@@ -5,8 +5,6 @@
  * direct ref integration, and feature-gated compilation directives.
  */
 
-"use memo";
-
 import React, { useState } from 'react';
 import { ErrorBoundary } from './shared/ui/error-boundary';
 import { Button } from './shared/ui/button';
@@ -38,6 +36,7 @@ const SAMPLE_PROOF_ITEMS: ProofItem[] = Array.from({ length: 150 }, (_, i) => ({
 }));
 
 export function App(): React.JSX.Element {
+  "use memo";
   const [activeView, setActiveView] = useState<ActiveView>(() => {
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/notebook')) {
       return 'notebook';

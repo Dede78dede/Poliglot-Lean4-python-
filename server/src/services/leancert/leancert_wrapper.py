@@ -4,7 +4,7 @@ Provides certified numerical verification interfaces utilizing the leancert
 library, emitting certified interval bounds and Taylor model approximations
 for machine-checked Lean 4 verification.
 
-Conforms to PEP 8, PEP 257, PEP 484, PEP 585, PEP 604, and PEP 695.
+Conforms to PEP 8, PEP 257, PEP 484, PEP 585, and PEP 604.
 """
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
-from typing import Literal
+from typing import Literal, TypeAlias, TypeVar
 
 
-type MethodKind = Literal["interval", "taylor-model", "solver"]
+MethodKind: TypeAlias = Literal["interval", "taylor-model", "solver"]
 
 
 class NumericalCertificate:
@@ -64,7 +64,10 @@ class NumericalCertificate:
         }
 
 
-def verify_scalar_bound[T: (int, float)](
+T = TypeVar("T", int, float)
+
+
+def verify_scalar_bound(
     val: T,
     lower_bound: T,
     upper_bound: T,

@@ -1,13 +1,16 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { SESSION_POLICY } from '../../../src/services/session/policy';
+
+export { SESSION_POLICY };
 
 export const SESSION_CONFIG = Object.freeze({
   ID_FORMAT: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-  MAX_SESSIONS: 1_000,
-  SESSION_QUOTA_BYTES: 500 * 1024 * 1024, // 500 MB per session
-  TOTAL_QUOTA_BYTES: 10 * 1024 * 1024 * 1024, // 10 GB aggregate storage limit across all sessions (O1)
-  TTL_HOURS: 72,                          // 3 days
-  CLEANUP_INTERVAL_MS: 60 * 60 * 1000,   // 1 hour
+  MAX_SESSIONS: SESSION_POLICY.maxSessions,
+  SESSION_QUOTA_BYTES: SESSION_POLICY.perSessionBytes,
+  TOTAL_QUOTA_BYTES: SESSION_POLICY.aggregateBytes,
+  TTL_HOURS: SESSION_POLICY.ttlHours,
+  CLEANUP_INTERVAL_MS: SESSION_POLICY.cleanupIntervalMs,
 });
 
 export interface SessionMetadata {
