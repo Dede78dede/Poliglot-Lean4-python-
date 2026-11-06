@@ -1,19 +1,22 @@
 /// <reference lib="webworker" />
 
 /**
- * Notebook Worker (Phase 13, Sprint 13.3, Task NB1)
+ * Notebook Worker (Phase 13, Sprint 13.3, Task NB1, Hardened in Sprint 3)
  *
  * Dedicated Pyodide Worker maintaining persistent in-memory global state across cell executions.
  *
  * Epistemic & Operational Rules:
  * - Completely separate from the one-shot Python worker (which enforces strict terminate-on-timeout).
  * - Persistent globals: `x = 42` in cell 1 is visible in cell 2.
+ * - Request-ID correlation on all inbound and outbound messages.
+ * - Concurrency guard: Rejects concurrent duplicate execution for the same cellId.
  * - On cell timeout: returns status: 'timeout' without restarting kernel or dropping variables.
  * - On explicit RESTART_KERNEL: clears variables and signals `variablesLost: true`.
  */
 
 export interface NotebookCellRequest {
   readonly type: 'EXECUTE_CELL';
+  readonly requestId?: string;
   readonly payload: {
     readonly cellId: string;
     readonly code: string;
@@ -23,10 +26,12 @@ export interface NotebookCellRequest {
 
 export interface NotebookRestartRequest {
   readonly type: 'RESTART_KERNEL';
+  readonly requestId?: string;
 }
 
 export interface NotebookStateRequest {
   readonly type: 'GET_STATE';
+  readonly requestId?: string;
 }
 
 export type NotebookRequest =
@@ -37,6 +42,7 @@ export type NotebookRequest =
 export interface NotebookCellResponse {
   readonly type: 'CELL_RESULT';
   readonly cellId: string;
+  readonly requestId?: string;
   readonly status: 'success' | 'error' | 'timeout';
   readonly stdout: string;
   readonly stderr: string;
@@ -46,12 +52,14 @@ export interface NotebookCellResponse {
 
 export interface NotebookRestartResponse {
   readonly type: 'KERNEL_RESTARTED';
+  readonly requestId?: string;
   readonly variablesLost: true;
   readonly timestamp: string;
 }
 
 export interface NotebookStateResponse {
   readonly type: 'KERNEL_STATE';
+  readonly requestId?: string;
   readonly cellOutputs: Record<string, string>;
   readonly variableNames: readonly string[];
 }
@@ -68,31 +76,51 @@ export type NotebookResponse =
 export class PersistentNotebookKernel {
   private readonly globals: Map<string, unknown> = new Map();
   private readonly cellOutputs: Record<string, string> = {};
+  private readonly activeCellExecutions: Set<string> = new Set();
 
   public async executeCell(
     cellId: string,
     code: string,
-    timeoutMs = 10_000
+    timeoutMs = 10_000,
+    requestId?: string,
   ): Promise<NotebookCellResponse> {
     const startTime = Date.now();
-    let stdout = '';
-    let stderr = '';
 
-    // Simulated timeout enforcement
-    if (code.includes('while True') || code.includes('time.sleep(100)')) {
-      const durationMs = Math.min(timeoutMs, 100);
+    // Concurrency guard: Reject concurrent duplicate execution ID
+    if (this.activeCellExecutions.has(cellId)) {
       return {
         type: 'CELL_RESULT',
         cellId,
-        status: 'timeout',
+        requestId,
+        status: 'error',
         stdout: '',
-        stderr: `Cell exceeded timeout limit of ${timeoutMs}ms.`,
-        durationMs,
-        message: 'Cell exceeded timeout. Kernel NOT restarted; variables preserved.',
+        stderr: `Concurrent duplicate execution rejected for cellId "${cellId}". Wait for previous execution to complete.`,
+        durationMs: 0,
+        message: 'Concurrent execution rejected.',
       };
     }
 
+    this.activeCellExecutions.add(cellId);
+
     try {
+      let stdout = '';
+      let stderr = '';
+
+      // Simulated timeout enforcement
+      if (code.includes('while True') || code.includes('time.sleep(100)')) {
+        const durationMs = Math.min(timeoutMs, 100);
+        return {
+          type: 'CELL_RESULT',
+          cellId,
+          requestId,
+          status: 'timeout',
+          stdout: '',
+          stderr: `Cell exceeded timeout limit of ${timeoutMs}ms.`,
+          durationMs,
+          message: 'Cell exceeded timeout. Kernel NOT restarted; variables preserved.',
+        };
+      }
+
       // Evaluate Python-like assignment and statements in persistent globals
       const lines = code.split('\n');
       for (const line of lines) {
@@ -154,6 +182,7 @@ export class PersistentNotebookKernel {
       return {
         type: 'CELL_RESULT',
         cellId,
+        requestId,
         status: 'success',
         stdout,
         stderr,
@@ -165,30 +194,40 @@ export class PersistentNotebookKernel {
       return {
         type: 'CELL_RESULT',
         cellId,
+        requestId,
         status: 'error',
-        stdout,
+        stdout: '',
         stderr: errMsg,
         durationMs,
         message: errMsg,
       };
+    } finally {
+      this.activeCellExecutions.delete(cellId);
     }
   }
 
-  public restartKernel(): NotebookRestartResponse {
+  public restartKernel(requestId?: string): NotebookRestartResponse {
     this.globals.clear();
+    this.activeCellExecutions.clear();
     return {
       type: 'KERNEL_RESTARTED',
+      requestId,
       variablesLost: true,
       timestamp: new Date().toISOString(),
     };
   }
 
-  public getState(): NotebookStateResponse {
+  public getState(requestId?: string): NotebookStateResponse {
     return {
       type: 'KERNEL_STATE',
+      requestId,
       cellOutputs: { ...this.cellOutputs },
       variableNames: Object.freeze(Array.from(this.globals.keys())),
     };
+  }
+
+  public isCellRunning(cellId: string): boolean {
+    return this.activeCellExecutions.has(cellId);
   }
 }
 
@@ -203,14 +242,15 @@ if (typeof self !== 'undefined' && typeof self.addEventListener === 'function') 
       const res = await notebookKernel.executeCell(
         req.payload.cellId,
         req.payload.code,
-        req.payload.timeoutMs
+        req.payload.timeoutMs,
+        req.requestId,
       );
       self.postMessage(res);
     } else if (req.type === 'RESTART_KERNEL') {
-      const res = notebookKernel.restartKernel();
+      const res = notebookKernel.restartKernel(req.requestId);
       self.postMessage(res);
     } else if (req.type === 'GET_STATE') {
-      const res = notebookKernel.getState();
+      const res = notebookKernel.getState(req.requestId);
       self.postMessage(res);
     }
   });

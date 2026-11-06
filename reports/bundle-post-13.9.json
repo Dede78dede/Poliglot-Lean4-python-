@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-04T17:28:05.196Z",
+  "timestamp": "2026-11-05T13:49:16.885Z",
   "phase": "13.9.1",
   "methodology": {
     "scope": "dist/assets",
@@ -12,40 +12,75 @@
     "totalJsGzipMaxKb": 260
   },
   "measured": {
-    "mainEntryGzipKb": 150.01,
-    "totalJsGzipKb": 243.12,
-    "totalJsRawKb": 1199.58,
-    "cssGzipKb": 16.95,
+    "mainEntryGzipKb": 172.24,
+    "totalJsGzipKb": 274.63,
+    "totalJsRawKb": 921.87,
+    "cssGzipKb": 16,
     "htmlGzipKb": 0.73
   },
   "files": {
-    "index-6PimINjn.js": {
-      "rawBytes": 785716,
-      "gzipBytes": 153613,
-      "gzipKb": 150.01
+    "CommandPalette-D-zO5bVW.js": {
+      "rawBytes": 61813,
+      "gzipBytes": 20278,
+      "gzipKb": 19.8
     },
-    "index-CQKDbGgE.css": {
-      "rawBytes": 134435,
-      "gzipBytes": 17355,
-      "gzipKb": 16.95
+    "NotebookPanel-ZsLV9uJd.js": {
+      "rawBytes": 14343,
+      "gzipBytes": 4185,
+      "gzipKb": 4.09
     },
-    "react-aria-vendor-fFkBbaN4.js": {
-      "rawBytes": 441472,
-      "gzipBytes": 94760,
-      "gzipKb": 92.54
+    "ProposalLoopPanel-DNvIaT7v.js": {
+      "rawBytes": 7345,
+      "gzipBytes": 1982,
+      "gzipKb": 1.94
     },
-    "rolldown-runtime-BPOCksWG.js": {
-      "rawBytes": 1180,
-      "gzipBytes": 578,
-      "gzipKb": 0.56
+    "RecommendationsPanel-UEvpVGh-.js": {
+      "rawBytes": 36541,
+      "gzipBytes": 9186,
+      "gzipKb": 8.97
+    },
+    "TranslationPanel-WqOIwECN.js": {
+      "rawBytes": 9880,
+      "gzipBytes": 2144,
+      "gzipKb": 2.09
+    },
+    "clock-CfOD4nu7.js": {
+      "rawBytes": 158,
+      "gzipBytes": 159,
+      "gzipKb": 0.16
+    },
+    "index-C4GcK4en.js": {
+      "rawBytes": 595496,
+      "gzipBytes": 176378,
+      "gzipKb": 172.24
+    },
+    "index-CAuupM18.css": {
+      "rawBytes": 107419,
+      "gzipBytes": 16384,
+      "gzipKb": 16
+    },
+    "react-aria-vendor-Do_oFdx0.js": {
+      "rawBytes": 203216,
+      "gzipBytes": 62865,
+      "gzipKb": 61.39
+    },
+    "rolldown-runtime-CbXtAM7H.js": {
+      "rawBytes": 589,
+      "gzipBytes": 368,
+      "gzipKb": 0.36
+    },
+    "showcase-HzJ3K3Xv.js": {
+      "rawBytes": 14617,
+      "gzipBytes": 3679,
+      "gzipKb": 3.59
     },
     "index.html": {
       "rawBytes": 1576,
-      "gzipBytes": 751,
+      "gzipBytes": 748,
       "gzipKb": 0.73
     }
   },
-  "status": "PASS",
-  "marginMainKb": 29.99,
-  "marginTotalKb": 16.88
+  "status": "FAIL",
+  "marginMainKb": 7.76,
+  "marginTotalKb": -14.63
 }

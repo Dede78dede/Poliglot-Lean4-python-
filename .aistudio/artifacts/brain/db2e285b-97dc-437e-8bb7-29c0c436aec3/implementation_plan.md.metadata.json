@@ -1,6 +1,6 @@
 {
-  "summary": "Comprehensive implementation plan for Phase 14 professional remediation and architectural consolidation of Polyglot Code Studio. Covers Python 3.11 PEP compliance, TypeAlias/TypeVar migration, autonomous unittest contract verification runner, legacy script archiving, Rolldown directive cleanup, WAI-ARIA live region security alerts, and feature fallback hardening.",
-  "updatedAt": "2026-11-04T17:21:19.459324006Z",
+  "summary": "Revised English Master Implementation Plan for Polyglot Code Studio. Incorporates all 10 directives from Implementation Plan Review: preserves confirmed full modular IDE scope, dual Lean pathways, and trusted Phase 14 baseline; corrects router signatures and worker paths; formalizes version-pinned Kimina /api/check adapter and isolated Lake runner; details hybrid comparability predicate and consensus statuses (confirmed_valid, confirmed_invalid, unconfirmed); implements confirmed axiom allowlist (propext, Classical.choice, Quot.sound) with transitive audit; reorders the 5 sprints so real runner and contracts precede positive UI verification; and establishes behavioral, integration, and release gates (S1-S5).",
+  "updatedAt": "2026-11-05T02:50:09.846852496Z",
   "requestFeedback": true,
   "userFacing": true
 }

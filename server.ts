@@ -17,6 +17,12 @@ import { configRouter } from './server/src/routes/config';
 import { searchRouter } from './server/src/routes/search';
 import { diffRouter } from './server/src/routes/diff';
 import { createMcpServerRouter } from './server/src/routes/mcp-server-router';
+import { createLeanRouter } from './server/src/routes/lean';
+import { createProjectsRouter } from './server/src/routes/projects';
+import { KiminaClientProxy } from './server/src/services/kimina-client-proxy';
+import { resolveKiminaConfig } from './server/src/config/kimina-config';
+import { LeanProjectRunner } from './server/src/services/lean-project-runner';
+import { resolveLeanRunnerConfig } from './server/src/config/lean-runner-config';
 import { authMiddleware } from './src/middleware/auth';
 import { standardRateLimiter, mcpRateLimiter } from './src/middleware/rate-limit';
 import { automationMetrics } from './src/services/proof/metrics/automation-metrics';
@@ -29,27 +35,55 @@ async function startServer(): Promise<void> {
 
   app.use(express.json());
 
-  // CORS Origin Enforcement
+  // CORS Origin Middleware
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    const allowedOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()) : null;
-    if (allowedOrigins && origin) {
-      if (!allowedOrigins.includes(origin)) {
-        return res.status(403).json({ error: 'CORS policy violation: Origin not allowed.' });
-      }
+    if (origin) {
       res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', '*');
     }
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Polyglot-Test-Secret, Mcp-Method, Mcp-Name, X-Correlation-ID');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Authorization, X-Polyglot-Test-Secret, Mcp-Method, Mcp-Name, X-Correlation-ID'
+    );
     if (req.method === 'OPTIONS') return res.sendStatus(204);
     next();
   });
 
-  // Health and readiness endpoints (Public, Unauthenticated)
+  const kiminaConfig = resolveKiminaConfig();
+  const kiminaProxy = new KiminaClientProxy(kiminaConfig);
+  const leanRunnerConfig = resolveLeanRunnerConfig();
+  const leanRunner = new LeanProjectRunner(leanRunnerConfig);
+
+  // Health, liveness, and readiness endpoints (Public, Unauthenticated)
+  app.get('/healthz', (_req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/readyz', (_req, res) => {
+    const isReady = kiminaConfig.mode !== 'real' || Boolean(kiminaConfig.baseUrl);
+    if (isReady) {
+      res.status(200).json({
+        status: 'ready',
+        timestamp: new Date().toISOString(),
+        kimina: { mode: kiminaConfig.mode },
+        runner: { mode: leanRunnerConfig.mode },
+      });
+    } else {
+      res.status(503).json({
+        status: 'not_ready',
+        error: 'Kimina or Lake runner service unconfigured in real mode',
+      });
+    }
+  });
+
   app.get('/api/health', (_req, res) => {
     res.json({
       status: 'healthy',
-      phase: '13.9',
+      phase: '14.0',
       compiler: 'annotation',
       virtualization: 'react-window-v2',
       wcag: '2.2-AA',
@@ -64,6 +98,8 @@ async function startServer(): Promise<void> {
       structuralDiff: true,
       tokenVault: true,
       securityObservability: true,
+      kiminaMounted: true,
+      projectsMounted: true,
     });
   });
 
@@ -76,6 +112,9 @@ async function startServer(): Promise<void> {
   app.use('/api/v1', standardRateLimiter, authMiddleware);
 
   // Modular Routers
+  app.use('/api/v1/lean', createLeanRouter(kiminaProxy));
+  app.use('/api/v1/projects', createProjectsRouter(leanRunner));
+
   app.use('/api/v1/proof/reuse', proofReuseRouter);
   app.use('/api/v1/proof/proposal-loop', proposalLoopRouter);
   app.use('/api/v1/translation', translationRouter);

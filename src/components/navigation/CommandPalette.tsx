@@ -28,6 +28,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
   // Subscribe to context updates so visible commands are re-evaluated
   const contextSnapshot = useSyncExternalStore(
     contextKeyService.subscribe,
+    contextKeyService.getSnapshot,
     contextKeyService.getSnapshot
   );
 

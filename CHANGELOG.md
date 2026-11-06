@@ -5,18 +5,25 @@ All notable changes to Polyglot Code Studio will be documented in this file.
 The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Fixed
-- **Python 3.11 Runtime Parity (PEP 484/585/604)**: Refactored `server/src/services/leancert/leancert_wrapper.py` from PEP 695 syntax (`type MethodKind` and generic function `[T]`) to `TypeAlias` and `TypeVar("T", int, float)`, ensuring clean execution across Python 3.10 and 3.11 without syntax errors.
-- **Frontend Directive Remediation**: Removed non-standard module-level `"use memo"` directive in `src/App.tsx`, eliminating bundler compilation warnings in Rolldown / Vite.
-- **Legacy Script Archival & PEP 257**: Moved temporary generator scripts `fix_suite103.py` and `generate_suites.py` to `scripts/archive/`, enriched with PEP 257 docstrings and `if __name__ == "__main__":` entry points; updated `pyproject.toml` tool overrides to exclude archive paths from strict audits.
-- **WAI-ARIA Security Feedback**: Added `src/shared/ui/security-alert.tsx` and updated `error-boundary.tsx` to enforce `role="alert"` and `aria-live="assertive"` for instantaneous screen-reader announcement of rate-limiting and authorization events.
+## [2.2.0] - 2026-11-05
 
 ### Added
-- **Autonomous Python Contract Runner**: Created `scripts/verify-python-contracts.py` using Python's standard library `unittest` (with fallback-safe Pydantic execution), validating AST compilation and contract parity without external pytest dependencies.
-- **Suite 165 (Python Runtime Parity & Phase 14 Hardening)**: 5 sub-tests verifying Python 3.11 subprocess execution, unittest runner execution, archive script PEP 257 structure, directive cleanliness, and accessible ARIA live alert attributes.
-- **Cumulative Test Verification**: Expanded cumulative test suite to 165 suites / 260 sub-tests at 100% pass rate.
+- **Canonical Verification Protocol (`polyglot.verification.v1`) & ADR 015**: Codified immutable verification dispatch envelope, dual execution pathways (interactive Kimina snippet vs isolated Lake runner), and transitive foundational axiom allowlist (`propext`, `Classical.choice`, `Quot.sound`).
+- **Hybrid Consensus Adjudication Engine**: Implemented `server/src/services/verification/hybrid-adjudicator.ts` with strict comparability predicates (source digest, context digest, toolchain digest) and binding consensus decision matrix (`confirmed_valid`, `confirmed_invalid`, `unconfirmed`).
+- **Full Modular IDE Workspace Shell**: Assembled comprehensive workspace in `src/App.tsx` featuring `EditorTabsStore` with LIFO reopen stack (max 10 entries), split-view toggle, symbol `Breadcrumbs`, Ctrl+K `CommandPalette`, and live 3-zone `StatusBar` (`statusBarRegistry`).
+- **Test Suites 166-168**:
+  - Suite 166: Hybrid consensus adjudication, axiom policy violations, and process error types (7 sub-tests).
+  - Suite 167: Worker request-ID correlation, concurrency duplicate guards, and security boundaries (6 sub-tests).
+  - Suite 168: Modular IDE workspace shell, tab navigation, keyboard shortcuts, and WCAG 2.2 AA accessibility (6 sub-tests).
+- **Expanded Cumulative Test Suite**: 168 test suites / 279 sub-tests achieving 100% pass rate.
+
+### Fixed & Epistemic Hardening
+- **F-01 Remediation**: Eliminated client-side `setTimeout(..., 400)` mock verification and synthetic `verified: true` emissions in `src/App.tsx`; connected execution dispatch through `executionStore` and live backend APIs.
+- **F-02 Remediation**: Eliminated heuristic string pattern matching (`goal.includes`) and fake kernel seals (`DUPER_KERNEL_SEAL_...`, `AESOP_KERNEL_SEAL_...`, `PANTOGRAPH_KERNEL_SEAL_...`) in `proof-coordinator.ts`.
+- **F-04, F-07, F-11 Remediation**: Mounted canonical `/api/v1/lean` router (`KiminaClientProxy`) and `/api/v1/projects` router (`LeanProjectRunner`) on full-stack Express server; added `/healthz` and `/readyz` probes.
+- **Kimina Contract Adapter**: Pinned `/api/check` upstream contract with UUID correlation ID checking, structured diagnostics, and `sorries` extraction.
+- **Lake Runner Process Rigor**: Refactored `LeanProjectRunner` to require explicit integer process exit code, failing closed on missing exit codes.
+- **Production Bundle Optimization**: Dynamic `React.lazy()` code-splitting for non-primary panels keeping initial main entry chunk gzip at 172.24 KB (well under the 180.00 KB budget).
 
 ## [2.1.0] - 2026-11-03
 

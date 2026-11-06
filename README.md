@@ -214,3 +214,16 @@ npx tsx scripts/verify-all.ts
 - **Rate Limiting**: In-memory sliding-window limiter enforcing 100 requests/minute on standard endpoints and 30 requests/minute on `/mcp`. Exhaustion emits HTTP 429 with `Retry-After`.
 - **Security Observability**: All security denials (401, 403, 429, bypass attempts) are logged via `src/services/auth/security-events.ts` without printing raw secret keys or tokens.
 
+---
+
+## 12. Phase 14 Canonical Verification Protocol & Hybrid Consensus
+
+- **Canonical Verification Protocol (`polyglot.verification.v1`)**: Standardized JSON request and evidence envelope for formal verification dispatches (ADR 015).
+- **Dual Pathways**:
+  - Interactive snippet elaboration via authenticated Kimina server (`POST /api/v1/lean/execute` using `/api/check`).
+  - Hermetic project repository compilation via isolated Lake runner (`POST /api/v1/projects/lean/build`).
+- **Transitive Axiom Policy (`polyglot.axioms.standard.v1`)**: Enforces allowlist strictly restricted to `propext`, `Classical.choice`, and `Quot.sound`. Any custom axioms or `sorryAx` references forbid certification.
+- **Hybrid Consensus Adjudicator**: Evaluates comparability (source digest, context digest, toolchain digest) and arbitrates between sub-engine evidence. Yields `confirmed_valid` (`SEAL_KERNEL_VERIFIED_TIER5`), `confirmed_invalid`, or `unconfirmed`.
+- **Cumulative Verification Suite**: Suites 1 through 168 (279 cumulative sub-tests) achieve 100% pass rate.
+
+

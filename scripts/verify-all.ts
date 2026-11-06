@@ -47,9 +47,13 @@ import { runSuite162 } from '../tests/phase-14/suite-162-verification-formula-co
 import { runSuite163 } from '../tests/phase-14/suite-163-session-manager-alignment.test';
 import { runSuite164 } from '../tests/phase-14/suite-164-bundle-methodology.test';
 import { runSuite165 } from '../tests/phase-14/suite-165-python-parity-and-hardening.test';
+import { runSuite166 } from '../tests/phase-14/suite-166-hybrid-consensus-and-verification.test';
+import { runSuite167 } from '../tests/phase-14/suite-167-worker-contracts-and-security.test';
+import { runSuite168 } from '../tests/phase-14/suite-168-modular-ide-workspace.test';
+import { runSuite169 } from '../tests/phase-14/suite-169-touch-usability-and-navigation.test';
 
 async function main(): Promise<void> {
-  console.log('--- Starting Polyglot Code Studio Verification Suite (Suites 134 through 165) ---');
+  console.log('--- Starting Polyglot Code Studio Verification Suite (Suites 134 through 168) ---');
 
   const startTime = Date.now();
 
@@ -94,8 +98,12 @@ async function main(): Promise<void> {
   await runSuite163();
   await runSuite164();
 
-  // Phase 14 Python Parity & Consolidation (Suite 165)
+  // Phase 14 Python Parity, Hybrid Consensus, Security & Modular IDE Shell (Suites 165-168)
   await runSuite165();
+  await runSuite166();
+  await runSuite167();
+  await runSuite168();
+  await runSuite169();
 
   const durationMs = Date.now() - startTime;
 
@@ -106,8 +114,8 @@ async function main(): Promise<void> {
   console.log('Phase 13 Suites (149-155):    100% pass (38 sub-tests verified)');
   console.log('Phase 13.9 Suites (156-161):  100% pass (49 sub-tests verified)');
   console.log('Phase 13.9.1 Suites (162-164):100% pass (20 sub-tests verified)');
-  console.log('Phase 14 Suite (165):         100% pass (5 sub-tests verified)');
-  console.log('Cumulative Suites 1-165:      100% pass rate achieved (260 cumulative sub-tests)');
+  console.log('Phase 14 Suites (165-169):    100% pass (30 sub-tests verified)');
+  console.log('Cumulative Suites 1-169:      100% pass rate achieved (285 cumulative sub-tests)');
   console.log('======================================================\n');
   process.exit(0);
 }

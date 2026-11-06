@@ -13,7 +13,12 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body class="bg-slate-950 text-slate-100 antialiased h-screen overflow-hidden">
-    <div id="root" class="h-full w-full"></div>
+    <div id="root" class="h-full w-full">
+      <div id="app-boot-loading" class="flex flex-col items-center justify-center h-full w-full bg-slate-950 text-slate-400 gap-3">
+        <div class="text-sm font-bold tracking-wider text-slate-100">POLYGLOT CODE STUDIO</div>
+        <div class="text-xs text-slate-500">Inizializzazione IDE Workspace...</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

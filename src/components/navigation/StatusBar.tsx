@@ -6,6 +6,7 @@ import type { StatusBarItemDescriptor } from '../../types/navigation';
 export function StatusBar(): React.JSX.Element {
   const items = useSyncExternalStore(
     statusBarRegistry.subscribe,
+    statusBarRegistry.getSnapshot,
     statusBarRegistry.getSnapshot
   );
 

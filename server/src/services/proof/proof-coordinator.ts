@@ -74,43 +74,23 @@ export class ProofCoordinator {
       const duperDuration = Date.now() - duperStart;
 
       if (duperResult.success && duperResult.proofTerm) {
-        // Kernel verification gate
-        const kernelOk = this.verifyWithKernel(cleanGoal, duperResult.proofTerm);
-        if (kernelOk) {
-          chainLog.push({
-            tier: 'duper',
-            status: 'proved',
-            durationMs: duperDuration,
-          });
+        chainLog.push({
+          tier: 'duper',
+          status: 'attempted',
+          durationMs: duperDuration,
+          reason: 'Duper heuristic candidate generated; requires authentic Lean kernel verification',
+        });
 
-          const contentHash = computeContentHash(duperResult.proofTerm);
-          return {
-            proved: true,
-            proofTerm: duperResult.proofTerm,
-            durationMs: Date.now() - startTime,
-            kernelVerified: true,
-            fallbackUsed: 'duper',
-            stepsEvaluated,
-            chainLog,
-            certificate: {
-              verifiedAt: Date.now(),
-              contentHash,
-              kernelTermsChecked: 5,
-              durationMs: duperDuration,
-              toolchain: 'v4.35.0-rc4',
-              zeroSorryVerified: true,
-              strictGoalsTerm: true,
-              signatureSeal: `DUPER_KERNEL_SEAL_${contentHash.slice(7, 23).toUpperCase()}`,
-            },
-          };
-        } else {
-          chainLog.push({
-            tier: 'duper',
-            status: 'rejected',
-            durationMs: duperDuration,
-            reason: 'Proof term rejected by Lean 4 kernel',
-          });
-        }
+        return {
+          proved: false,
+          proofTerm: duperResult.proofTerm,
+          durationMs: Date.now() - startTime,
+          kernelVerified: false,
+          fallbackUsed: 'duper',
+          stepsEvaluated,
+          chainLog,
+          error: 'UNVERIFIED_HEURISTIC: Candidate tactic generated but not certified by Lean kernel.',
+        };
       } else {
         chainLog.push({
           tier: 'duper',
@@ -132,42 +112,23 @@ export class ProofCoordinator {
     const aesopDuration = Date.now() - aesopStart;
 
     if (aesopResult.success && aesopResult.proofTerm) {
-      const kernelOk = this.verifyWithKernel(cleanGoal, aesopResult.proofTerm);
-      if (kernelOk) {
-        chainLog.push({
-          tier: 'aesop',
-          status: 'proved',
-          durationMs: aesopDuration,
-        });
+      chainLog.push({
+        tier: 'aesop',
+        status: 'attempted',
+        durationMs: aesopDuration,
+        reason: 'Aesop heuristic candidate generated; requires authentic Lean kernel verification',
+      });
 
-        const contentHash = computeContentHash(aesopResult.proofTerm);
-        return {
-          proved: true,
-          proofTerm: aesopResult.proofTerm,
-          durationMs: Date.now() - startTime,
-          kernelVerified: true,
-          fallbackUsed: 'aesop',
-          stepsEvaluated,
-          chainLog,
-          certificate: {
-            verifiedAt: Date.now(),
-            contentHash,
-            kernelTermsChecked: 5,
-            durationMs: aesopDuration,
-            toolchain: 'v4.35.0-rc4',
-            zeroSorryVerified: true,
-            strictGoalsTerm: true,
-            signatureSeal: `AESOP_KERNEL_SEAL_${contentHash.slice(7, 23).toUpperCase()}`,
-          },
-        };
-      } else {
-        chainLog.push({
-          tier: 'aesop',
-          status: 'rejected',
-          durationMs: aesopDuration,
-          reason: 'aesop proof term rejected by Lean 4 kernel',
-        });
-      }
+      return {
+        proved: false,
+        proofTerm: aesopResult.proofTerm,
+        durationMs: Date.now() - startTime,
+        kernelVerified: false,
+        fallbackUsed: 'aesop',
+        stepsEvaluated,
+        chainLog,
+        error: 'UNVERIFIED_HEURISTIC: Candidate tactic generated but not certified by Lean kernel.',
+      };
     } else {
       chainLog.push({
         tier: 'aesop',
@@ -188,42 +149,23 @@ export class ProofCoordinator {
     const pantoDuration = Date.now() - pantoStart;
 
     if (pantoResult.success && pantoResult.proofTerm) {
-      const kernelOk = this.verifyWithKernel(cleanGoal, pantoResult.proofTerm);
-      if (kernelOk) {
-        chainLog.push({
-          tier: 'pantograph',
-          status: 'proved',
-          durationMs: pantoDuration,
-        });
+      chainLog.push({
+        tier: 'pantograph',
+        status: 'attempted',
+        durationMs: pantoDuration,
+        reason: 'Pantograph heuristic candidate generated; requires authentic Lean kernel verification',
+      });
 
-        const contentHash = computeContentHash(pantoResult.proofTerm);
-        return {
-          proved: true,
-          proofTerm: pantoResult.proofTerm,
-          durationMs: Date.now() - startTime,
-          kernelVerified: true,
-          fallbackUsed: 'pantograph',
-          stepsEvaluated,
-          chainLog,
-          certificate: {
-            verifiedAt: Date.now(),
-            contentHash,
-            kernelTermsChecked: 5,
-            durationMs: pantoDuration,
-            toolchain: 'v4.35.0-rc4',
-            zeroSorryVerified: true,
-            strictGoalsTerm: true,
-            signatureSeal: `PANTOGRAPH_KERNEL_SEAL_${contentHash.slice(7, 23).toUpperCase()}`,
-          },
-        };
-      } else {
-        chainLog.push({
-          tier: 'pantograph',
-          status: 'rejected',
-          durationMs: pantoDuration,
-          reason: 'Pantograph candidate rejected by kernel',
-        });
-      }
+      return {
+        proved: false,
+        proofTerm: pantoResult.proofTerm,
+        durationMs: Date.now() - startTime,
+        kernelVerified: false,
+        fallbackUsed: 'pantograph',
+        stepsEvaluated,
+        chainLog,
+        error: 'UNVERIFIED_HEURISTIC: Candidate tactic generated but not certified by Lean kernel.',
+      };
     } else {
       chainLog.push({
         tier: 'pantograph',
@@ -297,20 +239,11 @@ export class ProofCoordinator {
 
   /**
    * Mandatory Lean 4 Kernel Verification Gate
-   * Evaluates candidate proof term against the 5-term verification formula.
+   * Requires authentic Lean kernel execution; lexical/regex checks strictly fail closed.
    */
-  public verifyWithKernel(goal: string, proofTerm: string): boolean {
-    if (!proofTerm || proofTerm.trim().length === 0) return false;
-    // Strict zero sorry / admit ban in both goal and proof term
-    if (/\b(sorry|admit)\b/.test(proofTerm) || /\b(sorry|admit)\b/.test(goal)) return false;
-    // Known contradictions and false statements are rejected by kernel elaboration
-    if (goal.includes('1 = 2') || goal.includes('2 + 2 = 5') || goal.includes('False') || goal.includes('0 = 1')) {
-      return false;
-    }
-    // Must contain closing tactic block
-    if (!/\b(by\s+duper|by\s+aesop|by\s+rfl|by\s+decide|by\s+omega|by\s+simp|by\s+exact)\b/.test(proofTerm)) {
-      return false;
-    }
-    return true;
+  public verifyWithKernel(_goal: string, _proofTerm: string): boolean {
+    // Pure lexical/string pattern matching CANNOT certify kernel verification.
+    // Strictly returns false until backed by an authentic Lean kernel subprocess.
+    return false;
   }
 }

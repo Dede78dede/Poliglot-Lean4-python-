@@ -22,6 +22,18 @@ export class ToolchainNotInstalledError extends Error {
   }
 }
 
+export class LakeProcessExecutionError extends Error {
+  readonly exitCode: number;
+  readonly stderr: string;
+
+  constructor(message: string, exitCode: number, stderr: string) {
+    super(message);
+    this.name = 'LakeProcessExecutionError';
+    this.exitCode = exitCode;
+    this.stderr = stderr;
+  }
+}
+
 export interface LeanProjectFile {
   readonly path: string;
   readonly content: string;
@@ -36,6 +48,7 @@ export interface LeanBuildResultData {
   readonly verified: boolean;
   readonly fallback: boolean;
   readonly fallbackNotice?: string;
+  readonly memoryBytes?: number;
 }
 
 export class LeanProjectRunner {
@@ -148,12 +161,23 @@ export class LeanProjectRunner {
         stdout?: string;
         stderr?: string;
         exitCode?: number;
+        durationMs?: number;
+        memoryBytes?: number;
       };
 
-      const durationMs = Math.round(performance.now() - startTime);
+      const durationMs = json.durationMs ?? Math.round(performance.now() - startTime);
       const stdout = json.stdout ?? '';
       const stderr = json.stderr ?? '';
-      const exitCode = json.exitCode ?? 0;
+
+      // Epistemic invariant: Never default missing exitCode to 0. Require explicit integer.
+      if (typeof json.exitCode !== 'number') {
+        throw new LakeProcessExecutionError(
+          'Lake runner upstream response did not contain an explicit integer exitCode.',
+          1,
+          stderr || 'Missing exitCode from Lake runner process.',
+        );
+      }
+      const exitCode = json.exitCode;
 
       // Check toolchain version from lean-toolchain if present
       const toolchainFile = files.find(
@@ -187,6 +211,7 @@ export class LeanProjectRunner {
         durationMs,
         verified: evalResult.verified,
         fallback: false,
+        memoryBytes: json.memoryBytes,
       };
     } catch (err: unknown) {
       clearTimeout(timeout);
