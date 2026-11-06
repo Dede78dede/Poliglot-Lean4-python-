@@ -44,7 +44,26 @@ The ~5 KB reduction between Phase 13 and Phase 13.9 is **an authentic code reduc
 
 ---
 
-## 3. Reproduction & CI Workflow Integration
+## 3. Historical Reconciliation (Phase 13.9 vs Phase 14: 154.32 KB → 172.24 KB)
+
+| Metric | Phase 13.9 Gate (`bundle-post-13.9.json`) | Phase 14 Consensus (`bundle-post-14.json`) | Variance (Δ) | Budget Cap | Status |
+|---|---|---|---|---|---|
+| **Main Entry Gzip** | 154.32 KB | 172.24 KB | **+17.92 KB (+11.6%)** | ≤ 180.00 KB | **PASS** (+7.76 KB margin) |
+| **Vendor Chunks Gzip** | 61.39 KB | 61.39 KB | **0.00 KB** | — | — |
+| **Runtime Gzip** | 0.36 KB | 0.36 KB | **0.00 KB** | — | — |
+| **Total Client JS Gzip** | 216.08 KB | 274.63 KB | **+58.55 KB** | ≤ 280.00 KB | **PASS** (+5.37 KB margin) |
+| **CSS Stylesheet Gzip** | 15.88 KB | 16.00 KB | **+0.12 KB** | — | — |
+
+### Root Cause of Transition (154.32 KB → 172.24 KB)
+The +17.92 KB expansion of the main entry bundle is fully attributed to production features delivered in Phase 14:
+1. **Full Modular IDE Workspace Shell**: Integration of `EditorTabsStore` with LIFO closedStack, `Breadcrumbs` navigation, and `StatusBar` 3-zone telemetry coordination in `src/App.tsx`.
+2. **Mobile Touch & Navigation Drawer**: Addition of `NavigationDrawer` modal dialog with responsive touch hitboxes (≥44px) and thumb navigation bar.
+3. **Consensus & Protocol Types**: Integration of `polyglot.verification.v1` result envelope types, comparability predicates, and `hybrid-adjudicator` client bindings.
+4. **Code-Splitting Preservation**: Non-primary panels (`NotebookPanel`, `ProposalLoopPanel`, `TranslationPanel`, `RecommendationsPanel`, and `DesignSystemShowcase`) remain code-split into on-demand dynamic chunks, ensuring the main entry remains safely below the 180.00 KB budget cap.
+
+---
+
+## 4. Reproduction & CI Workflow Integration
 
 To measure and record bundle metrics locally:
 ```bash

@@ -1,14 +1,14 @@
 /**
  * Polyglot Code Studio Cumulative Verification Runner (Phases 11.3, 12, 13, 13.9, 13.9.1 & 14)
  *
- * Runs test suites 134 through 165:
+ * Runs test suites 134 through 169:
  * - Suites 134-140: Phase 11.3 React Architecture, Compiler, State & A11y (33 sub-tests)
  * - Suites 141-148: Phase 12 Proof Reuse, Proposal Loop, Fidelity Gate & Integrations (36 sub-tests)
  * - Suites 149-155: Phase 13 Unified Contracts, Parity, Notebook, Config & Search (38 sub-tests)
  * - Suites 156-161: Phase 13.9 MCP, Auth/Rate-limit, Flag 503s, Critical Modules, Contract Parity & Security (49 sub-tests)
  * - Suites 162-164: Phase 13.9.1 Verification Formula Consolidation, Session Policy & Bundle Methodology (20 sub-tests)
- * - Suite 165: Phase 14 Python Runtime Parity, Autonomous Contract Runner & Hardening (5 sub-tests)
- * Total cumulative: 165 suites / 260 cumulative sub-tests (100% pass).
+ * - Suites 165-169: Phase 14 Python Parity, Consensus, Hardening, Modular Shell & Touch Usability (30 sub-tests)
+ * Total cumulative: 169 suites / 285 cumulative sub-tests (100% pass).
  */
 
 import { runSuite134 } from '../tests/phase-11.3/suite-134-compiler-react19.test';
@@ -53,7 +53,7 @@ import { runSuite168 } from '../tests/phase-14/suite-168-modular-ide-workspace.t
 import { runSuite169 } from '../tests/phase-14/suite-169-touch-usability-and-navigation.test';
 
 async function main(): Promise<void> {
-  console.log('--- Starting Polyglot Code Studio Verification Suite (Suites 134 through 168) ---');
+  console.log('--- Starting Polyglot Code Studio Verification Suite (Suites 134 through 169) ---');
 
   const startTime = Date.now();
 

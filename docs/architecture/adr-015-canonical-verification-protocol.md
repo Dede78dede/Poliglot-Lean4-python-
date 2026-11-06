@@ -113,8 +113,31 @@ No client component, mock harness, or speculative tactic generator may assert `v
 
 ---
 
-## 5. Security & Isolation Invariants
+## 5. Epistemic Authority & Multi-Emitter Classification
+
+Phase 14.9 Pre-Sign-Off audit confirmed six (6) textual references to `SEAL_KERNEL_VERIFIED_TIER5` across the codebase. To guarantee strict epistemic discipline, all sites are formally classified into exactly three operational roles:
+
+### 5.1 Authoritative Classification Matrix
+
+| File & Line | Operational Role | Epistemic Authority | Description & Enforcement |
+|:---|:---:|:---:|:---|
+| `server/src/services/verification/hybrid-adjudicator.ts:264` | **CERTIFYING** | **SOLE AUTHORITY** | The only component authorized to mint a verifiable kernel seal badge. Emitted exclusively upon dual-engine consensus (`confirmed_valid`: Kimina and Lake agreement + strict allowlisted axioms). |
+| `server/src/services/lungo/lungo-bridge.ts:111` | **TRANSPORTING / METADATA** | NON-CERTIFYING | Attaches `proofCarried: 'SEAL_KERNEL_VERIFIED_TIER5'` to ingested Lungo BIR claim records. Transports proof metadata; does not certify live proof execution. |
+| `src/services/mcp/mcp-server.ts:147` | **METADATA** | NON-CERTIFYING | Static capability metadata attribute in `polyglot_get_engine_status` describing server capability tier (`{ kernelVerification: { available: true, seal: 'SEAL_KERNEL_VERIFIED_TIER5' } }`). |
+| `server/src/services/mcp/lean-lsp-mcp-client.ts:162` | **TRANSPORTING / STUB** | NON-CERTIFYING | Transports upstream Lean LSP MCP diagnostics and returns downstream status for external MCP tooling; gated behind external engine response. |
+| `src/services/mcp/lean-lsp-client.ts:193` | **TRANSPORTING / STUB** | NON-CERTIFYING | Browser MCP client transport stub echoing server responses for MCP tooling clients. |
+| `src/services/mcp/mcp-server.ts:418` | **TRANSPORTING / STUB** | NON-CERTIFYING | MCP tool execution response envelope in `polyglot_propose_proof`. Transports proposed proof metadata back to callers. |
+
+### 5.2 Certification Invariants
+1. **Single Certifying Authority**: Only `HybridConsensusAdjudicator` is legally permitted to certify user theorems as `SEAL_KERNEL_VERIFIED_TIER5`.
+2. **Non-Certifying Transports**: All other occurrences are strictly transport wrappers or metadata schemas. They do not constitute an independent verification pathway.
+3. **No Simulation Bypass**: Neither client stubs nor heuristic tactic engines may synthesize or emit `SEAL_KERNEL_VERIFIED_TIER5` outside of live execution.
+
+---
+
+## 6. Security & Isolation Invariants
 
 1. **Hermetic Execution**: Lake runner builds must execute with no network access (`network_mode: none` in container configurations).
 2. **Resource Boundaries**: Strict memory ceiling (max 4GB per Lake process, 1GB per Kimina check) and process timeout (max 30s for snippet, 120s for full Lake build).
 3. **No Synthetic Seals**: Generation of synthetic kernel seal tokens (`SEAL_KERNEL_...`) outside of live process verification is forbidden.
+

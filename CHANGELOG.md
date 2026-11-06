@@ -5,17 +5,30 @@ All notable changes to Polyglot Code Studio will be documented in this file.
 The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Pending Reconciliation (Phase 14.9 Pre-Sign-Off)
+- **Version Bump**: Alignment of `package.json` from `2.1.0` to `2.2.0`.
+- **Suite 169 Documentation**: Document `tests/phase-14/suite-169-touch-usability-and-navigation.test.ts` (6 sub-tests) covering touch usability, top-left navigation drawer, and zero magic strings (bringing cumulative total to 169 suites / 285 sub-tests).
+- **Bundle Measurement Artifact**: Generation of `reports/bundle-post-14.json` and documentation of the 154.32 KB → 172.24 KB (+17.92 KB) transition in `reports/bundle-methodology.md`.
+- **ADR 015 Multi-Emitter Alignment**: Formal classification of secondary `SEAL_KERNEL_VERIFIED_TIER5` emission sites in MCP tool handlers.
+
+### Known Issues & Deferred Items (Phase 15 Backlog)
+- **F5 — Pyodide Offline Lockfile**: `public/pyodide/pyodide-lock.json` is deferred to Phase 15; Pyodide initialization currently uses standard runtime loading.
+- **F7 — Fallback Contracts Architecture Doc**: `docs/architecture/fallback-contracts.md` formal specification is deferred to Phase 15.
+
 ## [2.2.0] - 2026-11-05
 
 ### Added
 - **Canonical Verification Protocol (`polyglot.verification.v1`) & ADR 015**: Codified immutable verification dispatch envelope, dual execution pathways (interactive Kimina snippet vs isolated Lake runner), and transitive foundational axiom allowlist (`propext`, `Classical.choice`, `Quot.sound`).
 - **Hybrid Consensus Adjudication Engine**: Implemented `server/src/services/verification/hybrid-adjudicator.ts` with strict comparability predicates (source digest, context digest, toolchain digest) and binding consensus decision matrix (`confirmed_valid`, `confirmed_invalid`, `unconfirmed`).
-- **Full Modular IDE Workspace Shell**: Assembled comprehensive workspace in `src/App.tsx` featuring `EditorTabsStore` with LIFO reopen stack (max 10 entries), split-view toggle, symbol `Breadcrumbs`, Ctrl+K `CommandPalette`, and live 3-zone `StatusBar` (`statusBarRegistry`).
-- **Test Suites 166-168**:
+- **Full Modular IDE Workspace Shell**: Assembled comprehensive workspace in `src/App.tsx` featuring `EditorTabsStore` with LIFO reopen stack (max 10 entries), split-view toggle, symbol `Breadcrumbs`, Ctrl+K `CommandPalette`, top-left `NavigationDrawer`, and live 3-zone `StatusBar` (`statusBarRegistry`).
+- **Test Suites 166-169**:
   - Suite 166: Hybrid consensus adjudication, axiom policy violations, and process error types (7 sub-tests).
   - Suite 167: Worker request-ID correlation, concurrency duplicate guards, and security boundaries (6 sub-tests).
   - Suite 168: Modular IDE workspace shell, tab navigation, keyboard shortcuts, and WCAG 2.2 AA accessibility (6 sub-tests).
-- **Expanded Cumulative Test Suite**: 168 test suites / 279 sub-tests achieving 100% pass rate.
+  - Suite 169: Mobile touch usability, top-left navigation drawer dialog, zero magic strings, and Alt+1..6 view switching (6 sub-tests).
+- **Expanded Cumulative Test Suite**: 169 test suites / 285 sub-tests achieving 100% pass rate.
 
 ### Fixed & Epistemic Hardening
 - **F-01 Remediation**: Eliminated client-side `setTimeout(..., 400)` mock verification and synthetic `verified: true` emissions in `src/App.tsx`; connected execution dispatch through `executionStore` and live backend APIs.

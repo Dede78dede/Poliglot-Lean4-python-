@@ -1,7 +1,7 @@
 {
   "name": "polyglot-code-studio",
   "private": true,
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "A browser-based dual-runtime code editor and formal verification studio for Python 3.14 and Lean 4.",
   "license": "MIT",
   "repository": {

@@ -150,7 +150,7 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
     marginTotalKb: evalResult.marginTotalKb,
   };
 
-  const reportFile = options?.outputFile ?? 'reports/bundle-post-13.9.json';
+  const reportFile = options?.outputFile ?? process.env.BUNDLE_OUTPUT_FILE ?? (process.argv[2] || 'reports/bundle-post-14.json');
   const reportPath = path.resolve(reportFile);
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, JSON.stringify(metrics, null, 2), 'utf-8');
@@ -164,7 +164,8 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
 
 if (process.argv[1]?.endsWith('measure-bundle.ts')) {
   try {
-    const res = measureBundle();
+    const outputFile = process.argv[2] ?? process.env.BUNDLE_OUTPUT_FILE ?? 'reports/bundle-post-14.json';
+    const res = measureBundle({ outputFile });
     if (res.status !== 'PASS') {
       console.warn(`[WARNING] Bundle exceeds recommended budget limits: ${res.status}`);
     }
