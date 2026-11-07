@@ -7,15 +7,20 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ## [Unreleased]
 
-### Pending Reconciliation (Phase 14.9 Pre-Sign-Off)
-- **Version Bump**: Alignment of `package.json` from `2.1.0` to `2.2.0`.
-- **Suite 169 Documentation**: Document `tests/phase-14/suite-169-touch-usability-and-navigation.test.ts` (6 sub-tests) covering touch usability, top-left navigation drawer, and zero magic strings (bringing cumulative total to 169 suites / 285 sub-tests).
-- **Bundle Measurement Artifact**: Generation of `reports/bundle-post-14.json` and documentation of the 154.32 KB → 172.24 KB (+17.92 KB) transition in `reports/bundle-methodology.md`.
-- **ADR 015 Multi-Emitter Alignment**: Formal classification of secondary `SEAL_KERNEL_VERIFIED_TIER5` emission sites in MCP tool handlers.
+### Phase 14.9.1 Reconciliation (FIX-A & FIX-B)
+- **FIX-A: Bundle Reduction to 216.92 KB Total JS Gzip**: Resolved development runtime leak by defining `'process.env.NODE_ENV': JSON.stringify('production')` in `vite.config.ts`, added native Vite 8 / Rolldown `codeSplitting.groups` with priority hierarchy, applied route-level `React.lazy` + `Suspense`, and converted main entry to direct Lucide imports. Total JS gzip dropped from 274.63 KB to **216.92 KB** (budget ≤ 260.00 KB, +43.08 KB margin) and main entry dropped to **31.96 KB** (budget ≤ 180.00 KB). Validated via Suite 170 (6 sub-tests).
+- **FIX-B: Single Certifier Epistemic Authority**: Introduced `ProofOutcome` discriminated union (`certified`, `transport`, `preflight`, `unavailable`, `metadata`). Refactored `lean-lsp-mcp-client.ts` (delegates to `hybridAdjudicator`), `lean-lsp-client.ts` (returns `unavailable: client_stub`), and `mcp-server.ts` (gates `kernelSeal` strictly behind adjudicator). Codified Epistemic Authority Matrix in ADR 015 Section 5. Validated via Suite 171 (6 sub-tests).
+- **Cumulative Test Suite Expanded**: 171 test suites / 297 cumulative sub-tests with 100% pass rate.
 
-### Known Issues & Deferred Items (Phase 15 Backlog)
-- **F5 — Pyodide Offline Lockfile**: `public/pyodide/pyodide-lock.json` is deferred to Phase 15; Pyodide initialization currently uses standard runtime loading.
-- **F7 — Fallback Contracts Architecture Doc**: `docs/architecture/fallback-contracts.md` formal specification is deferred to Phase 15.
+### Phase 14.9.2 Architectural Hardening, Fallback Contracts & Antipattern Remediation
+- **F7 Closed — Fallback Contracts & Circuit Breaker Architecture**: Codified `docs/architecture/fallback-contracts.md` defining 4 operational tiers (`FULL_DUAL`, `SINGLE_ENGINE_DEGRADED`, `SYNTAX_PREFLIGHT`, `UNAVAILABLE`), explicit failure thresholds and probe windows, and RFC 9457 error mappings (`FALLBACK_DEGRADED`).
+- **F5 Closed — Pyodide Offline Integrity Lockfile**: Generated `public/pyodide/pyodide-lock.json` with pinned packages (`micropip`, `packaging`, `numpy`, `sympy`, `mpmath`) and SHA-256 cryptographic hashes for air-gapped / offline deterministic browser execution.
+- **Bridge Antipattern Remediation**: Refactored `server/src/services/autocorrect/axle-repair.ts` to strictly return `verified: false`, eliminating heuristic mock verification from code rewriters. Confirmed auxiliary bridges (`leancert`, `provepy`, `pastalean`) emit 0 kernel seals.
+- **Toolchain Modernization**: Cleansed `vitest.config.ts` replacing CommonJS `__dirname` with standard Vite 8 `import.meta.dirname` and removed `@ts-nocheck` directive.
+- **Suite 172 Added**: Introduced 6 automated sub-tests in `tests/phase-14/suite-172-fallback-contracts-and-integrity.test.ts`. Cumulative test suite expanded to **172 test suites / 303 sub-tests with 100% pass rate**.
+
+### Backlog Status
+- Zero blocking technical debts or deferred items remaining in pre-Phase 15 backlog (F5 and F7 closed).
 
 ## [2.2.0] - 2026-11-05
 

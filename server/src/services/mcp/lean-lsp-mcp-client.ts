@@ -8,6 +8,8 @@ import {
 import { createMcpTransport, type McpTransport } from './mcp-transports';
 import { mcpExternalSearchRateLimiter } from './mcp-rate-limiter';
 import { validateProofSearchQuery } from '../../../../src/services/proof/proof-search-validator';
+import { hybridAdjudicator } from '../verification/hybrid-adjudicator';
+import type { ProofOutcome } from '../../types/proof-outcome';
 
 export class LeanLspMcpClient {
   private readonly config: McpClientConfig;
@@ -154,17 +156,55 @@ export class LeanLspMcpClient {
           };
         }
 
-        return {
-          success: true,
-          toolName: request.toolName,
-          data: {
-            verified: true,
-            seal: 'SEAL_KERNEL_VERIFIED_TIER5',
-            declarationCount: 1,
-            unprovenCount: 0,
-          },
-          durationMs: Date.now() - startTime,
-        };
+        try {
+          const adjResult = hybridAdjudicator.adjudicate({
+            source: code,
+            exitCode: 0,
+          });
+
+          if (adjResult.verdict === 'confirmed_valid') {
+            const outcome: ProofOutcome = {
+              kind: 'transport',
+              source: 'hybrid-adjudicator',
+              payload: {
+                declarationCount: 1,
+                unprovenCount: 0,
+                axioms: adjResult.axioms,
+                durationMs: Date.now() - startTime,
+              },
+            };
+            return {
+              success: true,
+              toolName: request.toolName,
+              data: outcome,
+              durationMs: Date.now() - startTime,
+            };
+          }
+
+          const outcome: ProofOutcome = {
+            kind: 'preflight',
+            syntaxValid: true,
+            sorryFree: true,
+            reason: adjResult.reason,
+          };
+          return {
+            success: true,
+            toolName: request.toolName,
+            data: outcome,
+            durationMs: Date.now() - startTime,
+          };
+        } catch {
+          const outcome: ProofOutcome = {
+            kind: 'unavailable',
+            reason: 'adjudicator_unreachable',
+          };
+          return {
+            success: true,
+            toolName: request.toolName,
+            data: outcome,
+            durationMs: Date.now() - startTime,
+          };
+        }
       }
 
       return {

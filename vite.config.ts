@@ -19,7 +19,7 @@ export default defineConfig(() => {
       },
     },
     define: {
-      'process.env': {},
+      'process.env.NODE_ENV': JSON.stringify('production'),
       global: 'globalThis',
     },
     build: {
@@ -29,12 +29,29 @@ export default defineConfig(() => {
           codeSplitting: {
             groups: [
               {
-                name: 'monaco-vendor',
-                test: /@monaco-editor/,
+                name: 'react-vendor',
+                test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+                priority: 30,
               },
               {
-                name: 'react-aria-vendor',
-                test: /react-aria|@react-aria/,
+                name: 'aria-vendor',
+                test: /[\\/]node_modules[\\/](react-aria|react-aria-components|@react-aria)[\\/]/,
+                priority: 20,
+              },
+              {
+                name: 'zod-vendor',
+                test: /[\\/]node_modules[\\/]zod[\\/]/,
+                priority: 15,
+              },
+              {
+                name: 'monaco-vendor',
+                test: /[\\/]node_modules[\\/](monaco-editor|@monaco-editor)[\\/]/,
+                priority: 10,
+              },
+              {
+                name: 'icons-vendor',
+                test: /[\\/]node_modules[\\/]lucide-react[\\/]/,
+                priority: 5,
               },
             ],
           },

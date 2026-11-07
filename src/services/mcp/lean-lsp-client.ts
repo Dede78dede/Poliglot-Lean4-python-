@@ -10,6 +10,7 @@ import { createMcpTransport, type McpTransport } from '../../../server/src/servi
 import { mcpExternalSearchRateLimiter } from '../../../server/src/services/mcp/mcp-rate-limiter';
 import { validateProofSearchQuery } from '../proof/proof-search-validator';
 import { semanticSearchRegistry } from '../search/semantic-search-provider';
+import type { ProofOutcome } from '../../types/proof-outcome';
 
 export interface McpClientInterface {
   readonly id: string;
@@ -174,26 +175,15 @@ export class LeanLspClient implements McpClientInterface {
 
       // Kernel verification gate
       if (request.toolName === 'lean_verify_kernel') {
-        const code = String(request.arguments['code'] ?? '');
-        const hasSorry = code.includes('sorry') || code.includes('admit');
-        if (hasSorry) {
-          return {
-            success: false,
-            toolName: request.toolName,
-            error: 'KERNEL_VERIFICATION_REJECTED: Proof contains unproven sorry/admit.',
-            durationMs: Date.now() - startTime,
-          };
-        }
-
+        const outcome: ProofOutcome = {
+          kind: 'unavailable',
+          reason: 'client_stub',
+        };
         return {
           success: true,
           toolName: request.toolName,
-          data: {
-            verified: true,
-            seal: 'SEAL_KERNEL_VERIFIED_TIER5',
-            declarationCount: 1,
-            unprovenCount: 0,
-          },
+          data: outcome,
+          error: 'Verification requires the server adjudicator.',
           durationMs: Date.now() - startTime,
         };
       }

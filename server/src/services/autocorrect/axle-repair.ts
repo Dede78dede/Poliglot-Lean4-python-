@@ -8,7 +8,11 @@ export interface AxleRepairResult {
   readonly ok: boolean;
   readonly repairedProof: string;
   readonly passesApplied: readonly AxleRepairPass[];
-  readonly verified: boolean;
+  /**
+   * Indicates whether formal kernel verification has certified this repaired proof.
+   * AXLE produces candidate repairs and always returns false; certification requires the hybrid adjudicator.
+   */
+  readonly verified: false;
   readonly error?: string;
   readonly rateLimited?: boolean;
   readonly retryAfterSeconds?: number;
@@ -91,7 +95,7 @@ export class AxleRepairService {
         passesApplied: data.passesApplied ?? [
           { name: 'relax_defeq_transparency', applied: true, description: 'Relaxed definitional equality transparency.' },
         ],
-        verified: true,
+        verified: false,
       };
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'CONSENT_REQUIRED') throw err;
@@ -111,7 +115,7 @@ export class AxleRepairService {
       ok: true,
       repairedProof: repaired,
       passesApplied: passes,
-      verified: true,
+      verified: false,
     };
   }
 }

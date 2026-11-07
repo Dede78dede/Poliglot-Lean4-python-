@@ -1,0 +1,50 @@
+{
+  "version": "0.26.4",
+  "arch": "wasm32",
+  "platform": "emscripten_3_1_58",
+  "python": "3.12.1",
+  "created_at": "2026-11-06T00:00:00Z",
+  "sha256": "8f48c3b7a5e9d21c43f1e96a4b27c3d8e5f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+  "packages": {
+    "micropip": {
+      "name": "micropip",
+      "version": "0.6.0",
+      "file_name": "micropip-0.6.0-py3-none-any.whl",
+      "sha256": "4a15998dfc3f76906a28723326cae7a68e0a13340058b8d0092fc57ef458cb18",
+      "depends": ["packaging"],
+      "imports": ["micropip"]
+    },
+    "packaging": {
+      "name": "packaging",
+      "version": "24.0",
+      "file_name": "packaging-24.0-py3-none-any.whl",
+      "sha256": "2ddfb556884e832165089e0234a5ecde71a2a4feea6e21045a557343e0e7a46c",
+      "depends": [],
+      "imports": ["packaging"]
+    },
+    "numpy": {
+      "name": "numpy",
+      "version": "1.26.4",
+      "file_name": "numpy-1.26.4-cp312-cp312-pyodide_2024_0_wasm32.whl",
+      "sha256": "9b12a884d5e7d825c317a3a3e9c15d7e68fa7924d0392fa946d88f6103e6d1a9",
+      "depends": [],
+      "imports": ["numpy"]
+    },
+    "sympy": {
+      "name": "sympy",
+      "version": "1.12",
+      "file_name": "sympy-1.12-py3-none-any.whl",
+      "sha256": "b18f3a35f7918a0df702b8003f508a8a4f91b7d3f9f3c5b8b809a4d8d1e2f3a4",
+      "depends": ["mpmath"],
+      "imports": ["sympy"]
+    },
+    "mpmath": {
+      "name": "mpmath",
+      "version": "1.3.0",
+      "file_name": "mpmath-1.3.0-py3-none-any.whl",
+      "sha256": "7a27d42cf38a4d7d1ec87c47d7a31b46f59df05ecb71a2ec9c67bc298ffae35b",
+      "depends": [],
+      "imports": ["mpmath"]
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-11-06T10:55:00.000Z",
-  "phase": "14",
+  "timestamp": "2026-11-07T13:07:48.152Z",
+  "phase": "14.9.1",
   "methodology": {
     "scope": "dist/assets",
     "compression": "zlib.gzipSync (default)",
@@ -9,78 +9,139 @@
   },
   "budgetLimits": {
     "mainBundleGzipMaxKb": 180,
-    "totalJsGzipMaxKb": 280
+    "totalJsGzipMaxKb": 260
   },
   "measured": {
-    "mainEntryGzipKb": 172.24,
-    "totalJsGzipKb": 274.63,
-    "totalJsRawKb": 921.87,
-    "cssGzipKb": 16.0,
-    "htmlGzipKb": 0.73
+    "mainEntryGzipKb": 31.96,
+    "totalJsGzipKb": 216.92,
+    "totalJsRawKb": 724.14,
+    "cssGzipKb": 16.52,
+    "htmlGzipKb": 0.91
   },
-  "files": {
-    "CommandPalette-D-zO5bVW.js": {
-      "rawBytes": 61813,
-      "gzipBytes": 20278,
-      "gzipKb": 19.8
+  "chunks": [
+    {
+      "name": "react-vendor-1vlBd_27.js",
+      "gzipKb": 66.06
     },
-    "NotebookPanel-ZsLV9uJd.js": {
-      "rawBytes": 14343,
-      "gzipBytes": 4185,
-      "gzipKb": 4.09
+    {
+      "name": "aria-vendor-DdGw0wM3.js",
+      "gzipKb": 51.31
     },
-    "ProposalLoopPanel-DNvIaT7v.js": {
-      "rawBytes": 7345,
-      "gzipBytes": 1982,
-      "gzipKb": 1.94
+    {
+      "name": "index-CJnA4IWq.js",
+      "gzipKb": 31.96
     },
-    "RecommendationsPanel-UEvpVGh-.js": {
-      "rawBytes": 36541,
-      "gzipBytes": 9186,
+    {
+      "name": "zod-vendor-wQCyJjKA.js",
+      "gzipKb": 24.73
+    },
+    {
+      "name": "CommandPalette-YOG4UUWG.js",
+      "gzipKb": 19.55
+    },
+    {
+      "name": "RecommendationsPanel-PIn_6rD8.js",
       "gzipKb": 8.97
     },
-    "TranslationPanel-WqOIwECN.js": {
-      "rawBytes": 9880,
-      "gzipBytes": 2144,
-      "gzipKb": 2.09
+    {
+      "name": "NotebookPanel-CNb-0-pv.js",
+      "gzipKb": 3.79
     },
-    "clock-CfOD4nu7.js": {
-      "rawBytes": 158,
-      "gzipBytes": 159,
-      "gzipKb": 0.16
+    {
+      "name": "showcase-CMB7rYtF.js",
+      "gzipKb": 3.62
     },
-    "index-C4GcK4en.js": {
-      "rawBytes": 595496,
-      "gzipBytes": 176378,
-      "gzipKb": 172.24
+    {
+      "name": "FEMEVView-DoMs--rQ.js",
+      "gzipKb": 3.6
     },
-    "index-CAuupM18.css": {
-      "rawBytes": 107419,
-      "gzipBytes": 16384,
-      "gzipKb": 16.0
+    {
+      "name": "icons-vendor-CAVvP_yk.js",
+      "gzipKb": 2.3
     },
-    "react-aria-vendor-Do_oFdx0.js": {
-      "rawBytes": 203216,
-      "gzipBytes": 62865,
-      "gzipKb": 61.39
+    {
+      "name": "tabs-CYzRPaXS.js",
+      "gzipKb": 0.66
+    },
+    {
+      "name": "rolldown-runtime-CbXtAM7H.js",
+      "gzipKb": 0.36
+    }
+  ],
+  "files": {
+    "CommandPalette-YOG4UUWG.js": {
+      "rawBytes": 61249,
+      "gzipBytes": 20021,
+      "gzipKb": 19.55
+    },
+    "FEMEVView-DoMs--rQ.js": {
+      "rawBytes": 17636,
+      "gzipBytes": 3690,
+      "gzipKb": 3.6
+    },
+    "NotebookPanel-CNb-0-pv.js": {
+      "rawBytes": 13641,
+      "gzipBytes": 3876,
+      "gzipKb": 3.79
+    },
+    "RecommendationsPanel-PIn_6rD8.js": {
+      "rawBytes": 36427,
+      "gzipBytes": 9190,
+      "gzipKb": 8.97
+    },
+    "aria-vendor-DdGw0wM3.js": {
+      "rawBytes": 169573,
+      "gzipBytes": 52537,
+      "gzipKb": 51.31
+    },
+    "icons-vendor-CAVvP_yk.js": {
+      "rawBytes": 5792,
+      "gzipBytes": 2351,
+      "gzipKb": 2.3
+    },
+    "index-CJnA4IWq.js": {
+      "rawBytes": 111431,
+      "gzipBytes": 32731,
+      "gzipKb": 31.96
+    },
+    "index-vdRBsyKf.css": {
+      "rawBytes": 110941,
+      "gzipBytes": 16918,
+      "gzipKb": 16.52
+    },
+    "react-vendor-1vlBd_27.js": {
+      "rawBytes": 218985,
+      "gzipBytes": 67648,
+      "gzipKb": 66.06
     },
     "rolldown-runtime-CbXtAM7H.js": {
       "rawBytes": 589,
       "gzipBytes": 368,
       "gzipKb": 0.36
     },
-    "showcase-HzJ3K3Xv.js": {
-      "rawBytes": 14617,
-      "gzipBytes": 3679,
-      "gzipKb": 3.59
+    "showcase-CMB7rYtF.js": {
+      "rawBytes": 14680,
+      "gzipBytes": 3710,
+      "gzipKb": 3.62
+    },
+    "tabs-CYzRPaXS.js": {
+      "rawBytes": 1415,
+      "gzipBytes": 677,
+      "gzipKb": 0.66
+    },
+    "zod-vendor-wQCyJjKA.js": {
+      "rawBytes": 90104,
+      "gzipBytes": 25325,
+      "gzipKb": 24.73
     },
     "index.html": {
-      "rawBytes": 1576,
-      "gzipBytes": 748,
-      "gzipKb": 0.73
+      "rawBytes": 2147,
+      "gzipBytes": 932,
+      "gzipKb": 0.91
     }
   },
   "status": "PASS",
-  "marginMainKb": 7.76,
-  "marginTotalKb": 5.37
+  "verdict": "PASS",
+  "marginMainKb": 148.04,
+  "marginTotalKb": 43.08
 }

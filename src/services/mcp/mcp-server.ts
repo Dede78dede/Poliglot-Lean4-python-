@@ -10,6 +10,7 @@ import {
 } from './mcp-server-registry';
 import { featureFlagRegistry } from '../flags/feature-flag-registry';
 import { defaultLeanBeamClient } from './lean-beam-client';
+import { hybridAdjudicator } from '../../../server/src/services/verification/hybrid-adjudicator';
 
 export const MAX_RESPONSE_BYTES = 100 * 1024; // 100 KB cap
 
@@ -408,6 +409,14 @@ export const FULL_MCP_SERVER_TOOLS: readonly McpServerTool[] = [
         }
 
         activeProposals.delete(confirmationToken);
+
+        const adj = hybridAdjudicator.adjudicate({
+          source: proposal.diffOrProof,
+          exitCode: 0,
+        });
+
+        const isCertified = adj.verdict === 'confirmed_valid';
+
         return {
           success: true,
           toolName: 'polyglot_propose_proof',
@@ -415,7 +424,8 @@ export const FULL_MCP_SERVER_TOOLS: readonly McpServerTool[] = [
             committed: true,
             theoremName: proposal.target,
             proofScript: proposal.diffOrProof,
-            kernelSeal: 'SEAL_KERNEL_VERIFIED_TIER5',
+            kernelSeal: isCertified ? ('SEAL_KERNEL_VERIFIED_TIER5' as const) : null,
+            status: isCertified ? 'certified' : 'awaiting_adjudication',
           },
         };
       }

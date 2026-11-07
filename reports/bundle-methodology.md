@@ -63,13 +63,47 @@ The +17.92 KB expansion of the main entry bundle is fully attributed to producti
 
 ---
 
-## 4. Reproduction & CI Workflow Integration
+## 4. Phase 14.9.1 — 274.63 → ≤260.00 KB Reconciliation (FIX-A)
+
+Phase 14.9.1 FIX-A eliminated the bundle budget overrun, reducing total client JS gzip from 274.63 KB down to **216.92 KB** (against the strict 260.00 KB budget, delivering **+43.08 KB** of headroom). Main entry gzip was reduced from 172.24 KB down to **31.96 KB** (**+148.04 KB** headroom).
+
+### Reconciliation Summary Table
+
+| Metric | Phase 14 Overrun (`reports/bundle-post-14.json` prior) | Phase 14.9.1 Reconciled | Delta (Δ) | Budget Ceiling | Status | Headroom Margin |
+|---|---|---|---|---|---|---|
+| **Main Entry Gzip** | 172.24 KB | **31.96 KB** | **-140.28 KB (-81.4%)** | ≤ 180.00 KB | **PASS** | +148.04 KB |
+| **Total Client JS Gzip** | 274.63 KB | **216.92 KB** | **-57.71 KB (-21.0%)** | ≤ 260.00 KB | **PASS** | +43.08 KB |
+| **Max Single Chunk Gzip** | 172.24 KB | **66.06 KB** | **-106.18 KB** | ≤ 80.00 KB | **PASS** | +13.94 KB |
+| **Route Chunks Emitted** | 0 dynamic routes | **5 route chunks** | **+5 chunks** | ≥ 3 chunks | **PASS** | Active code-splitting |
+
+### Per-Chunk Delta & Attribution Table
+
+| Chunk Asset | Before Gzip (KB) | After Gzip (KB) | Delta (KB) | Root Cause & Attribution |
+|:---|:---:|:---:|:---:|:---|
+| `index-*.js` (Main Entry) | 172.24 | **31.96** | **-140.28** | Dynamic route lazy loading (`React.lazy` + `Suspense`) and decoupling of vendor bundles via Rolldown. |
+| `react-vendor-*.js` | 0.00 | **66.06** | **+66.06** | Dedicated vendor chunk with priority 30; `process.env.NODE_ENV = 'production'` strips development warnings (-63.8 KB vs unoptimized). |
+| `aria-vendor-*.js` | 61.39 | **51.31** | **-10.08** | React Aria components scoped to UI primitives with production dead-code elimination. |
+| `zod-vendor-*.js` | 0.00 | **24.73** | **+24.73** | Dedicated Zod contract vendor chunk with priority 15; isolated from main entry. |
+| `CommandPalette-*.js` | 19.80 | **19.55** | **-0.25** | Dynamic command palette loaded on-demand on `Ctrl+K` shortcut. |
+| `RecommendationsPanel-*.js` | 8.97 | **8.97** | **0.00** | Config discovery recommendations loaded on-demand in Settings view. |
+| `NotebookPanel-*.js` | 4.09 | **3.79** | **-0.30** | Interactive Jupyter/Pyodide notebook panel loaded on-demand. |
+| `showcase-*.js` | 3.59 | **3.62** | **+0.03** | UI design system showcase loaded on-demand. |
+| `FEMEVView-*.js` | 4.03 | **3.60** | **-0.43** | Formal verification and proposal loop panels consolidated in lazy FEMEV view. |
+| `icons-vendor-*.js` | 0.00 | **2.30** | **+2.30** | Direct subpath imports (`lucide-react/dist/esm/icons/*`) eliminate barrel overhead. |
+| `tabs-*.js` | 0.00 | **0.66** | **+0.66** | Accessible tab navigation primitive code-split into shared component chunk. |
+| `rolldown-runtime-*.js` | 0.36 | **0.36** | **0.00** | Rolldown shared module loader runtime. |
+| **Total JS Bundle** | **274.63** | **216.92** | **-57.71** | **100% compliant with 260.00 KB budget cap.** |
+
+---
+
+## 5. Reproduction & CI Workflow Integration
 
 To measure and record bundle metrics locally:
 ```bash
 npm run build
-npm run bundle:measure
+npx tsx scripts/measure-bundle.ts --out reports/bundle-post-14.json
 ```
 
 ### Continuous Integration (GitHub Actions)
 In `.github/workflows/ci.yml`, the `Bundle budget` step runs `npm run bundle:measure`. Per the confirmed architecture, budget overflows emit GitHub Actions warning annotations (`::warning::`) in pull request reviews without blocking CI merges, alerting engineers prior to deployment.
+

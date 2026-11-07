@@ -13,15 +13,8 @@ import { ErrorBoundary } from './shared/ui/error-boundary';
 import { Button } from './shared/ui/button';
 import { Badge } from './shared/ui/badge';
 import { VirtualizedContainer } from './shared/ui/virtualized-container';
-import { Tabs } from './shared/ui/tabs';
 import { Breadcrumbs } from './components/editor/Breadcrumbs';
 import { StatusBar } from './components/StatusBar';
-import { DesignSystemShowcase } from './shared/ui/showcase';
-import { ProposalLoopPanel } from './components/femev/ProposalLoopPanel';
-import { TranslationPanel } from './components/femev/TranslationPanel';
-import { NotebookPanel } from './components/notebook/NotebookPanel';
-import { RecommendationsPanel } from './components/config/RecommendationsPanel';
-import { CommandPalette } from './components/navigation/CommandPalette';
 import { NavigationDrawer } from './components/navigation/NavigationDrawer';
 import { executionStore } from './services/execution/execution-store';
 import { editorTabsStore } from './services/shell/editor-tabs-store';
@@ -39,18 +32,43 @@ import {
   KEYBOARD_SHORTCUTS,
   NAVIGATION_SECTIONS,
 } from './constants/navigation';
-import {
-  Menu,
-  X,
-  Plus,
-  Columns,
-  Search,
-  RotateCcw,
-  Code2,
-  BookOpen,
-  ShieldCheck,
-  MoreHorizontal,
-} from 'lucide-react';
+import Menu from 'lucide-react/dist/esm/icons/menu';
+import X from 'lucide-react/dist/esm/icons/x';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Columns from 'lucide-react/dist/esm/icons/columns';
+import Search from 'lucide-react/dist/esm/icons/search';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
+import Code2 from 'lucide-react/dist/esm/icons/code-2';
+import BookOpen from 'lucide-react/dist/esm/icons/book-open';
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check';
+import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
+
+const DesignSystemShowcase = React.lazy(() =>
+  import('./shared/ui/showcase').then((m) => ({ default: m.DesignSystemShowcase }))
+);
+const FEMEVView = React.lazy(() =>
+  import('./components/femev/FEMEVView').then((m) => ({ default: m.FEMEVView }))
+);
+const NotebookPanel = React.lazy(() =>
+  import('./components/notebook/NotebookPanel').then((m) => ({ default: m.NotebookPanel }))
+);
+const RecommendationsPanel = React.lazy(() =>
+  import('./components/config/RecommendationsPanel').then((m) => ({ default: m.RecommendationsPanel }))
+);
+const CommandPalette = React.lazy(() =>
+  import('./components/navigation/CommandPalette').then((m) => ({ default: m.CommandPalette }))
+);
+
+function ViewFallback(): React.JSX.Element {
+  return (
+    <div className="h-full w-full flex items-center justify-center p-8 text-slate-500 animate-pulse" role="status" aria-label="Loading view">
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-6 h-6 rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin" />
+        <span className="text-xs font-mono">Loading module...</span>
+      </div>
+    </div>
+  );
+}
 
 interface ProofItem {
   readonly id: string;
@@ -431,27 +449,16 @@ export function App(): React.JSX.Element {
 
           {activeView === VIEWS.NOTEBOOK && (
             <div className="h-full w-full overflow-hidden">
-              <NotebookPanel />
+              <React.Suspense fallback={<ViewFallback />}>
+                <NotebookPanel />
+              </React.Suspense>
             </div>
           )}
 
           {activeView === VIEWS.FEMEV && (
-            <div className="h-full p-3 sm:p-4 max-w-6xl mx-auto flex flex-col w-full overflow-y-auto">
-              <Tabs
-                items={[
-                  {
-                    id: 'proposal-loop',
-                    label: 'AX-PROVER Proposal Loop',
-                    content: <ProposalLoopPanel />,
-                  },
-                  {
-                    id: 'translation-gate',
-                    label: 'Translation Fidelity Gate',
-                    content: <TranslationPanel />,
-                  },
-                ]}
-              />
-            </div>
+            <React.Suspense fallback={<ViewFallback />}>
+              <FEMEVView />
+            </React.Suspense>
           )}
 
           {activeView === VIEWS.LEDGER && (
@@ -505,7 +512,9 @@ export function App(): React.JSX.Element {
 
           {activeView === VIEWS.SHOWCASE && (
             <div className="h-full overflow-y-auto">
-              <DesignSystemShowcase />
+              <React.Suspense fallback={<ViewFallback />}>
+                <DesignSystemShowcase />
+              </React.Suspense>
             </div>
           )}
 
@@ -543,7 +552,9 @@ export function App(): React.JSX.Element {
               </div>
 
               {/* Dynamic Config Discovery & Adaptive Recommendations */}
-              <RecommendationsPanel />
+              <React.Suspense fallback={<ViewFallback />}>
+                <RecommendationsPanel />
+              </React.Suspense>
             </div>
           )}
         </main>
@@ -610,10 +621,14 @@ export function App(): React.JSX.Element {
         />
 
         {/* Command Palette Modal */}
-        <CommandPalette
-          isOpen={isCommandPaletteOpen}
-          onClose={() => setIsCommandPaletteOpen(false)}
-        />
+        {isCommandPaletteOpen && (
+          <React.Suspense fallback={null}>
+            <CommandPalette
+              isOpen={isCommandPaletteOpen}
+              onClose={() => setIsCommandPaletteOpen(false)}
+            />
+          </React.Suspense>
+        )}
       </div>
     </ErrorBoundary>
   );

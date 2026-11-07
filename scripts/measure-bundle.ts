@@ -45,8 +45,10 @@ export interface BundleMetrics {
     readonly cssGzipKb: number;
     readonly htmlGzipKb: number;
   };
+  readonly chunks: Array<{ readonly name: string; readonly gzipKb: number }>;
   readonly files: Record<string, { rawBytes: number; gzipBytes: number; gzipKb: number }>;
   readonly status: 'PASS' | 'FAIL';
+  readonly verdict: 'PASS' | 'FAIL';
   readonly marginMainKb: number;
   readonly marginTotalKb: number;
 }
@@ -80,6 +82,7 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
   const assetFiles = fs.existsSync(assetsPath) ? fs.readdirSync(assetsPath) : [];
 
   const filesMap: Record<string, { rawBytes: number; gzipBytes: number; gzipKb: number }> = {};
+  const chunksList: Array<{ name: string; gzipKb: number }> = [];
   let totalJsRaw = 0;
   let totalJsGzip = 0;
   let mainGzip = 0;
@@ -96,6 +99,7 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
     filesMap[file] = { rawBytes, gzipBytes, gzipKb };
 
     if (file.endsWith('.js')) {
+      chunksList.push({ name: file, gzipKb });
       totalJsRaw += rawBytes;
       totalJsGzip += gzipBytes;
       if (file.startsWith('index-')) {
@@ -132,9 +136,11 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
 
   const evalResult = evaluateBundleBudget(mainKb, totalJsKb, budgetLimits);
 
+  chunksList.sort((a, b) => b.gzipKb - a.gzipKb);
+
   const metrics: BundleMetrics = {
     timestamp: new Date().toISOString(),
-    phase: '13.9.1',
+    phase: '14.9.1',
     methodology: BUNDLE_METHODOLOGY,
     budgetLimits,
     measured: {
@@ -144,13 +150,25 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
       cssGzipKb: cssKb,
       htmlGzipKb: htmlKb,
     },
+    chunks: chunksList,
     files: filesMap,
     status: evalResult.status,
+    verdict: evalResult.status,
     marginMainKb: evalResult.marginMainKb,
     marginTotalKb: evalResult.marginTotalKb,
   };
 
-  const reportFile = options?.outputFile ?? process.env.BUNDLE_OUTPUT_FILE ?? (process.argv[2] || 'reports/bundle-post-14.json');
+  // Parse CLI args for --out
+  let cliOutputFile = 'reports/bundle-post-14.json';
+  const args = process.argv.slice(2);
+  const outIndex = args.indexOf('--out');
+  if (outIndex !== -1 && args[outIndex + 1]) {
+    cliOutputFile = args[outIndex + 1];
+  } else if (args[0] && !args[0].startsWith('--')) {
+    cliOutputFile = args[0];
+  }
+
+  const reportFile = options?.outputFile ?? process.env.BUNDLE_OUTPUT_FILE ?? cliOutputFile;
   const reportPath = path.resolve(reportFile);
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, JSON.stringify(metrics, null, 2), 'utf-8');
@@ -164,7 +182,16 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
 
 if (process.argv[1]?.endsWith('measure-bundle.ts')) {
   try {
-    const outputFile = process.argv[2] ?? process.env.BUNDLE_OUTPUT_FILE ?? 'reports/bundle-post-14.json';
+    let outputFile = 'reports/bundle-post-14.json';
+    const args = process.argv.slice(2);
+    const outIndex = args.indexOf('--out');
+    if (outIndex !== -1 && args[outIndex + 1]) {
+      outputFile = args[outIndex + 1];
+    } else if (args[0] && !args[0].startsWith('--')) {
+      outputFile = args[0];
+    } else if (process.env.BUNDLE_OUTPUT_FILE) {
+      outputFile = process.env.BUNDLE_OUTPUT_FILE;
+    }
     const res = measureBundle({ outputFile });
     if (res.status !== 'PASS') {
       console.warn(`[WARNING] Bundle exceeds recommended budget limits: ${res.status}`);

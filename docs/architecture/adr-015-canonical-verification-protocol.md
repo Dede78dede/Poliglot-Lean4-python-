@@ -113,25 +113,26 @@ No client component, mock harness, or speculative tactic generator may assert `v
 
 ---
 
-## 5. Epistemic Authority & Multi-Emitter Classification
+## 5. Epistemic Authority Matrix & Multi-Emitter Classification
 
-Phase 14.9 Pre-Sign-Off audit confirmed six (6) textual references to `SEAL_KERNEL_VERIFIED_TIER5` across the codebase. To guarantee strict epistemic discipline, all sites are formally classified into exactly three operational roles:
+Phase 14.9 Pre-Sign-Off audit confirmed six (6) textual references to `SEAL_KERNEL_VERIFIED_TIER5` across the codebase. In Phase 14.9.1 FIX-B, all sites were refactored to enforce that ONLY `HybridConsensusAdjudicator` can certify.
 
-### 5.1 Authoritative Classification Matrix
+### 5.1 Epistemic Authority Matrix
 
 | File & Line | Operational Role | Epistemic Authority | Description & Enforcement |
 |:---|:---:|:---:|:---|
 | `server/src/services/verification/hybrid-adjudicator.ts:264` | **CERTIFYING** | **SOLE AUTHORITY** | The only component authorized to mint a verifiable kernel seal badge. Emitted exclusively upon dual-engine consensus (`confirmed_valid`: Kimina and Lake agreement + strict allowlisted axioms). |
 | `server/src/services/lungo/lungo-bridge.ts:111` | **TRANSPORTING / METADATA** | NON-CERTIFYING | Attaches `proofCarried: 'SEAL_KERNEL_VERIFIED_TIER5'` to ingested Lungo BIR claim records. Transports proof metadata; does not certify live proof execution. |
 | `src/services/mcp/mcp-server.ts:147` | **METADATA** | NON-CERTIFYING | Static capability metadata attribute in `polyglot_get_engine_status` describing server capability tier (`{ kernelVerification: { available: true, seal: 'SEAL_KERNEL_VERIFIED_TIER5' } }`). |
-| `server/src/services/mcp/lean-lsp-mcp-client.ts:162` | **TRANSPORTING / STUB** | NON-CERTIFYING | Transports upstream Lean LSP MCP diagnostics and returns downstream status for external MCP tooling; gated behind external engine response. |
-| `src/services/mcp/lean-lsp-client.ts:193` | **TRANSPORTING / STUB** | NON-CERTIFYING | Browser MCP client transport stub echoing server responses for MCP tooling clients. |
-| `src/services/mcp/mcp-server.ts:418` | **TRANSPORTING / STUB** | NON-CERTIFYING | MCP tool execution response envelope in `polyglot_propose_proof`. Transports proposed proof metadata back to callers. |
+| `server/src/services/mcp/lean-lsp-mcp-client.ts:162` | **TRANSPORTING / PREFLIGHT** | NON-CERTIFYING | Refactored in FIX-B to delegate to `hybridAdjudicator.adjudicate()`. Maps to `ProofOutcome` (`transport`, `preflight`, or `unavailable`). Never independently certifies or emits `verified: true`. |
+| `src/services/mcp/lean-lsp-client.ts:193` | **UNAVAILABLE STUB** | NON-CERTIFYING | Refactored in FIX-B to return `{ kind: 'unavailable', reason: 'client_stub' }`. Client stub never simulates verification or asserts truth. |
+| `src/services/mcp/mcp-server.ts:418` | **CONDITIONAL TRANSPORT** | NON-CERTIFYING | Refactored in FIX-B to invoke `hybridAdjudicator.adjudicate()`. Sets `kernelSeal: 'SEAL_KERNEL_VERIFIED_TIER5'` only if adjudicator returns `confirmed_valid`; otherwise `null`. Proposal commitment (`committed: true`) is decoupled from proof certification. |
 
-### 5.2 Certification Invariants
+### 5.2 Certification Invariants & Governance Rule
 1. **Single Certifying Authority**: Only `HybridConsensusAdjudicator` is legally permitted to certify user theorems as `SEAL_KERNEL_VERIFIED_TIER5`.
 2. **Non-Certifying Transports**: All other occurrences are strictly transport wrappers or metadata schemas. They do not constitute an independent verification pathway.
 3. **No Simulation Bypass**: Neither client stubs nor heuristic tactic engines may synthesize or emit `SEAL_KERNEL_VERIFIED_TIER5` outside of live execution.
+4. **Governance Rule on New Emitters**: Adding a new emitter requires an ADR and a test that asserts the new site does not certify.
 
 ---
 

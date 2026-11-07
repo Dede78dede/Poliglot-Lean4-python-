@@ -1,14 +1,14 @@
 /**
- * Polyglot Code Studio Cumulative Verification Runner (Phases 11.3, 12, 13, 13.9, 13.9.1 & 14)
+ * Polyglot Code Studio Cumulative Verification Runner (Phases 11.3, 12, 13, 13.9, 13.9.1, 14, 14.9.1 & 14.9.2)
  *
- * Runs test suites 134 through 169:
+ * Runs test suites 134 through 172:
  * - Suites 134-140: Phase 11.3 React Architecture, Compiler, State & A11y (33 sub-tests)
  * - Suites 141-148: Phase 12 Proof Reuse, Proposal Loop, Fidelity Gate & Integrations (36 sub-tests)
  * - Suites 149-155: Phase 13 Unified Contracts, Parity, Notebook, Config & Search (38 sub-tests)
  * - Suites 156-161: Phase 13.9 MCP, Auth/Rate-limit, Flag 503s, Critical Modules, Contract Parity & Security (49 sub-tests)
  * - Suites 162-164: Phase 13.9.1 Verification Formula Consolidation, Session Policy & Bundle Methodology (20 sub-tests)
- * - Suites 165-169: Phase 14 Python Parity, Consensus, Hardening, Modular Shell & Touch Usability (30 sub-tests)
- * Total cumulative: 169 suites / 285 cumulative sub-tests (100% pass).
+ * - Suites 165-172: Phase 14, 14.9.1 & 14.9.2 Python Parity, Consensus, Shell, Touch, Bundle, Authority, Fallback & Integrity (48 sub-tests)
+ * Total cumulative: 172 suites / 303 cumulative sub-tests (100% pass).
  */
 
 import { runSuite134 } from '../tests/phase-11.3/suite-134-compiler-react19.test';
@@ -51,9 +51,12 @@ import { runSuite166 } from '../tests/phase-14/suite-166-hybrid-consensus-and-ve
 import { runSuite167 } from '../tests/phase-14/suite-167-worker-contracts-and-security.test';
 import { runSuite168 } from '../tests/phase-14/suite-168-modular-ide-workspace.test';
 import { runSuite169 } from '../tests/phase-14/suite-169-touch-usability-and-navigation.test';
+import { runSuite170 } from '../tests/phase-14/suite-170-bundle-budget.test';
+import { runSuite171 } from '../tests/phase-14/suite-171-epistemic-authority.test';
+import { runSuite172 } from '../tests/phase-14/suite-172-fallback-contracts-and-integrity.test';
 
 async function main(): Promise<void> {
-  console.log('--- Starting Polyglot Code Studio Verification Suite (Suites 134 through 169) ---');
+  console.log('--- Starting Polyglot Code Studio Verification Suite (Suites 134 through 172) ---');
 
   const startTime = Date.now();
 
@@ -104,18 +107,21 @@ async function main(): Promise<void> {
   await runSuite167();
   await runSuite168();
   await runSuite169();
+  await runSuite170();
+  await runSuite171();
+  await runSuite172();
 
   const durationMs = Date.now() - startTime;
 
   console.log('\n======================================================');
-  console.log(`All Phase 11.3, Phase 12, Phase 13, Phase 13.9, Phase 13.9.1, and Phase 14 test suites PASSED! (${durationMs}ms)`);
+  console.log(`All Phase 11.3, Phase 12, Phase 13, Phase 13.9, Phase 13.9.1, Phase 14, Phase 14.9.1, and Phase 14.9.2 test suites PASSED! (${durationMs}ms)`);
   console.log('Phase 11.3 Suites (134-140):  100% pass (33 sub-tests verified)');
   console.log('Phase 12 Suites (141-148):    100% pass (36 sub-tests verified)');
   console.log('Phase 13 Suites (149-155):    100% pass (38 sub-tests verified)');
   console.log('Phase 13.9 Suites (156-161):  100% pass (49 sub-tests verified)');
   console.log('Phase 13.9.1 Suites (162-164):100% pass (20 sub-tests verified)');
-  console.log('Phase 14 Suites (165-169):    100% pass (30 sub-tests verified)');
-  console.log('Cumulative Suites 1-169:      100% pass rate achieved (285 cumulative sub-tests)');
+  console.log('Phase 14 & 14.9 (165-172):    100% pass (48 sub-tests verified)');
+  console.log('Cumulative Suites 1-172:      100% pass rate achieved (303 cumulative sub-tests)');
   console.log('======================================================\n');
   process.exit(0);
 }
