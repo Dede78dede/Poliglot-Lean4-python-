@@ -1,0 +1,47 @@
+{
+  "timestamp": "2026-11-08T18:01:01.721Z",
+  "phase": "15-preflight-14.9.9",
+  "note": "Baseline latency measured prior to OpenTelemetry instrumentation wave W1. Required p95 overhead in W1 <= +5%.",
+  "results": {
+    "/api/v1/verify": {
+      "endpoint": "/api/v1/verify",
+      "iterations": 1000,
+      "minMs": 0.003,
+      "maxMs": 0.698,
+      "p50Ms": 0.004,
+      "p95Ms": 0.011,
+      "p99Ms": 0.036,
+      "avgMs": 0.007
+    },
+    "/api/v1/session": {
+      "endpoint": "/api/v1/session",
+      "iterations": 1000,
+      "minMs": 0,
+      "maxMs": 0.121,
+      "p50Ms": 0,
+      "p95Ms": 0.001,
+      "p99Ms": 0.001,
+      "avgMs": 0.001
+    },
+    "/api/v1/lean/execute": {
+      "endpoint": "/api/v1/lean/execute",
+      "iterations": 1000,
+      "minMs": 0,
+      "maxMs": 0.296,
+      "p50Ms": 0,
+      "p95Ms": 0,
+      "p99Ms": 0.001,
+      "avgMs": 0.001
+    },
+    "/mcp": {
+      "endpoint": "/mcp",
+      "iterations": 1000,
+      "minMs": 0.001,
+      "maxMs": 0.382,
+      "p50Ms": 0.001,
+      "p95Ms": 0.001,
+      "p99Ms": 0.012,
+      "avgMs": 0.002
+    }
+  }
+}
