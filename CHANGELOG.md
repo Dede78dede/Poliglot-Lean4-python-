@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ## [Unreleased]
 
+## [2.3.0] - Phase 14.9.9.1 (2026-11-08)
+
+### Added
+- **ADR-016 (Phase 15 Scope, Epistemic Guarantees & Activation Waves)**: Formally codified roadmap from 172-suite baseline to 195-suite Phase 15 target, bundle ceilings (O1 $\le$ 100 KB, O2 $\le$ 220 KB, total $\le$ 290 KB), and activation waves (W1–W4).
+- **ADR-018 (Removal of Client Seal Path)**: Documented excision of `certifyWithKernel` from client preflight syntax guard.
+- **Feature Flag Governance (62/62 Flags Annotated)**: Codified squad ownership, fail-closed behaviors (`503`, `404`, `noop`), and expiry horizons across all 62 registered feature flags; created `reports/feature-flag-audit.md` and `docs/architecture/feature-flags.md`.
+- **Master Indexes**: Created `docs/INDEX.md` and `reports/INDEX.md` indexing all architecture decisions, specifications, and audit reports.
+- **Property-Based Contract Testing**: Implemented Suite 190 with `fast-check` executing 1000 randomized iterations across 4 contract properties.
+- **Accessibility & Design Tokens**: Implemented Suite 191 validating WCAG 2.2 AA contrast rules, minimum 44px touch hitboxes, and `axe-core` rule engine integration.
+
+### Changed & Hardened
+- **Sole Epistemic Authority Invariant**: `server/src/services/verification/hybrid-adjudicator.ts:264` is verified as the exclusive site authorized to emit `verified: true` and `SEAL_KERNEL_VERIFIED_TIER5`.
+- **Excision of `certifyWithKernel`**: Removed `certifyWithKernel` and direct server formula imports from `src/services/verification/preflight-syntax-guard.ts` and `verification-formula.ts`.
+- **ProofOutcome Parity**: Added `NUMERIC_CERTIFICATE_UNVERIFIED` tier and `numeric-certificate` variant to `ProofOutcome`; updated Zod and Pydantic v2 schemas with `extra='forbid'`, `Discriminator('ok')`, and `Discriminator('kind')`.
+- **FEMEV & LeanCert Adaptation**: Distinguish numerical bound computation (`numericStatus: 'computed'`, `NUMERIC_CERTIFICATE_UNVERIFIED`) from kernel formal verification, preventing false verification claims.
+- **Supply Chain Security**: Pinned all 23 production dependencies in `package.json` to exact versions; codified `npm ci --ignore-scripts` in CI workflow.
+
 ### Phase 14.9.1 Reconciliation (FIX-A & FIX-B)
 - **FIX-A: Bundle Reduction to 216.92 KB Total JS Gzip**: Resolved development runtime leak by defining `'process.env.NODE_ENV': JSON.stringify('production')` in `vite.config.ts`, added native Vite 8 / Rolldown `codeSplitting.groups` with priority hierarchy, applied route-level `React.lazy` + `Suspense`, and converted main entry to direct Lucide imports. Total JS gzip dropped from 274.63 KB to **216.92 KB** (budget ≤ 260.00 KB, +43.08 KB margin) and main entry dropped to **31.96 KB** (budget ≤ 180.00 KB). Validated via Suite 170 (6 sub-tests).
 - **FIX-B: Single Certifier Epistemic Authority**: Introduced `ProofOutcome` discriminated union (`certified`, `transport`, `preflight`, `unavailable`, `metadata`). Refactored `lean-lsp-mcp-client.ts` (delegates to `hybridAdjudicator`), `lean-lsp-client.ts` (returns `unavailable: client_stub`), and `mcp-server.ts` (gates `kernelSeal` strictly behind adjudicator). Codified Epistemic Authority Matrix in ADR 015 Section 5. Validated via Suite 171 (6 sub-tests).

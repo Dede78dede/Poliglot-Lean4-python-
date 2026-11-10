@@ -23,6 +23,7 @@ export interface FemevEvidence {
   readonly kind: 'empirical-orbit' | 'heuristic-interval' | 'numeric-certificate' | 'kernel-proof';
   readonly certificateHash?: string;
   readonly verified: boolean;
+  readonly numericStatus?: 'computed' | 'failed';
   readonly summary: string;
   readonly timestamp: string;
 }

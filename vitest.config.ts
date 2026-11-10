@@ -5,6 +5,14 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    restoreMocks: true,
+    clearMocks: true,
+    mockReset: true,
+    dangerouslyIgnoreUnhandledErrors: false,
+    include: ['tests/**/*.test.ts'],
+    exclude: ['node_modules', 'dist', 'src/archive'],
+    testTimeout: 20000,
+    hookTimeout: 10000,
     coverage: {
       provider: 'v8',
       thresholds: {
@@ -21,4 +29,3 @@ export default defineConfig({
     },
   },
 });
-

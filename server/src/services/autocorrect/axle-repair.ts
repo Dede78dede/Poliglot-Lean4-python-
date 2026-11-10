@@ -1,3 +1,5 @@
+import type { ProofOutcome } from '../../types/proof-outcome';
+
 export interface AxleRepairPass {
   readonly name: 'insert_sorries' | 'relax_defeq_transparency' | 'remove_unknown_options' | 'proof_simplification';
   readonly applied: boolean;
@@ -8,11 +10,7 @@ export interface AxleRepairResult {
   readonly ok: boolean;
   readonly repairedProof: string;
   readonly passesApplied: readonly AxleRepairPass[];
-  /**
-   * Indicates whether formal kernel verification has certified this repaired proof.
-   * AXLE produces candidate repairs and always returns false; certification requires the hybrid adjudicator.
-   */
-  readonly verified: false;
+  readonly outcome: ProofOutcome;
   readonly error?: string;
   readonly rateLimited?: boolean;
   readonly retryAfterSeconds?: number;
@@ -77,10 +75,15 @@ export class AxleRepairService {
           ok: false,
           repairedProof: brokenProof,
           passesApplied: [],
-          verified: false,
           rateLimited: true,
           retryAfterSeconds,
           error: 'AXLE API rate limit reached.',
+          outcome: {
+            kind: 'unavailable',
+            certificationTier: 'UNAVAILABLE',
+            verified: false,
+            reason: 'feature_disabled',
+          },
         };
       }
 
@@ -95,7 +98,14 @@ export class AxleRepairService {
         passesApplied: data.passesApplied ?? [
           { name: 'relax_defeq_transparency', applied: true, description: 'Relaxed definitional equality transparency.' },
         ],
-        verified: false,
+        outcome: {
+          kind: 'preflight',
+          certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+          verified: false,
+          syntaxValid: true,
+          sorryFree: !data.repairedProof.includes('sorry'),
+          reason: 'AXLE candidate repair synthesized; requires kernel adjudication.',
+        },
       };
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'CONSENT_REQUIRED') throw err;
@@ -115,7 +125,14 @@ export class AxleRepairService {
       ok: true,
       repairedProof: repaired,
       passesApplied: passes,
-      verified: false,
+      outcome: {
+        kind: 'preflight',
+        certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+        verified: false,
+        syntaxValid: true,
+        sorryFree: !repaired.includes('sorry'),
+        reason: 'Local offline simulated repair; candidate not certified by kernel.',
+      },
     };
   }
 }

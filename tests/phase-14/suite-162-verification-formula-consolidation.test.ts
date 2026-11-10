@@ -23,7 +23,6 @@ import {
 } from '../../server/src/services/verification-formula';
 import {
   evaluatePreflightSyntax,
-  certifyWithKernel,
 } from '../../src/services/verification/preflight-syntax-guard';
 
 export async function runSuite162(): Promise<void> {

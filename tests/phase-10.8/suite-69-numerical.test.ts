@@ -10,36 +10,42 @@ import { provepyBridge } from '../../server/src/services/provepy/provepy-bridge'
 export async function runSuite69(): Promise<void> {
   console.log('\n--- Test Suite 69: Phase A — Numerical Verification & Python-FFI ---');
 
-  // 69.1: verifyNumeric() on simple bound returns verified: true with certificate
+  // 69.1: verifyNumeric() on simple bound returns numeric-certificate outcome
   const req1: LeanCertVerifyRequest = {
     claim: 'sin(x) < 1 for all x in [0, 2]',
     method: 'interval',
   };
   const res1 = await leanCertBridge.verifyNumeric(req1);
-  assert.equal(res1.verified, true);
+  assert.equal(res1.outcome.verified, false);
+  assert.equal(res1.outcome.kind, 'numeric-certificate');
+  assert.equal(res1.outcome.certificationTier, 'NUMERIC_CERTIFICATE_UNVERIFIED');
   assert.equal(res1.certificateChecker, 'leancert');
   assert.ok(typeof res1.certificate === 'string' && res1.certificate.length >= 32);
   assert.ok(res1.bounds !== undefined);
   assert.ok((res1.bounds?.upper ?? 0) <= 1.0);
-  console.log('  ✓ 69.1 verifyNumeric() on valid bound returns verified: true with Lean certificate');
+  console.log('  ✓ 69.1 verifyNumeric() on valid bound returns NUMERIC_CERTIFICATE_UNVERIFIED outcome with Lean certificate');
 
-  // 69.2: verifyNumeric() on false claim returns verified: false
+  // 69.2: verifyNumeric() on false claim returns preflight outcome with error
   const req2: LeanCertVerifyRequest = {
     claim: 'sin(x) > 2 for all x in [0, 2]',
     method: 'interval',
   };
   const res2 = await leanCertBridge.verifyNumeric(req2);
-  assert.equal(res2.verified, false);
+  assert.equal(res2.outcome.verified, false);
+  assert.equal(res2.outcome.kind, 'preflight');
+  assert.equal(res2.outcome.certificationTier, 'SYNTAX_ONLY_UNVERIFIED');
   assert.ok(res2.error?.includes('CLAIM_REFUTED'));
-  console.log('  ✓ 69.2 verifyNumeric() on false claim returns verified: false');
+  console.log('  ✓ 69.2 verifyNumeric() on false claim returns preflight SYNTAX_ONLY_UNVERIFIED outcome');
 
   // 69.3: LEANCERT_UNAVAILABLE when container is stopped
   leanCertBridge.setContainerRunning(false);
   const res3 = await leanCertBridge.verifyNumeric(req1);
-  assert.equal(res3.verified, false);
+  assert.equal(res3.outcome.verified, false);
+  assert.equal(res3.outcome.kind, 'unavailable');
+  assert.equal(res3.outcome.certificationTier, 'UNAVAILABLE');
   assert.ok(res3.error?.includes('LEANCERT_UNAVAILABLE'));
   leanCertBridge.setContainerRunning(true); // Restore for subsequent steps
-  console.log('  ✓ 69.3 503 LEANCERT_UNAVAILABLE returned when container is unavailable');
+  console.log('  ✓ 69.3 503 LEANCERT_UNAVAILABLE returned with UNAVAILABLE tier when container is unavailable');
 
   // 69.4: NumpySpec feature flag off by default
   assert.equal(numpySpecBridge.isEnabled(), false);

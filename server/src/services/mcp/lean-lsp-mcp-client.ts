@@ -165,6 +165,8 @@ export class LeanLspMcpClient {
           if (adjResult.verdict === 'confirmed_valid') {
             const outcome: ProofOutcome = {
               kind: 'transport',
+              certificationTier: 'DEGRADED_FALLBACK_UNVERIFIED',
+              verified: false,
               source: 'hybrid-adjudicator',
               payload: {
                 declarationCount: 1,
@@ -183,6 +185,8 @@ export class LeanLspMcpClient {
 
           const outcome: ProofOutcome = {
             kind: 'preflight',
+            certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+            verified: false,
             syntaxValid: true,
             sorryFree: true,
             reason: adjResult.reason,
@@ -196,6 +200,8 @@ export class LeanLspMcpClient {
         } catch {
           const outcome: ProofOutcome = {
             kind: 'unavailable',
+            certificationTier: 'UNAVAILABLE',
+            verified: false,
             reason: 'adjudicator_unreachable',
           };
           return {

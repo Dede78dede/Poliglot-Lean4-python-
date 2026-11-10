@@ -7,13 +7,15 @@
  * Educational alpha mode only. Gated behind ENABLE_PROVEPY (default: false).
  */
 
+import type { ProofOutcome } from '../../types/proof-outcome';
+
 export interface ProvepyRequest {
   readonly pythonSource: string;
   readonly functionName: string;
 }
 
 export interface ProvepyResult {
-  readonly verified: boolean;
+  readonly outcome: ProofOutcome;
   readonly formalLeanCode: string;
   readonly functionName: string;
   readonly enabled: boolean;
@@ -42,7 +44,12 @@ export class ProvepyBridge {
   public async verifyFunction(request: ProvepyRequest): Promise<ProvepyResult> {
     if (!this.enabled) {
       return {
-        verified: false,
+        outcome: {
+          kind: 'unavailable',
+          certificationTier: 'UNAVAILABLE',
+          verified: false,
+          reason: 'feature_disabled',
+        },
         formalLeanCode: '',
         functionName: request.functionName,
         enabled: false,
@@ -54,7 +61,14 @@ export class ProvepyBridge {
     const hasDecorator = request.pythonSource.includes('@provable');
     if (!hasDecorator) {
       return {
-        verified: false,
+        outcome: {
+          kind: 'preflight',
+          certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+          verified: false,
+          syntaxValid: false,
+          sorryFree: true,
+          reason: 'MISSING_DECORATOR: Function must be decorated with @provable',
+        },
         formalLeanCode: '',
         functionName: request.functionName,
         enabled: true,
@@ -71,7 +85,14 @@ export class ProvepyBridge {
     ].join('\n');
 
     return {
-      verified: true,
+      outcome: {
+        kind: 'preflight',
+        certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+        verified: false,
+        syntaxValid: true,
+        sorryFree: true,
+        reason: 'Educational autoformalization draft; requires kernel adjudication.',
+      },
       formalLeanCode,
       functionName: request.functionName,
       enabled: true,

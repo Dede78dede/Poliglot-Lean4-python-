@@ -99,21 +99,23 @@ export class FemevEngine {
     };
 
     const certRes = await leanCertBridge.verifyNumeric(request);
+    const isComputed = certRes.outcome.kind === 'numeric-certificate';
 
     const evidence: FemevEvidence = {
       id: `ev-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       declarationId: id,
       kind: 'numeric-certificate',
       certificateHash: certRes.certificate,
-      verified: certRes.verified,
-      summary: certRes.verified
-        ? `LeanCert verified ${certRes.methodUsed} bounds [${certRes.bounds?.lower ?? 0}, ${certRes.bounds?.upper ?? 0}]`
+      verified: false,
+      numericStatus: isComputed ? 'computed' : 'failed',
+      summary: isComputed
+        ? `LeanCert computed ${certRes.methodUsed} bounds [${certRes.bounds?.lower ?? 0}, ${certRes.bounds?.upper ?? 0}] (${certRes.outcome.certificationTier})`
         : `LeanCert verification failed: ${certRes.error ?? 'Unknown error'}`,
       timestamp: new Date().toISOString(),
     };
 
     const updatedEvidences = [...existing.evidences, evidence];
-    const updatedStatus = certRes.verified ? 'numerically_verified' : 'rejected';
+    const updatedStatus = isComputed ? 'numerically_verified' : 'rejected';
 
     const updatedDecl: FemevDeclaration = {
       ...existing,

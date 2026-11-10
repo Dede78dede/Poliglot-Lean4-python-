@@ -51,19 +51,20 @@ export async function runSuite189(): Promise<void> {
   assert.equal(parsedFailure.success, true, 'Valid failure envelope must pass Zod parse');
   console.log('  ✓ 189.2 ResultEnvelope failure payload validates RFC 9457 error structure');
 
-  // 189.3: ProofOutcome discriminated union across all 5 variants
+  // 189.3: ProofOutcome discriminated union across all 6 variants
   const variants = [
-    { kind: 'certified', seal: 'SEAL_KERNEL_VERIFIED_TIER5', digest: 'sha256-abc', axioms: ['propext'] },
-    { kind: 'transport', source: 'hybrid-adjudicator', payload: { theoremName: 'test', durationMs: 12 } },
-    { kind: 'preflight', syntaxValid: true, sorryFree: true, reason: 'preflight check' },
-    { kind: 'unavailable', reason: 'client_stub' },
-    { kind: 'metadata', note: 'test note' },
+    { kind: 'certified', seal: 'SEAL_KERNEL_VERIFIED_TIER5', certificationTier: 'KERNEL_VERIFIED_TIER5', verified: true, digest: 'sha256-abc', axioms: ['propext'] },
+    { kind: 'numeric-certificate', certificationTier: 'NUMERIC_CERTIFICATE_UNVERIFIED', verified: false, certificate: 'sha256-num', methodUsed: 'interval' },
+    { kind: 'transport', certificationTier: 'DEGRADED_FALLBACK_UNVERIFIED', verified: false, source: 'hybrid-adjudicator', payload: { theoremName: 'test', durationMs: 12 } },
+    { kind: 'preflight', certificationTier: 'SYNTAX_ONLY_UNVERIFIED', verified: false, syntaxValid: true, sorryFree: true, reason: 'preflight check' },
+    { kind: 'unavailable', certificationTier: 'UNAVAILABLE', verified: false, reason: 'client_stub' },
+    { kind: 'metadata', certificationTier: 'SYNTAX_ONLY_UNVERIFIED', verified: false, note: 'test note' },
   ];
   for (const v of variants) {
     const parseRes = ProofOutcomeSchema.safeParse(v);
-    assert.equal(parseRes.success, true, `ProofOutcome variant '${v.kind}' must parse cleanly`);
+    assert.equal(parseRes.success, true, `ProofOutcome variant '${v.kind}' must parse cleanly: ${JSON.stringify(parseRes)}`);
   }
-  console.log('  ✓ 189.3 ProofOutcome discriminated union parses all 5 canonical variants');
+  console.log('  ✓ 189.3 ProofOutcome discriminated union parses all canonical variants');
 
   // 189.4: Boundary rejection of unknown fields (strict)
   const payloadWithExtra = {

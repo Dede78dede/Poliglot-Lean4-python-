@@ -1077,12 +1077,12 @@ Every integer $n > 1$ has at least one prime divisor.
                     <span className="text-slate-300 font-bold uppercase">Certificate Inspection:</span>
                     <span
                       className={`text-[10px] px-2 py-0.5 border ${
-                        numericResult.verified
-                          ? 'border-emerald-800 bg-emerald-950/40 text-emerald-400 font-bold'
+                        numericResult.outcome.kind === 'numeric-certificate'
+                          ? 'border-amber-800 bg-amber-950/40 text-amber-400 font-bold'
                           : 'border-rose-800 bg-rose-950/40 text-rose-400'
                       }`}
                     >
-                      {numericResult.verified ? 'VERIFIED LEAN CERTIFICATE' : 'VERIFICATION FAILED'}
+                      {numericResult.outcome.kind === 'numeric-certificate' ? 'NUMERIC CERTIFICATE (UNVERIFIED)' : 'CALCULATION FAILED'}
                     </span>
                   </div>
 

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-07T13:07:48.152Z",
+  "timestamp": "2026-11-09T17:15:49.699Z",
   "phase": "14.9.1",
   "methodology": {
     "scope": "dist/assets",
@@ -13,10 +13,11 @@
   },
   "measured": {
     "mainEntryGzipKb": 31.96,
-    "totalJsGzipKb": 216.92,
+    "totalJsGzipKb": 216.91,
     "totalJsRawKb": 724.14,
-    "cssGzipKb": 16.52,
-    "htmlGzipKb": 0.91
+    "cssGzipKb": 16.56,
+    "htmlGzipKb": 0.91,
+    "initialLoadGzipKb": 174.06
   },
   "chunks": [
     {
@@ -28,7 +29,7 @@
       "gzipKb": 51.31
     },
     {
-      "name": "index-CJnA4IWq.js",
+      "name": "index-B8obJ7Sm.js",
       "gzipKb": 31.96
     },
     {
@@ -36,7 +37,7 @@
       "gzipKb": 24.73
     },
     {
-      "name": "CommandPalette-YOG4UUWG.js",
+      "name": "CommandPalette-Bse_wQuo.js",
       "gzipKb": 19.55
     },
     {
@@ -48,11 +49,11 @@
       "gzipKb": 3.79
     },
     {
-      "name": "showcase-CMB7rYtF.js",
+      "name": "showcase-BgU06uo0.js",
       "gzipKb": 3.62
     },
     {
-      "name": "FEMEVView-DoMs--rQ.js",
+      "name": "FEMEVView-BGt_14lE.js",
       "gzipKb": 3.6
     },
     {
@@ -60,7 +61,7 @@
       "gzipKb": 2.3
     },
     {
-      "name": "tabs-CYzRPaXS.js",
+      "name": "tabs-CHxUVrUf.js",
       "gzipKb": 0.66
     },
     {
@@ -69,14 +70,14 @@
     }
   ],
   "files": {
-    "CommandPalette-YOG4UUWG.js": {
+    "CommandPalette-Bse_wQuo.js": {
       "rawBytes": 61249,
       "gzipBytes": 20021,
       "gzipKb": 19.55
     },
-    "FEMEVView-DoMs--rQ.js": {
+    "FEMEVView-BGt_14lE.js": {
       "rawBytes": 17636,
-      "gzipBytes": 3690,
+      "gzipBytes": 3687,
       "gzipKb": 3.6
     },
     "NotebookPanel-CNb-0-pv.js": {
@@ -99,15 +100,15 @@
       "gzipBytes": 2351,
       "gzipKb": 2.3
     },
-    "index-CJnA4IWq.js": {
+    "index-B8obJ7Sm.js": {
       "rawBytes": 111431,
-      "gzipBytes": 32731,
+      "gzipBytes": 32730,
       "gzipKb": 31.96
     },
-    "index-vdRBsyKf.css": {
-      "rawBytes": 110941,
-      "gzipBytes": 16918,
-      "gzipKb": 16.52
+    "index-Du8A28SQ.css": {
+      "rawBytes": 111136,
+      "gzipBytes": 16960,
+      "gzipKb": 16.56
     },
     "react-vendor-1vlBd_27.js": {
       "rawBytes": 218985,
@@ -119,14 +120,14 @@
       "gzipBytes": 368,
       "gzipKb": 0.36
     },
-    "showcase-CMB7rYtF.js": {
+    "showcase-BgU06uo0.js": {
       "rawBytes": 14680,
       "gzipBytes": 3710,
       "gzipKb": 3.62
     },
-    "tabs-CYzRPaXS.js": {
+    "tabs-CHxUVrUf.js": {
       "rawBytes": 1415,
-      "gzipBytes": 677,
+      "gzipBytes": 675,
       "gzipKb": 0.66
     },
     "zod-vendor-wQCyJjKA.js": {
@@ -143,5 +144,5 @@
   "status": "PASS",
   "verdict": "PASS",
   "marginMainKb": 148.04,
-  "marginTotalKb": 43.08
+  "marginTotalKb": 43.09
 }

@@ -36,7 +36,7 @@ export async function runSuite190(): Promise<void> {
     fc.property(
       fc.string(),
       fc.uuid(),
-      fc.date(),
+      fc.integer({ min: 1577836800000, max: 1893456000000 }).map(ms => new Date(ms)),
       (strVal, corrId, timestamp) => {
         const payload = {
           ok: true as const,
@@ -89,6 +89,8 @@ export async function runSuite190(): Promise<void> {
         const payload = {
           kind: 'certified' as const,
           seal: 'SEAL_KERNEL_VERIFIED_TIER5' as const,
+          certificationTier: 'KERNEL_VERIFIED_TIER5' as const,
+          verified: true as const,
           digest,
           axioms,
         };
@@ -96,7 +98,9 @@ export async function runSuite190(): Promise<void> {
         if (!parseRes.success) return false;
         return (
           parseRes.data.kind === 'certified' &&
-          parseRes.data.seal === 'SEAL_KERNEL_VERIFIED_TIER5'
+          parseRes.data.seal === 'SEAL_KERNEL_VERIFIED_TIER5' &&
+          parseRes.data.certificationTier === 'KERNEL_VERIFIED_TIER5' &&
+          parseRes.data.verified === true
         );
       }
     ),

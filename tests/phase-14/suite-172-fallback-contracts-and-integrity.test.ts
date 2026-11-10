@@ -78,16 +78,20 @@ export async function runSuite172(): Promise<void> {
   // 172.5: ProofOutcome non-certified outcomes prohibit literal SEAL_KERNEL_VERIFIED_TIER5
   const fallbackOutcome: ProofOutcome = {
     kind: 'unavailable',
-    reason: 'upstream_timeout',
-    message: 'Kimina engine timed out after 8000ms. Degraded to syntax preflight.',
+    certificationTier: 'UNAVAILABLE',
+    verified: false,
+    reason: 'adjudicator_unreachable',
   };
   assert.equal(fallbackOutcome.kind, 'unavailable');
   assert.ok(!('seal' in fallbackOutcome), 'Unavailable outcome must not contain seal property');
 
   const preflightOutcome: ProofOutcome = {
     kind: 'preflight',
+    certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+    verified: false,
     syntaxValid: true,
-    diagnostics: [],
+    sorryFree: true,
+    reason: 'syntax check',
   };
   assert.equal(preflightOutcome.kind, 'preflight');
   assert.ok(!('seal' in preflightOutcome), 'Preflight outcome must not contain seal property');
@@ -147,7 +151,9 @@ if (process.env.VITEST) {
     it('172.5: ProofOutcome non-certified outcomes guarantee absence of kernel seals', async () => {
       const fallbackOutcome: ProofOutcome = {
         kind: 'unavailable',
-        reason: 'upstream_timeout',
+        certificationTier: 'UNAVAILABLE',
+        verified: false,
+        reason: 'adjudicator_unreachable',
       };
       expect(fallbackOutcome.kind).toBe('unavailable');
       expect('seal' in fallbackOutcome).toBe(false);

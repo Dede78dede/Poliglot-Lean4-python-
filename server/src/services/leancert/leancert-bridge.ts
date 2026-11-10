@@ -10,6 +10,7 @@
  */
 
 import { validateProofSearchQuery } from '../../../../src/services/proof/proof-search-validator';
+import type { ProofOutcome } from '../../types/proof-outcome';
 
 export interface LeanCertVerifyRequest {
   readonly claim: string;                 // e.g. "sin(x) < 1 for all x in [0, 2]"
@@ -18,7 +19,7 @@ export interface LeanCertVerifyRequest {
 }
 
 export interface LeanCertVerifyResult {
-  readonly verified: boolean;
+  readonly outcome: ProofOutcome;
   readonly certificate?: string;          // Lean-certificate hash (SHA-256)
   readonly certificateChecker: 'leancert';
   readonly bounds?: { readonly lower: number; readonly upper: number };
@@ -54,7 +55,12 @@ export class LeanCertBridge {
     // 1. Availability check: Fail fast with LEANCERT_UNAVAILABLE if container is down
     if (!this.isContainerRunning) {
       return {
-        verified: false,
+        outcome: {
+          kind: 'unavailable',
+          certificationTier: 'UNAVAILABLE',
+          verified: false,
+          reason: 'feature_disabled',
+        },
         certificateChecker: this.certificateChecker,
         durationMs: Date.now() - startTime,
         error: '503 LEANCERT_UNAVAILABLE: LeanCert v4.32.0 container is not reachable on port 8085',
@@ -67,7 +73,14 @@ export class LeanCertBridge {
     const sanitizedClaim = validateProofSearchQuery(request.claim);
     if (!sanitizedClaim.valid) {
       return {
-        verified: false,
+        outcome: {
+          kind: 'preflight',
+          certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+          verified: false,
+          syntaxValid: false,
+          sorryFree: true,
+          reason: `INVALID_CLAIM: ${sanitizedClaim.message ?? sanitizedClaim.errorCode ?? 'Query sanitization failed'}`,
+        },
         certificateChecker: this.certificateChecker,
         durationMs: Date.now() - startTime,
         error: `INVALID_CLAIM: ${sanitizedClaim.message ?? sanitizedClaim.errorCode ?? 'Query sanitization failed'}`,
@@ -80,7 +93,14 @@ export class LeanCertBridge {
       const sanitizedCode = validateProofSearchQuery(request.pythonCode);
       if (!sanitizedCode.valid) {
         return {
-          verified: false,
+          outcome: {
+            kind: 'preflight',
+            certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+            verified: false,
+            syntaxValid: false,
+            sorryFree: true,
+            reason: `INVALID_CODE: ${sanitizedCode.message ?? sanitizedCode.errorCode ?? 'Python code sanitization failed'}`,
+          },
           certificateChecker: this.certificateChecker,
           durationMs: Date.now() - startTime,
           error: `INVALID_CODE: ${sanitizedCode.message ?? sanitizedCode.errorCode ?? 'Python code sanitization failed'}`,
@@ -95,13 +115,20 @@ export class LeanCertBridge {
 
     // Detect contradictory or false claims
     if (
-      claimLower.includes('> 2') && claimLower.includes('sin(') ||
-      claimLower.includes('< 0') && claimLower.includes('x^2') ||
+      (claimLower.includes('> 2') && claimLower.includes('sin(')) ||
+      (claimLower.includes('< 0') && claimLower.includes('x^2')) ||
       claimLower.includes('false') ||
       claimLower.includes('1 < 0')
     ) {
       return {
-        verified: false,
+        outcome: {
+          kind: 'preflight',
+          certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+          verified: false,
+          syntaxValid: true,
+          sorryFree: true,
+          reason: 'CLAIM_REFUTED: Bounds violation detected during interval arithmetic expansion',
+        },
         certificateChecker: this.certificateChecker,
         bounds: { lower: 0.0, upper: 1.0 },
         durationMs: Math.max(Date.now() - startTime, 24),
@@ -136,7 +163,14 @@ export class LeanCertBridge {
       .join('');
 
     return {
-      verified: true,
+      outcome: {
+        kind: 'numeric-certificate',
+        certificationTier: 'NUMERIC_CERTIFICATE_UNVERIFIED',
+        verified: false,
+        certificate: certificateHash,
+        methodUsed: request.method,
+        bounds: { lower: lowerBound, upper: upperBound },
+      },
       certificate: certificateHash,
       certificateChecker: this.certificateChecker,
       bounds: { lower: lowerBound, upper: upperBound },

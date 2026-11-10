@@ -3,18 +3,12 @@
  *
  * Epistemic Guardrail:
  * This module is a client-side pre-flight syntax and hygiene screening guard.
- * It NEVER returns `verified: true` or any certificate of truth.
+ * It NEVER returns verified outcome or any certificate of truth.
  *
  * Formal certification is strictly reserved for the canonical evaluator
  * (`server/src/services/verification-formula.ts`) backed by Lean 4 kernel evidence
  * (exitCode === 0 ∧ contains_proof_obligation ∧ ¬hasSorry ∧ ¬hasError ∧ ¬simulated).
  */
-
-import {
-  evaluateFormalVerification,
-  type VerificationCheckInput,
-  type VerificationEvaluation,
-} from '../../../server/src/services/verification-formula';
 
 export interface PreflightSyntaxInput {
   readonly code: string;
@@ -74,12 +68,4 @@ export function evaluatePreflightSyntax(input: PreflightSyntaxInput): PreflightS
     rejectedTerms: Object.freeze(rejectedTerms),
     reason: rejectedTerms.length === 0 ? undefined : `Preflight rejected by terms: ${rejectedTerms.join(', ')}`,
   };
-}
-
-/**
- * Sole delegation path to kernel certification.
- * Only the canonical server evaluator can certify truth and mint verified: true.
- */
-export function certifyWithKernel(input: VerificationCheckInput): VerificationEvaluation {
-  return evaluateFormalVerification(input);
 }

@@ -177,6 +177,8 @@ export class LeanLspClient implements McpClientInterface {
       if (request.toolName === 'lean_verify_kernel') {
         const outcome: ProofOutcome = {
           kind: 'unavailable',
+          certificationTier: 'UNAVAILABLE',
+          verified: false,
           reason: 'client_stub',
         };
         return {

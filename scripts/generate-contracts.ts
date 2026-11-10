@@ -1,10 +1,12 @@
 /**
- * Contract Parity Generator (Phase 13.9, Task 07)
+ * Contract Parity Generator (Phase 14.9.9.1)
  *
  * Generates Pydantic v2 contract models from TypeScript schemas.
  * Enforces:
  * - Strict Pydantic v2 ConfigDict (extra='forbid', frozen=True, validate_assignment=True, strict=True)
  * - Discriminated union on 'ok' via Discriminator('ok')
+ * - Discriminated union on 'kind' for ProofOutcome
+ * - CertificationTier enum including NUMERIC_CERTIFICATE_UNVERIFIED
  * - PEP 8 formatting (88-char line cap, 2 blank lines around top-level definitions)
  * - Regeneration notice header
  */
@@ -77,6 +79,107 @@ ResultEnvelope = Annotated[
 ]
 
 
+CertificationTier = Literal[
+    'KERNEL_VERIFIED_TIER5',
+    'NUMERIC_CERTIFICATE_UNVERIFIED',
+    'SYNTAX_ONLY_UNVERIFIED',
+    'DEGRADED_FALLBACK_UNVERIFIED',
+    'UNAVAILABLE',
+]
+
+
+class NumericBounds(PolyglotBaseModel):
+    """Numeric bounds representation."""
+
+    lower: float
+    upper: float
+
+
+class ProofOutcomeCertified(PolyglotBaseModel):
+    """Certified kernel verification outcome."""
+
+    kind: Literal['certified']
+    seal: Literal['SEAL_KERNEL_VERIFIED_TIER5']
+    certificationTier: Literal['KERNEL_VERIFIED_TIER5']
+    verified: Literal[True]
+    digest: str
+    axioms: list[str]
+
+
+class ProofOutcomeNumericCertificate(PolyglotBaseModel):
+    """Numeric certificate verified outcome."""
+
+    kind: Literal['numeric-certificate']
+    certificationTier: Literal['NUMERIC_CERTIFICATE_UNVERIFIED']
+    verified: Literal[False]
+    certificate: str
+    methodUsed: Literal['interval', 'taylor-model', 'solver']
+    bounds: NumericBounds | None = None
+
+
+class CertifiedPayload(PolyglotBaseModel):
+    """Payload for transport outcomes."""
+
+    theoremName: str | None = None
+    declarationCount: int | None = None
+    unprovenCount: int | None = None
+    axioms: list[str] | None = None
+    durationMs: float | None = None
+
+
+class ProofOutcomeTransport(PolyglotBaseModel):
+    """Transport degraded outcome."""
+
+    kind: Literal['transport']
+    certificationTier: Literal['DEGRADED_FALLBACK_UNVERIFIED']
+    verified: Literal[False]
+    source: Literal['hybrid-adjudicator', 'bridge_fallback']
+    payload: CertifiedPayload
+
+
+class ProofOutcomePreflight(PolyglotBaseModel):
+    """Preflight syntax outcome."""
+
+    kind: Literal['preflight']
+    certificationTier: Literal['SYNTAX_ONLY_UNVERIFIED']
+    verified: Literal[False]
+    syntaxValid: bool
+    sorryFree: bool
+    reason: str
+
+
+class ProofOutcomeUnavailable(PolyglotBaseModel):
+    """Unavailable engine outcome."""
+
+    kind: Literal['unavailable']
+    certificationTier: Literal['UNAVAILABLE']
+    verified: Literal[False]
+    reason: Literal['client_stub', 'adjudicator_unreachable', 'feature_disabled']
+
+
+class ProofOutcomeMetadata(PolyglotBaseModel):
+    """Metadata non-certifying outcome."""
+
+    kind: Literal['metadata']
+    certificationTier: Literal['SYNTAX_ONLY_UNVERIFIED']
+    verified: Literal[False]
+    note: str
+
+
+# Discriminated union on 'kind'
+ProofOutcome = Annotated[
+    Union[
+        Annotated[ProofOutcomeCertified, Tag('certified')],
+        Annotated[ProofOutcomeNumericCertificate, Tag('numeric-certificate')],
+        Annotated[ProofOutcomeTransport, Tag('transport')],
+        Annotated[ProofOutcomePreflight, Tag('preflight')],
+        Annotated[ProofOutcomeUnavailable, Tag('unavailable')],
+        Annotated[ProofOutcomeMetadata, Tag('metadata')],
+    ],
+    Discriminator('kind'),
+]
+
+
 class LeanExecuteRequest(PolyglotBaseModel):
     """Lean 4 execution request."""
 
@@ -93,6 +196,36 @@ class LeanExecuteResponse(PolyglotBaseModel):
     durationMs: float = Field(ge=0)
     verified: bool
     simulated: bool | None = None
+
+
+class VerificationRequest(PolyglotBaseModel):
+    """Formal verification request contract."""
+
+    requestId: str
+    code: str = Field(min_length=1)
+    toolchain: str = Field(default='v4.34.0')
+    protocolVersion: str = Field(default='polyglot.verification.v1')
+
+
+class VerificationResponse(PolyglotBaseModel):
+    """Formal verification response contract."""
+
+    requestId: str
+    verified: bool
+    verdict: str
+    badge: str
+    reason: str | None = None
+    durationMs: float = Field(default=0.0, ge=0)
+
+
+class SessionMetadata(PolyglotBaseModel):
+    """Session metadata descriptor."""
+
+    sessionId: str
+    userId: str
+    createdAt: str
+    ttlHours: int = Field(default=72, ge=1)
+    pinned: bool = False
 
 
 class ProofReuseQuery(PolyglotBaseModel):

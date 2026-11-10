@@ -67,9 +67,9 @@ $$\text{verified} \iff (\text{exitCode} = 0) \land \text{contains\_proof\_obliga
 4. **`¬hasError`**: Assenza di messaggi diagnostici con severità `error` o `fail`.
 5. **`¬simulated`**: Nessun fallback sintattico o simulatore può attestare una verifica formale (`simulated: true` implica sempre `verified: false`).
 
-### Architettura Modulare a Due Livelli (ADR 014):
-- **Canonical Evaluator (Autorità Unica)**: `server/src/services/verification-formula.ts` — è l'unica autorità certificante abilitata a rilasciare `verified: true` sulla base dell'output del kernel Lean.
-- **Pre-Flight Syntax Guard (Non-Certificante)**: `src/services/verification/preflight-syntax-guard.ts` — modulo client-side per screening rapido di igiene sintattica ($T_{\text{code}} \land T_{\text{sorry}} \land T_{\text{syntax}} \land T_{\text{toolchain}}$); non emette mai `verified: true` e delega la certificazione finale al modulo server.
+### Architettura Modulare a Due Livelli (ADR 014 & ADR 018):
+- **Hybrid Adjudicator (Autorità Epistemica Unica)**: `server/src/services/verification/hybrid-adjudicator.ts:264` — è l'unica autorità certificante abilitata a rilasciare `verified: true` e `SEAL_KERNEL_VERIFIED_TIER5` sulla base della formula a 5 termini e del consenso dei kernel.
+- **Pre-Flight Syntax Guard (Non-Certificante)**: `src/services/verification/preflight-syntax-guard.ts` — modulo client-side per screening rapido di igiene sintattica ($T_{\text{code}} \land T_{\text{sorry}} \land T_{\text{syntax}} \land T_{\text{toolchain}}$); non emette mai `verified: true` e opera senza alcun canale di bypass verso il kernel (ADR-018).
 
 ---
 
@@ -224,6 +224,19 @@ npx tsx scripts/verify-all.ts
   - Hermetic project repository compilation via isolated Lake runner (`POST /api/v1/projects/lean/build`).
 - **Transitive Axiom Policy (`polyglot.axioms.standard.v1`)**: Enforces allowlist strictly restricted to `propext`, `Classical.choice`, and `Quot.sound`. Any custom axioms or `sorryAx` references forbid certification.
 - **Hybrid Consensus Adjudicator**: Evaluates comparability (source digest, context digest, toolchain digest) and arbitrates between sub-engine evidence. Yields `confirmed_valid` (`SEAL_KERNEL_VERIFIED_TIER5`), `confirmed_invalid`, or `unconfirmed`.
-- **Cumulative Verification Suite**: Suites 1 through 168 (279 cumulative sub-tests) achieve 100% pass rate.
+- **Cumulative Verification Suite**: Baseline suites 1 through 172 (303 sub-tests) achieve 100% pass rate. Extended suites 173 through 191 (377 sub-tests) verified.
+
+---
+
+## 13. Phase 14.9.9.1 Epistemic Hardening & Phase 15 Scope
+
+- **Milestone**: `14.9.9.1` (SemVer `2.3.0`).
+- **Epistemic Isolation**: Strict static verification enforcing that `hybrid-adjudicator.ts:264` is the exclusive certifier (`npm run arch:check-epistemic-authority`).
+- **ProofOutcome Discriminated Union**: Complete Zod ↔ Pydantic v2 contract parity across all 6 variants (`certified`, `numeric-certificate`, `transport`, `preflight`, `unavailable`, `metadata`).
+- **Feature Flag Governance**: 62/62 registered flags assigned squad owners, fail-closed behaviors, and retirement dates (`npm run check-flag-expiry:strict`).
+- **Supply Chain Security**: All 23 production dependencies pinned to exact versions; `npm ci --ignore-scripts` verified in CI.
+- **Architectural Documentation**: Master indexes available in [`docs/INDEX.md`](docs/INDEX.md) and [`reports/INDEX.md`](reports/INDEX.md). Key ADRs: [ADR-016](docs/adr/ADR-016-phase-15-scope.md), [ADR-017](docs/adr/ADR-017-bundle-budget-revision.md), [ADR-018](docs/adr/ADR-018-removal-of-client-seal-path.md).
+- **Phase 15 Roadmap**: 4 activation waves targeting 195 suites / 420 sub-tests under revised bundle budget ceilings (O1 $\le$ 100 KB, O2 $\le$ 220 KB, total $\le$ 290 KB).
+
 
 

@@ -107,3 +107,12 @@ npx tsx scripts/measure-bundle.ts --out reports/bundle-post-14.json
 ### Continuous Integration (GitHub Actions)
 In `.github/workflows/ci.yml`, the `Bundle budget` step runs `npm run bundle:measure`. Per the confirmed architecture, budget overflows emit GitHub Actions warning annotations (`::warning::`) in pull request reviews without blocking CI merges, alerting engineers prior to deployment.
 
+
+---
+
+## 6. Phase 14.9.3 — O1–O3 Closure
+
+Phase 14.9.3 resolves the residual bundle observations O1, O2, and O3 identified during the post-Phase 14 reconciliation:
+- **O1 (Max Single Chunk Cap)**: Preserved at ≤ 80.00 KB gzip (largest chunk measured: `react-vendor` at 66.06 KB).
+- **O2 (Initial Load Gzip)**: Main entry + core initial runtime chunks measured at 174.06 KB gzip (safely below the 200.00 KB ceiling).
+- **O3 (Chunk Sum Accounting)**: Sum of emitted chunk assets strictly matches `totalJsGzipKb` (216.91 KB) within 0.01 KB (well within the ≤ 0.50 KB tolerance).

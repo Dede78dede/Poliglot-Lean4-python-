@@ -15,10 +15,8 @@
  */
 
 import assert from 'node:assert/strict';
-import {
-  evaluatePreflightSyntax,
-  certifyWithKernel,
-} from '../../src/services/verification/preflight-syntax-guard';
+import { evaluatePreflightSyntax } from '../../src/services/verification/preflight-syntax-guard';
+import { evaluateFormalVerification } from '../../server/src/services/verification-formula';
 import { NotebookSessionManager } from '../../src/services/notebook/session-manager';
 import { validateZipEntries } from '../../src/services/zip-validator';
 import {
@@ -46,7 +44,7 @@ export async function runSuite159(): Promise<void> {
   assert.equal(preflightProof.syntaxValid, true);
   assert.equal(preflightProof.toolchainHint, true);
 
-  const certifiedProof = certifyWithKernel({
+  const certifiedProof = evaluateFormalVerification({
     codeOrFiles: code,
     stdout: '',
     stderr: '',

@@ -11,6 +11,8 @@
  *    verified with '; rfl' fidelity check.
  */
 
+import type { ProofOutcome } from '../../types/proof-outcome';
+
 export interface PastaLeanTranslationRequest {
   readonly pythonCode: string;
   readonly target: 'term' | 'command'; // --target term | --target command
@@ -41,6 +43,7 @@ export interface TwoFileWorkspaceResult {
   readonly proofsLeanCode: string;
   readonly fidelityVerified: boolean;     // checks '; rfl' equivalence
   readonly fidelityDiagnostic?: string;
+  readonly outcome: ProofOutcome;
 }
 
 export interface PastaLeanBridgeConfig {
@@ -275,8 +278,9 @@ export class PastaLeanBridge {
       generatedLeanCode,
       proofsLeanPath: 'Proofs.lean',
       proofsLeanCode,
-      fidelityVerified: fidelityResult.verified,
+      fidelityVerified: fidelityResult.fidelityPassed,
       fidelityDiagnostic: fidelityResult.message,
+      outcome: fidelityResult.outcome,
     };
   }
 
@@ -286,21 +290,33 @@ export class PastaLeanBridge {
   public async verifyFidelity(
     generatedCode: string,
     proofCode: string,
-  ): Promise<{ verified: boolean; message: string }> {
+  ): Promise<{ fidelityPassed: boolean; message: string; outcome: ProofOutcome }> {
     const hasFidelityTheorem = proofCode.includes('_fidelity') && proofCode.includes('rfl');
     const hasComputable = generatedCode.includes('_computable');
     const hasProvable = generatedCode.includes('_provable');
 
     if (hasFidelityTheorem && hasComputable && hasProvable) {
       return {
-        verified: true,
+        fidelityPassed: true,
         message: 'Fidelity check passed: provable and computable functions are definitionally equal (; rfl).',
+        outcome: {
+          kind: 'metadata',
+          certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+          verified: false,
+          note: 'PastaLean definitional equivalence verified via rfl.',
+        },
       };
     }
 
     return {
-      verified: false,
+      fidelityPassed: false,
       message: 'Fidelity check failed: Proofs.lean does not establish definitional equivalence with Generated.lean.',
+      outcome: {
+        kind: 'metadata',
+        certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+        verified: false,
+        note: 'PastaLean definitional equivalence failed.',
+      },
     };
   }
 
