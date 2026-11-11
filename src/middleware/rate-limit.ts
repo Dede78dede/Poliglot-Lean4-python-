@@ -15,12 +15,14 @@ export interface RateLimitOptions {
   readonly windowMs?: number;     // Window duration in ms (default: 60,000)
   readonly maxRequests?: number;  // Max requests per window (default: 100)
   readonly keyPrefix?: string;
+  readonly getNow?: () => number;
 }
 
 export function createRateLimitMiddleware(options: RateLimitOptions = {}) {
   const windowMs = options.windowMs ?? 60_000;
   const maxRequests = options.maxRequests ?? 100;
   const keyPrefix = options.keyPrefix ?? 'global';
+  const getNow = options.getNow ?? (() => Date.now());
 
   // Map of clientIdentifier -> array of request timestamps
   const clients = new Map<string, number[]>();
@@ -30,7 +32,7 @@ export function createRateLimitMiddleware(options: RateLimitOptions = {}) {
     const tokenUser = (req as unknown as { userTokenId?: string }).userTokenId;
     const clientKey = `${keyPrefix}:${tokenUser || req.ip || '127.0.0.1'}`;
 
-    const now = Date.now();
+    const now = getNow();
     const windowStart = now - windowMs;
 
     let timestamps = clients.get(clientKey) ?? [];

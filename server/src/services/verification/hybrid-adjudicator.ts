@@ -100,6 +100,19 @@ export interface HybridAdjudicationResult {
   };
 }
 
+export type AdjudicationResultV1 = {
+  readonly protocolVersion: typeof CANONICAL_VERIFICATION_PROTOCOL;
+  readonly requestId: string;
+  readonly verdict: HybridVerdict;
+  readonly verified: boolean;
+  readonly seal: 'SEAL_KERNEL_VERIFIED_TIER5' | null;
+  readonly axiomPolicyCompliance: boolean;
+  readonly enginesConsulted: readonly string[];
+  readonly consensusAchieved: boolean;
+  readonly reason: string;
+  readonly diagnostics: readonly any[];
+};
+
 /**
  * Validates whether evidence from Kimina and Lake are epistemically comparable.
  */
@@ -314,64 +327,17 @@ export interface AdjudicateOutput {
 
 export class HybridAdjudicator {
   adjudicate(input: AdjudicateInput): AdjudicateOutput {
+    // Non-certifying synchronous preflight analysis only (Defect A contained).
+    // Epistemic Invariant 1: Genuine server-side dual-engine execution only.
+    // A synchronous text check can never issue confirmed_valid or mint SEAL_KERNEL_VERIFIED_TIER5.
     const hasSorry = input.source.includes('sorry') || input.source.includes('admit');
-    const exitOk = input.exitCode === 0 || input.exitCode === undefined;
-    const stderrOk = !input.stderr || !input.stderr.toLowerCase().includes('error:');
-
-    if (!hasSorry && exitOk && stderrOk && input.source.trim().length > 0) {
-      const sourceDigest = `sha256:${Buffer.from(input.source).toString('hex').slice(0, 32)}`;
-      const req: VerificationRequestV1 = {
-        protocolVersion: CANONICAL_VERIFICATION_PROTOCOL,
-        requestId: 'adjudicator-sync',
-        scope: 'snippet',
-        sourceDigest,
-        environment: { leanToolchain: input.toolchain || 'leanprover/lean4:v4.35.0' },
-        axiomPolicyId: STANDARD_AXIOM_POLICY,
-        requireConsensus: true,
-      };
-
-      const evidence: EngineEvidence = {
-        engine: 'kimina',
-        contractVersion: '1.0.0',
-        outcome: 'accepted',
-        requestId: 'adjudicator-sync',
-        sourceDigest,
-        toolchain: input.toolchain || 'leanprover/lean4:v4.35.0',
-        durationMs: 10,
-        exitCode: 0,
-        diagnostics: [],
-        axiomAudit: {
-          status: 'passed',
-          observedAxioms: ['propext', 'Classical.choice'],
-          allowedAxioms: STANDARD_AXIOM_ALLOWLIST,
-        },
-        error: null,
-      };
-
-      const lakeEvidence: EngineEvidence = {
-        ...evidence,
-        engine: 'lake',
-      };
-
-      const result = adjudicateHybridConsensus(req, evidence, lakeEvidence);
-      if (result.verdict === 'confirmed_valid') {
-        return {
-          verdict: 'confirmed_valid',
-          verified: true,
-          seal: 'SEAL_KERNEL_VERIFIED_TIER5',
-          reason: result.reason,
-          axioms: ['propext', 'Classical.choice'],
-        };
-      }
-    }
-
     return {
       verdict: 'unconfirmed',
       verified: false,
       seal: null,
       reason: hasSorry
         ? 'Proof contains unproven sorry/admit.'
-        : 'Adjudication did not achieve confirmed_valid consensus.',
+        : 'Non-certifying synchronous preflight: dual-engine consensus execution required for verification.',
       axioms: [],
     };
   }

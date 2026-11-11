@@ -55,4 +55,6 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD elan toolchain list | grep -q "v4.35.0-rc4" || exit 1
 
-CMD ["node", "-e", "console.log('Lean 4 Multi-Toolchain Runner active with pre-installed: v4.28.0, v4.31.0, v4.33.1, v4.35.0-rc4'); require('http').createServer((req, res) => { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(JSON.stringify({ status: 'ok', toolchains: ['v4.28.0', 'v4.31.0', 'v4.33.1', 'v4.35.0-rc4'] })); }).listen(8080);"]
+COPY server.js /workspace/server.js
+
+CMD ["node", "/workspace/server.js"]

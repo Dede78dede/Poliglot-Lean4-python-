@@ -20,13 +20,11 @@ class SecurityEventLogger {
   private readonly events: SecurityEvent[] = [];
   private readonly maxBufferedEvents = 500;
 
-  private sanitizeId(tokenOrId?: string): string | undefined {
+  public sanitizeId(tokenOrId?: string): string | undefined {
     if (!tokenOrId) return undefined;
-    // If it looks like a raw base64 token (length > 20), do NOT log it!
-    if (tokenOrId.length >= 24) {
-      return `opaque_ref_${tokenOrId.slice(0, 4)}...`;
-    }
-    return tokenOrId;
+    if (tokenOrId.startsWith('opaque_ref_')) return tokenOrId;
+    const prefix = tokenOrId.slice(0, Math.min(4, tokenOrId.length));
+    return `opaque_ref_${prefix}...`;
   }
 
   private record(event: SecurityEvent): void {

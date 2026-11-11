@@ -43,6 +43,17 @@ module.exports = {
         path: 'server/src/types/proof-outcome\\.ts$',
       },
     },
+    {
+      name: 'no-tools-in-production',
+      severity: 'error',
+      comment: 'Production and runtime code (src/ and server/src/) must never import developer tooling from tools/.',
+      from: {
+        path: '^(src|server/src)',
+      },
+      to: {
+        path: '^tools',
+      },
+    },
   ],
   options: {
     doNotFollow: {

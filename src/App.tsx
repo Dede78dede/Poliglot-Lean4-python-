@@ -44,19 +44,19 @@ import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check';
 import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
 
 const DesignSystemShowcase = React.lazy(() =>
-  import('./shared/ui/showcase').then((m) => ({ default: m.DesignSystemShowcase }))
+  import('./shared/ui/showcase').then((m) => ({ default: m.DesignSystemShowcase || (m as any).default }))
 );
 const FEMEVView = React.lazy(() =>
-  import('./components/femev/FEMEVView').then((m) => ({ default: m.FEMEVView }))
+  import('./components/femev/FEMEVView').then((m) => ({ default: m.FEMEVView || (m as any).default }))
 );
 const NotebookPanel = React.lazy(() =>
-  import('./components/notebook/NotebookPanel').then((m) => ({ default: m.NotebookPanel }))
+  import('./components/notebook/NotebookPanel').then((m) => ({ default: m.NotebookPanel || (m as any).default }))
 );
 const RecommendationsPanel = React.lazy(() =>
-  import('./components/config/RecommendationsPanel').then((m) => ({ default: m.RecommendationsPanel }))
+  import('./components/config/RecommendationsPanel').then((m) => ({ default: m.RecommendationsPanel || (m as any).default }))
 );
 const CommandPalette = React.lazy(() =>
-  import('./components/navigation/CommandPalette').then((m) => ({ default: m.CommandPalette }))
+  import('./components/navigation/CommandPalette').then((m) => ({ default: m.CommandPalette || (m as any).default }))
 );
 
 function ViewFallback(): React.JSX.Element {

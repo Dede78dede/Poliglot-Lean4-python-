@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "Catalog of verified local developer search, indexation, and context packaging tools for Polyglot Code Studio.",
+  "tools": [
+    {
+      "name": "ogrep",
+      "version": "1.0.0",
+      "purpose": "Local structural search and AST-aware token query engine.",
+      "license": "MIT",
+      "binaryOrCommand": "tools/search/ogrep.sh",
+      "allowedInputs": [
+        "src/**",
+        "server/src/**",
+        "tests/**",
+        "docs/**",
+        "schemas/**"
+      ],
+      "forbiddenInputs": [
+        "data/tokens.json",
+        ".env*",
+        "node_modules/**",
+        "dist/**",
+        ".git/**"
+      ],
+      "sha256": "4b68427f794711317d7b420f1a92e1041d5b3dce63fbb950efd01c64eb3c3c72"
+    },
+    {
+      "name": "semcode",
+      "version": "1.0.0",
+      "purpose": "Semantic code graph search and cross-file symbol indexing.",
+      "license": "Apache-2.0",
+      "binaryOrCommand": "tools/search/semcode.sh",
+      "allowedInputs": [
+        "src/**",
+        "server/src/**",
+        "tests/**"
+      ],
+      "forbiddenInputs": [
+        "data/tokens.json",
+        ".env*",
+        "node_modules/**",
+        "dist/**",
+        ".git/**"
+      ],
+      "sha256": "81f337a77e81dc089d10e6a39d48b7d90393f9decdca03290b34d70ec63b1be4"
+    },
+    {
+      "name": "codeindex",
+      "version": "1.0.0",
+      "purpose": "Deterministic local static code index generator producing index.json, files.jsonl, symbols.jsonl, texts.jsonl.",
+      "license": "MIT",
+      "binaryOrCommand": "npx tsx tools/codeindex/generate.ts",
+      "allowedInputs": [
+        "src/**",
+        "server/src/**",
+        "tests/**",
+        "docs/**",
+        "schemas/**"
+      ],
+      "forbiddenInputs": [
+        "data/tokens.json",
+        ".env*",
+        "node_modules/**",
+        "dist/**",
+        ".git/**"
+      ],
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "repomix",
+      "version": "0.2.14",
+      "purpose": "Context packaging tool creating structured code snapshots for offline audits and analysis.",
+      "license": "MIT",
+      "binaryOrCommand": "npx repomix",
+      "allowedInputs": [
+        "src/**",
+        "server/src/**",
+        "tests/**",
+        "docs/**",
+        "schemas/**"
+      ],
+      "forbiddenInputs": [
+        "data/tokens.json",
+        ".env*",
+        "node_modules/**",
+        "dist/**",
+        ".git/**"
+      ],
+      "sha256": "7d9b4c09d5a9d6bfef43360eb91705e324ef6e873d6d84a7e94dbff7e6008eb4"
+    }
+  ]
+}

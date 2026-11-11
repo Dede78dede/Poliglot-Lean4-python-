@@ -38,8 +38,29 @@ services:
         condition: service_healthy
       pantograph:
         condition: service_healthy
+      kimina-backend:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  kimina-backend:
+    build:
+      context: ./docker/lean-runner
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    networks:
+      - polyglot-net
+      - lean-isolated-net
+    volumes:
+      - mathlib-cache:/root/.cache/mathlib
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/readyz"]
       interval: 15s
       timeout: 5s
       retries: 3

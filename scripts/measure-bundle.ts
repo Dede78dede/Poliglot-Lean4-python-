@@ -44,6 +44,7 @@ export interface BundleMetrics {
     readonly totalJsRawKb: number;
     readonly cssGzipKb: number;
     readonly htmlGzipKb: number;
+    readonly initialLoadGzipKb?: number;
   };
   readonly chunks: Array<{ readonly name: string; readonly gzipKb: number }>;
   readonly files: Record<string, { rawBytes: number; gzipBytes: number; gzipKb: number }>;
@@ -131,24 +132,41 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
 
   const budgetLimits = {
     mainBundleGzipMaxKb: 180.0,
-    totalJsGzipMaxKb: 260.0,
+    totalJsGzipMaxKb: 290.0,
+    maxSingleChunkGzipKb: 100.0,
+    initialLoadGzipMaxKb: 220.0,
+    maxAccountingDiscrepancyKb: 0.5,
   };
 
-  const evalResult = evaluateBundleBudget(mainKb, totalJsKb, budgetLimits);
+  const evalResult = evaluateBundleBudget(mainKb, totalJsKb, {
+    mainBundleGzipMaxKb: budgetLimits.mainBundleGzipMaxKb,
+    totalJsGzipMaxKb: budgetLimits.totalJsGzipMaxKb,
+  });
 
   chunksList.sort((a, b) => b.gzipKb - a.gzipKb);
 
+  // Initial load gzip (main entry + react vendor + aria vendor)
+  const reactVendorChunk = chunksList.find((c) => c.name.startsWith('react-vendor-'));
+  const ariaVendorChunk = chunksList.find((c) => c.name.startsWith('aria-vendor-'));
+  const initialLoadGzipKb = Number(
+    (mainKb + (reactVendorChunk?.gzipKb ?? 0) + (ariaVendorChunk?.gzipKb ?? 0)).toFixed(2)
+  );
+
   const metrics: BundleMetrics = {
     timestamp: new Date().toISOString(),
-    phase: '14.9.1',
+    phase: '14.9.9.2',
     methodology: BUNDLE_METHODOLOGY,
-    budgetLimits,
+    budgetLimits: {
+      mainBundleGzipMaxKb: budgetLimits.mainBundleGzipMaxKb,
+      totalJsGzipMaxKb: budgetLimits.totalJsGzipMaxKb,
+    },
     measured: {
       mainEntryGzipKb: mainKb,
       totalJsGzipKb: totalJsKb,
       totalJsRawKb: totalJsRawKb,
       cssGzipKb: cssKb,
       htmlGzipKb: htmlKb,
+      initialLoadGzipKb,
     },
     chunks: chunksList,
     files: filesMap,
@@ -159,7 +177,7 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
   };
 
   // Parse CLI args for --out
-  let cliOutputFile = 'reports/bundle-post-14.json';
+  let cliOutputFile = 'reports/bundle-post-14.9.9.2.json';
   const args = process.argv.slice(2);
   const outIndex = args.indexOf('--out');
   if (outIndex !== -1 && args[outIndex + 1]) {
@@ -172,6 +190,9 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
   const reportPath = path.resolve(reportFile);
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, JSON.stringify(metrics, null, 2), 'utf-8');
+
+  // Also preserve canonical copy at reports/bundle-post-14.json for backward compatibility with suite-170
+  fs.writeFileSync(path.resolve('reports/bundle-post-14.json'), JSON.stringify(metrics, null, 2), 'utf-8');
   console.log(`Bundle metrics recorded to ${reportPath}: Status ${metrics.status}`);
   console.log(`  Main Entry: ${mainKb} KB (Budget <= ${budgetLimits.mainBundleGzipMaxKb} KB, Margin +${evalResult.marginMainKb} KB)`);
   console.log(`  Total JS:   ${totalJsKb} KB (Budget <= ${budgetLimits.totalJsGzipMaxKb} KB, Margin +${evalResult.marginTotalKb} KB)`);

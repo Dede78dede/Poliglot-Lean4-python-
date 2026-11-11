@@ -163,6 +163,8 @@ export class LeanProjectRunner {
         exitCode?: number;
         durationMs?: number;
         memoryBytes?: number;
+        toolchain?: string;
+        toolchains?: string[];
       };
 
       const durationMs = json.durationMs ?? Math.round(performance.now() - startTime);
@@ -186,8 +188,12 @@ export class LeanProjectRunner {
       let toolchainMismatch: { required: string; current: string } | undefined;
       if (toolchainFile) {
         const required = toolchainFile.content.trim().replace(/^leanprover\/lean4:/, '');
-        const current = 'v4.8.0';
-        if (required && !required.includes('4.8.0')) {
+        const runnerToolchains: string[] = Array.isArray(json.toolchains) ? json.toolchains : [];
+        const current = (json.toolchain as string) || (runnerToolchains.includes(required) ? required : DEFAULT_LEAN_TOOLCHAIN);
+        const isSupported = runnerToolchains.length > 0
+          ? runnerToolchains.includes(required)
+          : (AVAILABLE_LEAN_TOOLCHAINS as readonly string[]).includes(required);
+        if (!isSupported) {
           toolchainMismatch = { required, current };
         }
       }

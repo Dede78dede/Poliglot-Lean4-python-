@@ -144,18 +144,26 @@ RUN apt-get update && apt-get install -y \
 
 ---
 
-## 7. Verifica e Test Suite
+## 7. Verification and Test Suites
 
-Per eseguire la suite di verifica automatizzata a 9 suite (copertura 100%):
-```bash
-npm run test:verify
-# oppure:
-npx tsx scripts/verify-all.ts
-```
+Polyglot Code Studio executes two comprehensive automated test runners:
+- **Default Verification Suite (Suites 134–172)**: 303 sub-tests covering React architecture, contracts, error registries, and core verification pipelines:
+  ```bash
+  npm test
+  # or:
+  npx tsx scripts/verify-all.ts
+  ```
+- **Extended Verification Suite (Suites 173–194)**: 89 sub-tests covering single-certifier epistemic authority, negative seal containment, rate limiting, and recursive redaction:
+  ```bash
+  npm run test:extended
+  # or:
+  npx tsx scripts/verify-extended.ts
+  ```
+Cumulative active baseline: **61 suites / 392 sub-tests (100% pass rate)**.
 
 ---
 
-## 8. Feature Status Matrix (Phase 13.9 Reconciled)
+## 8. Feature Status Matrix (Phase 14.9.9.2 Reconciled)
 
 | Feature / Subsystem | Status | Engine / Provider | Gating & Policy |
 |---|---|---|---|
@@ -174,8 +182,11 @@ npx tsx scripts/verify-all.ts
 | Cross-Artifact MiniSearch | ready | MiniSearch across 5 corpora | Sub-millisecond latency (< 1ms) |
 | Token Vault & Bearer Auth | ready | Opaque 32-byte base64 TokenVault | CI bypass strictly test-only |
 | API Rate Limiting | ready | In-memory sliding window (100 rpm) | 429 Retry-After + RFC headers |
-| Security Observability | ready | Standalone security-events emitter | Zero token leakage in logs |
+| Security Observability | ready | Standalone security-events emitter | Recursive redaction at log sink |
 | MCP 2026-07-28 Server | ready | Stateless JSON-RPC at /mcp | Dedicated 30 rpm rate limit |
+| Kimina Client Proxy | ready | Real HTTP client proxy | Mode: real/auto/simulator |
+| Lean Project Runner | ready | Lake process build executor | Dynamic toolchain resolution |
+| Local Re-implementation Bridges | local | Pastalean, Lungo, LeanCert, LeanScreen, LeanFlow, CRAMF, Nerodia, NumPySpec, ProvePy | Local heuristics / zero fetch calls |
 | LeanBeam Bridge | fallback | Client stub | Gated by ENABLE_LEAN_BEAM (off) |
 | Mathesis Integration | fallback | Remote endpoint client | Gated by ENABLE_MATHESIS (off) |
 | LP2 Transpiler | fallback | Lossy transpiler | Gated by ENABLE_LP2 (off) |
@@ -184,8 +195,6 @@ npx tsx scripts/verify-all.ts
 | OpenTelemetry Node | partial | Server trace bridge | Gated by ENABLE_OTEL_NODE (off) |
 | Yjs Collaborative Editing | partial | Hocuspocus WebSocket | Gated by ENABLE_YJS_COLLABORATION (off) |
 | Paperproof Visualizer | partial | Playback service | Gated by ENABLE_PAPERPROOF_PLAYBACK (off) |
-| Proof-State Snapshotting | future | A2DR1/Lean_Snapshot | Deferred to Phase 14 pending release |
-| Distributed Multi-pod Rate Limit | future | Redis sliding-window cluster | Architecture note / Phase 14 |
 
 ---
 

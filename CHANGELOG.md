@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ## [Unreleased]
 
+### Phase 14.9.9.2 — Verification Authority Containment & Prerequisite Repair
+- **Verification Authority Containment (P0 Stop-Ship)**:
+  - Contained Defect A: Excised synthetic synchronous certification from `HybridAdjudicator.adjudicate()`; all synchronous paths fail closed as `unconfirmed` with `verified: false` and null seal. Replaced truncated hex digest with standard SHA-256.
+  - Contained Defect B: Hardened `/api/v1/lean/consensus` route; client-supplied `kiminaEvidence` and `lakeEvidence` fields are strictly forbidden by Invariant 2 and rejected with HTTP 400.
+  - Remediated Defect C1: Eliminated hardcoded `v4.8.0` in `lean-project-runner.ts`; toolchain resolution now dynamically resolves against `AVAILABLE_LEAN_TOOLCHAINS`.
+  - Remediated Defect C2: Created root `Dockerfile` for `studio` service and defined `kimina-backend` in `docker-compose.yml`.
+  - Remediated Defect C3: Implemented minimal real HTTP Lake build runner in `docker/lean-runner/server.js` handling `POST /build` with integer `exitCode`.
+- **Governance & Hygiene**:
+  - G-H1: Removed empty committed files (`subfolder`, `theorem`, `file.lean`); rotated tokens, committed `data/tokens.template.json`, and added live store to `.gitignore`. Updated `README.md` §7 and §8.
+  - G-H2: Repaired `json-schema-exporter.ts` and `export-schemas.ts` to emit populated JSON schemas in `schemas/contracts.json`.
+  - G-D1 & ADR-019: Ratified `ADR-019-feature-flag-ttl-policy.md` grandfathering existing flags to 2027-12-31 with 180-day max TTL for new flags; added Suite 192 (5 sub-tests).
+  - G-P11: Implemented deterministic rate-limiting burst tests with clock injection in Suite 193 (5 sub-tests).
+  - G-P12: Implemented recursive redaction of credentials, cookies, and query strings in `security-events.ts`; added Suite 194 (5 sub-tests).
+  - Active baseline reached: **61 suites / 392 sub-tests (100% pass rate)**.
+
 ## [2.3.0] - Phase 14.9.9.1 (2026-11-08)
 
 ### Added

@@ -8,9 +8,14 @@ if (!fs.existsSync(outDir)) {
   fs.mkdirSync(outDir, { recursive: true });
 }
 
+const sortedSchemas: Record<string, unknown> = {};
+for (const key of Object.keys(schemas).sort()) {
+  sortedSchemas[key] = schemas[key];
+}
+
 fs.writeFileSync(
   path.join(outDir, 'contracts.json'),
-  JSON.stringify(schemas, Object.keys(schemas).sort(), 2)
+  JSON.stringify(sortedSchemas, null, 2)
 );
 
 console.log('Exported Zod boundary schemas to schemas/contracts.json');

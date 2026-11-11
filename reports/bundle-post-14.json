@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-11-09T17:15:49.699Z",
-  "phase": "14.9.1",
+  "timestamp": "2026-11-11T12:12:08.596Z",
+  "phase": "14.9.9.2",
   "methodology": {
     "scope": "dist/assets",
     "compression": "zlib.gzipSync (default)",
@@ -9,59 +9,59 @@
   },
   "budgetLimits": {
     "mainBundleGzipMaxKb": 180,
-    "totalJsGzipMaxKb": 260
+    "totalJsGzipMaxKb": 290
   },
   "measured": {
-    "mainEntryGzipKb": 31.96,
-    "totalJsGzipKb": 216.91,
-    "totalJsRawKb": 724.14,
-    "cssGzipKb": 16.56,
+    "mainEntryGzipKb": 28.84,
+    "totalJsGzipKb": 199.77,
+    "totalJsRawKb": 666.32,
+    "cssGzipKb": 16.57,
     "htmlGzipKb": 0.91,
-    "initialLoadGzipKb": 174.06
+    "initialLoadGzipKb": 132.18
   },
   "chunks": [
     {
-      "name": "react-vendor-1vlBd_27.js",
-      "gzipKb": 66.06
+      "name": "react-vendor-D_mjGnsX.js",
+      "gzipKb": 55.67
     },
     {
-      "name": "aria-vendor-DdGw0wM3.js",
-      "gzipKb": 51.31
+      "name": "aria-vendor-DAtJMEYJ.js",
+      "gzipKb": 47.67
     },
     {
-      "name": "index-B8obJ7Sm.js",
-      "gzipKb": 31.96
+      "name": "index-Dirw536a.js",
+      "gzipKb": 28.84
     },
     {
       "name": "zod-vendor-wQCyJjKA.js",
       "gzipKb": 24.73
     },
     {
-      "name": "CommandPalette-Bse_wQuo.js",
+      "name": "CommandPalette-C3_gxMui.js",
       "gzipKb": 19.55
     },
     {
-      "name": "RecommendationsPanel-PIn_6rD8.js",
+      "name": "RecommendationsPanel-CgHV6LQv.js",
       "gzipKb": 8.97
     },
     {
-      "name": "NotebookPanel-CNb-0-pv.js",
+      "name": "NotebookPanel-Docru5RY.js",
       "gzipKb": 3.79
     },
     {
-      "name": "showcase-BgU06uo0.js",
+      "name": "showcase-CSsfbCHq.js",
       "gzipKb": 3.62
     },
     {
-      "name": "FEMEVView-BGt_14lE.js",
+      "name": "FEMEVView-W8tokpuY.js",
       "gzipKb": 3.6
     },
     {
-      "name": "icons-vendor-CAVvP_yk.js",
+      "name": "icons-vendor-CvjH32Fg.js",
       "gzipKb": 2.3
     },
     {
-      "name": "tabs-CHxUVrUf.js",
+      "name": "tabs-BIVKX7XT.js",
       "gzipKb": 0.66
     },
     {
@@ -70,64 +70,64 @@
     }
   ],
   "files": {
-    "CommandPalette-Bse_wQuo.js": {
+    "CommandPalette-C3_gxMui.js": {
       "rawBytes": 61249,
       "gzipBytes": 20021,
       "gzipKb": 19.55
     },
-    "FEMEVView-BGt_14lE.js": {
+    "FEMEVView-W8tokpuY.js": {
       "rawBytes": 17636,
-      "gzipBytes": 3687,
+      "gzipBytes": 3688,
       "gzipKb": 3.6
     },
-    "NotebookPanel-CNb-0-pv.js": {
+    "NotebookPanel-Docru5RY.js": {
       "rawBytes": 13641,
-      "gzipBytes": 3876,
+      "gzipBytes": 3877,
       "gzipKb": 3.79
     },
-    "RecommendationsPanel-PIn_6rD8.js": {
+    "RecommendationsPanel-CgHV6LQv.js": {
       "rawBytes": 36427,
       "gzipBytes": 9190,
       "gzipKb": 8.97
     },
-    "aria-vendor-DdGw0wM3.js": {
-      "rawBytes": 169573,
-      "gzipBytes": 52537,
-      "gzipKb": 51.31
+    "aria-vendor-DAtJMEYJ.js": {
+      "rawBytes": 158429,
+      "gzipBytes": 48817,
+      "gzipKb": 47.67
     },
-    "icons-vendor-CAVvP_yk.js": {
+    "icons-vendor-CvjH32Fg.js": {
       "rawBytes": 5792,
-      "gzipBytes": 2351,
+      "gzipBytes": 2353,
       "gzipKb": 2.3
     },
-    "index-B8obJ7Sm.js": {
-      "rawBytes": 111431,
-      "gzipBytes": 32730,
-      "gzipKb": 31.96
+    "index-CWQvxRyb.css": {
+      "rawBytes": 111165,
+      "gzipBytes": 16965,
+      "gzipKb": 16.57
     },
-    "index-Du8A28SQ.css": {
-      "rawBytes": 111136,
-      "gzipBytes": 16960,
-      "gzipKb": 16.56
+    "index-Dirw536a.js": {
+      "rawBytes": 101061,
+      "gzipBytes": 29533,
+      "gzipKb": 28.84
     },
-    "react-vendor-1vlBd_27.js": {
-      "rawBytes": 218985,
-      "gzipBytes": 67648,
-      "gzipKb": 66.06
+    "react-vendor-D_mjGnsX.js": {
+      "rawBytes": 181287,
+      "gzipBytes": 57010,
+      "gzipKb": 55.67
     },
     "rolldown-runtime-CbXtAM7H.js": {
       "rawBytes": 589,
       "gzipBytes": 368,
       "gzipKb": 0.36
     },
-    "showcase-BgU06uo0.js": {
+    "showcase-CSsfbCHq.js": {
       "rawBytes": 14680,
-      "gzipBytes": 3710,
+      "gzipBytes": 3711,
       "gzipKb": 3.62
     },
-    "tabs-CHxUVrUf.js": {
+    "tabs-BIVKX7XT.js": {
       "rawBytes": 1415,
-      "gzipBytes": 675,
+      "gzipBytes": 676,
       "gzipKb": 0.66
     },
     "zod-vendor-wQCyJjKA.js": {
@@ -137,12 +137,12 @@
     },
     "index.html": {
       "rawBytes": 2147,
-      "gzipBytes": 932,
+      "gzipBytes": 931,
       "gzipKb": 0.91
     }
   },
   "status": "PASS",
   "verdict": "PASS",
-  "marginMainKb": 148.04,
-  "marginTotalKb": 43.09
+  "marginMainKb": 151.16,
+  "marginTotalKb": 90.23
 }

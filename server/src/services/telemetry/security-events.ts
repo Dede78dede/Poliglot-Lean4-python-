@@ -22,16 +22,45 @@ export interface SecurityEventRecord {
   readonly details?: Readonly<Record<string, unknown>>;
 }
 
+const SENSITIVE_KEY_PATTERN = /^(authorization|cookie|set-cookie|token|rawtoken|secret|api[_-]?key|password|bearer|auth|authheader|privkey|secretkey|jwt)$/i;
+
+export function redactSensitiveData(val: unknown): unknown {
+  if (val === null || val === undefined) return val;
+  if (typeof val === 'string') {
+    if (/^bearer\s+[a-zA-Z0-9._-]+$/i.test(val)) {
+      return 'Bearer [REDACTED]';
+    }
+    if (/[?&](token|key|secret|password|auth)=[^&]+/i.test(val)) {
+      return val.replace(/([?&](token|key|secret|password|auth)=)[^&]+/gi, '$1[REDACTED]');
+    }
+    return val;
+  }
+  if (Array.isArray(val)) {
+    return val.map((item) => redactSensitiveData(item));
+  }
+  if (typeof val === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+      if (SENSITIVE_KEY_PATTERN.test(k)) {
+        result[k] = '[REDACTED]';
+      } else {
+        result[k] = redactSensitiveData(v);
+      }
+    }
+    return result;
+  }
+  return val;
+}
+
 export class SecurityEventService {
   private readonly events: SecurityEventRecord[] = [];
   private readonly maxBufferedEvents = 500;
 
-  private sanitizeId(tokenOrId?: string): string | undefined {
+  public sanitizeId(tokenOrId?: string): string | undefined {
     if (!tokenOrId) return undefined;
-    if (tokenOrId.length >= 24) {
-      return `opaque_ref_${tokenOrId.slice(0, 4)}...`;
-    }
-    return tokenOrId;
+    if (tokenOrId.startsWith('opaque_ref_')) return tokenOrId;
+    const prefix = tokenOrId.slice(0, Math.min(4, tokenOrId.length));
+    return `opaque_ref_${prefix}...`;
   }
 
   private record(
@@ -48,6 +77,11 @@ export class SecurityEventService {
     const traceCtx = data.traceContext ?? StructuredLogger.getTraceContext();
     const correlationId = data.correlationId ?? StructuredLogger.getGlobalCorrelationId();
 
+    const sanitizedPath = data.path ? String(redactSensitiveData(data.path)) : '/';
+    const sanitizedDetails = data.details
+      ? (redactSensitiveData(data.details) as Record<string, unknown>)
+      : undefined;
+
     const record: SecurityEventRecord = {
       timestamp: new Date().toISOString(),
       event,
@@ -56,8 +90,8 @@ export class SecurityEventService {
       ...(traceCtx?.spanId ? { spanId: traceCtx.spanId } : {}),
       tokenId: this.sanitizeId(data.tokenId),
       ip: data.ip ?? '127.0.0.1',
-      path: data.path ?? '/',
-      ...(data.details ? { details: Object.freeze({ ...data.details }) } : {}),
+      path: sanitizedPath,
+      ...(sanitizedDetails ? { details: Object.freeze(sanitizedDetails) } : {}),
     };
 
     this.events.push(record);

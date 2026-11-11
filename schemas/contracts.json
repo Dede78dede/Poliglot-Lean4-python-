@@ -1,13 +1,421 @@
 {
-  "ConfigProposal": {},
-  "FidelityCheckRequest": {},
-  "FidelityCheckResult": {},
-  "HealthCheckResponse": {},
-  "LeanExecuteRequest": {},
-  "LeanExecuteResponse": {},
-  "ProblemDetails": {},
-  "ProofReuseQuery": {},
-  "ProofReuseResult": {},
-  "ProposalLoopResult": {},
-  "SerializedBridgeError": {}
+  "ConfigProposal": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "rationale": {
+        "type": "string"
+      },
+      "source": {
+        "type": "string",
+        "enum": [
+          "hardware",
+          "usage",
+          "benchmark"
+        ]
+      },
+      "changes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "flag": {
+              "type": "string"
+            },
+            "from": {
+              "type": "boolean"
+            },
+            "to": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "flag",
+            "from",
+            "to"
+          ]
+        }
+      },
+      "confidence": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "evidence": {
+        "type": "object"
+      },
+      "createdAt": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "title",
+      "rationale",
+      "source",
+      "changes",
+      "confidence",
+      "evidence",
+      "createdAt"
+    ]
+  },
+  "FidelityCheckRequest": {
+    "type": "object",
+    "properties": {
+      "direction": {
+        "type": "string",
+        "enum": [
+          "python-to-lean",
+          "lean-to-python"
+        ]
+      },
+      "source": {
+        "type": "string"
+      },
+      "target": {
+        "type": "string"
+      },
+      "sourceLanguage": {
+        "type": "string"
+      },
+      "targetLanguage": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "direction",
+      "source",
+      "target"
+    ]
+  },
+  "FidelityCheckResult": {
+    "type": "object",
+    "properties": {
+      "passed": {
+        "type": "boolean"
+      },
+      "checks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "passed": {
+              "type": "boolean"
+            },
+            "details": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "passed"
+          ]
+        }
+      },
+      "durationMs": {
+        "type": "number"
+      },
+      "epistemicWarning": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "passed",
+      "checks",
+      "durationMs"
+    ]
+  },
+  "HealthCheckResponse": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "const": "ok"
+      },
+      "timestamp": {
+        "type": "string"
+      },
+      "kiminaMode": {
+        "type": "string",
+        "enum": [
+          "real",
+          "simulator",
+          "auto"
+        ]
+      },
+      "kiminaConnected": {
+        "type": "boolean"
+      },
+      "version": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "status",
+      "timestamp",
+      "kiminaMode",
+      "kiminaConnected",
+      "version"
+    ]
+  },
+  "LeanExecuteRequest": {
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "string"
+      },
+      "timeoutMs": {
+        "type": "number",
+        "default": 10000
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "code",
+      "timeoutMs"
+    ]
+  },
+  "LeanExecuteResponse": {
+    "type": "object",
+    "properties": {
+      "stdout": {
+        "type": "string"
+      },
+      "stderr": {
+        "type": "string"
+      },
+      "exitCode": {
+        "type": "number"
+      },
+      "durationMs": {
+        "type": "number"
+      },
+      "verified": {
+        "type": "boolean"
+      },
+      "simulated": {
+        "type": "boolean"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "stdout",
+      "stderr",
+      "exitCode",
+      "durationMs",
+      "verified"
+    ]
+  },
+  "ProblemDetails": {
+    "type": "object",
+    "properties": {
+      "type": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "status": {
+        "type": "number"
+      },
+      "detail": {
+        "type": "string"
+      },
+      "instance": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "type",
+      "title",
+      "status",
+      "detail"
+    ]
+  },
+  "ProofReuseQuery": {
+    "type": "object",
+    "properties": {
+      "goal": {
+        "type": "string"
+      },
+      "leanToolchain": {
+        "type": "string"
+      },
+      "minSimilarity": {
+        "type": "number"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "goal",
+      "leanToolchain"
+    ]
+  },
+  "ProofReuseResult": {
+    "type": "object",
+    "properties": {
+      "goalHash": {
+        "type": "string"
+      },
+      "proof": {
+        "type": "string"
+      },
+      "dependencies": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "certificateSha256": {
+        "type": "string"
+      },
+      "similarity": {
+        "type": "number"
+      },
+      "sourceDeclaration": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "string"
+      },
+      "warning": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "goalHash",
+      "proof",
+      "certificateSha256",
+      "similarity",
+      "sourceDeclaration",
+      "createdAt"
+    ]
+  },
+  "ProposalLoopResult": {
+    "type": "object",
+    "properties": {
+      "proved": {
+        "type": "boolean"
+      },
+      "finalProof": {
+        "type": "string"
+      },
+      "certificateSha256": {
+        "type": "string"
+      },
+      "iterations": {
+        "type": "number"
+      },
+      "nodes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "node": {
+              "type": "string",
+              "enum": [
+                "proposer",
+                "builder",
+                "reviewer",
+                "memory"
+              ]
+            },
+            "iteration": {
+              "type": "number"
+            },
+            "durationMs": {
+              "type": "number"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "success",
+                "failure",
+                "timeout",
+                "budget_exceeded"
+              ]
+            },
+            "details": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "node",
+            "iteration",
+            "durationMs",
+            "status",
+            "details"
+          ]
+        }
+      },
+      "totalCostUsd": {
+        "type": "number"
+      },
+      "totalDurationMs": {
+        "type": "number"
+      },
+      "memoryLessons": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "proved",
+      "iterations",
+      "nodes",
+      "totalCostUsd",
+      "totalDurationMs",
+      "memoryLessons"
+    ]
+  },
+  "SerializedBridgeError": {
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "string"
+      },
+      "problemType": {
+        "type": "string"
+      },
+      "httpStatus": {
+        "type": "number"
+      },
+      "message": {
+        "type": "string"
+      },
+      "details": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "code",
+      "problemType",
+      "httpStatus",
+      "message",
+      "details"
+    ]
+  }
 }

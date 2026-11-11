@@ -17,6 +17,7 @@
 | **[ADR-0016](adr/ADR-016-phase-15-scope.md)** | Phase 15 Scope & Activation Waves | Accepted | Roadmap from 172 to 195 suites |
 | **[ADR-0017](adr/ADR-017-bundle-budget-revision.md)** | Bundle Budget Revision for Phase 15 | Accepted | O1–O3 bundle budget limits |
 | **[ADR-0018](adr/ADR-018-removal-of-client-seal-path.md)** | Removal of Client Seal Path | Accepted | Total excision of certifyWithKernel |
+| **[ADR-0019](adr/ADR-019-feature-flag-ttl-policy.md)** | Feature Flag TTL & Retirement Policy | Accepted | 90-day maximum TTL and mandatory metadata |
 | **[ADR-0027](adr/ADR-0027-leancert-authority-model.md)** | LeanCert Certified Numerical Authority | Accepted | Numerical interval verification |
 | **[ADR-0031](adr/ADR-0031-cross-layer-automation.md)** | Cross-Layer Pre-Check Automation | Accepted | FEMEV pre-check before proof |
 
@@ -24,11 +25,13 @@
 
 ## 2. Architecture Specifications (`docs/architecture/`)
 
+- **[Codebase Map](architecture/codebase-map.md)**: Honest classification of live vs dormant paths, epistemic authority, and layout.
 - **[Feature Flags](architecture/feature-flags.md)**: Governance, fail-closed behavior, and 62-flag inventory.
 - **[CI/CD & Supply Chain](architecture/ci-cd.md)**: Pipeline security, exact dependency pinning, and `--ignore-scripts`.
 - **[Fallback Contracts](architecture/fallback-contracts.md)**: 4-tier degradation strategy and RFC 9457 error mappings.
 - **[MCP Architecture](mcp-architecture.md)**: Model Context Protocol client-server integration.
 - **[Memory Architecture](memory-architecture.md)**: Virtual file system, session caches, and persistence.
+- **[Design System](design-system/index.md)**: Design system token specifications, typography, and color scales.
 
 ---
 

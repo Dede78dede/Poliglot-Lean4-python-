@@ -42,9 +42,12 @@ import { runSuite188 } from '../tests/phase-14/suite-188-fallback-degraded.test'
 import { runSuite189 } from '../tests/phase-14/suite-189-contract-parity-runtime.test';
 import { runSuite190 } from '../tests/phase-14/suite-190-property-based.test';
 import { runSuite191 } from '../tests/phase-14/suite-191-accessibility.test';
+import { runSuite192 } from '../tests/phase-14/suite-192-feature-flag-audit.test';
+import { runSuite193 } from '../tests/phase-14/suite-193-rate-limiting.test';
+import { runSuite194 } from '../tests/phase-14/suite-194-redaction-logging.test';
 
 async function main(): Promise<void> {
-  console.log('--- Starting Polyglot Code Studio Extended Verification Suite (Suites 173 through 191) ---');
+  console.log('--- Starting Polyglot Code Studio Extended Verification Suite (Suites 173 through 194) ---');
 
   const startTime = Date.now();
 
@@ -67,13 +70,15 @@ async function main(): Promise<void> {
   await runSuite189();
   await runSuite190();
   await runSuite191();
+  await runSuite192();
+  await runSuite193();
+  await runSuite194();
 
   const durationMs = Date.now() - startTime;
 
   console.log('\n======================================================');
-  console.log(`All Phase 14.9.9.1 Extended test suites PASSED! (${durationMs}ms)`);
-  console.log('Suites 173-191: 100% pass (74 sub-tests verified)');
-  console.log('Cumulative Total (Suites 1-191): 377 sub-tests verified');
+  console.log(`All Phase 14.9.9.2 Extended test suites PASSED! (${durationMs}ms)`);
+  console.log('Suites 173-194: 100% pass (89 sub-tests verified)');
   console.log('======================================================\n');
   process.exit(0);
 }

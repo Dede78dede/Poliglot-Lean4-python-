@@ -42,21 +42,27 @@ jobs:
       - name: Build Application
         run: npm run build
 
-      - name: Bundle Budget Measurement & Warning Check
+      - name: Bundle Budget Measurement & Blocking Gate (ADR-017)
         run: |
           npm run bundle:measure
           node -e '
             const fs = require("fs");
-            const report = JSON.parse(fs.readFileSync("reports/bundle-post-14.json", "utf-8"));
+            const reportPath = fs.existsSync("reports/bundle-post-14.9.9.2.json")
+              ? "reports/bundle-post-14.9.9.2.json"
+              : "reports/bundle-post-14.json";
+            const report = JSON.parse(fs.readFileSync(reportPath, "utf-8"));
             if (report.status !== "PASS") {
-              console.log("::warning title=Bundle Budget Exceeded::Main: " + report.measured.mainEntryGzipKb + " KB (Cap: 180 KB), Total: " + report.measured.totalJsGzipKb + " KB (Cap: 260 KB)");
-            } else {
-              console.log("Bundle budget check passed: " + report.measured.mainEntryGzipKb + " KB main, " + report.measured.totalJsGzipKb + " KB total JS.");
+              console.error("❌ Bundle Budget Exceeded: Main " + report.measured.mainEntryGzipKb + " KB, Total " + report.measured.totalJsGzipKb + " KB");
+              process.exit(1);
             }
+            console.log("✓ Bundle budget passed: " + report.measured.mainEntryGzipKb + " KB main, " + report.measured.totalJsGzipKb + " KB total JS (Budget <= 290 KB).");
           '
 
-      - name: Run Complete Polyglot Verification Suite
+      - name: Run Primary Polyglot Verification Suite (Suites 134-172)
         run: npx tsx scripts/verify-all.ts
+
+      - name: Run Extended Polyglot Verification Suite (Suites 173-194)
+        run: npx tsx scripts/verify-extended.ts
 
       - name: Epistemic Seal Integrity Sweep (Final Gate)
         run: |

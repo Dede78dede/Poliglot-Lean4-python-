@@ -8,6 +8,8 @@ import {
   adjudicateHybridConsensus,
   type VerificationRequestV1,
   type EngineEvidence,
+  type HybridAdjudicationResult,
+  type AdjudicationResultV1,
 } from '../services/verification/hybrid-adjudicator';
 
 const ConsensusRequestSchema = z.object({
@@ -25,8 +27,8 @@ const ConsensusRequestSchema = z.object({
   }),
   axiomPolicyId: z.string().default(STANDARD_AXIOM_POLICY),
   requireConsensus: z.boolean().default(true),
-  kiminaEvidence: z.any().optional(),
-  lakeEvidence: z.any().optional(),
+  kiminaEvidence: z.never().optional(),
+  lakeEvidence: z.never().optional(),
 });
 
 export function createLeanRouter(proxy: KiminaClientProxy): Router {
@@ -88,6 +90,17 @@ export function createLeanRouter(proxy: KiminaClientProxy): Router {
 
   // POST /api/v1/lean/consensus
   router.post('/consensus', (req: Request, res: Response): void => {
+    // Invariant 2 (Defect B contained): Reject any caller-forged evidence immediately
+    if (req.body && typeof req.body === 'object' && ('kiminaEvidence' in req.body || 'lakeEvidence' in req.body)) {
+      res.status(400).json({
+        type: 'https://polyglot.dev/errors/forged-evidence-rejected',
+        title: 'Caller-Supplied Evidence Prohibited',
+        status: 400,
+        detail: 'Epistemic Invariant 2 violation: client callers may not supply engine evidence to mint consensus verification.',
+      });
+      return;
+    }
+
     const parse = ConsensusRequestSchema.safeParse(req.body);
     if (!parse.success) {
       res.status(400).json({
@@ -99,17 +112,7 @@ export function createLeanRouter(proxy: KiminaClientProxy): Router {
       return;
     }
 
-    const { kiminaEvidence, lakeEvidence, ...requestData } = parse.data;
-
-    if (!kiminaEvidence || !lakeEvidence) {
-      res.status(400).json({
-        type: 'https://polyglot.dev/errors/missing-evidence',
-        title: 'Missing Sub-Engine Evidence',
-        status: 400,
-        detail: 'Both kiminaEvidence and lakeEvidence are required to adjudicate hybrid consensus.',
-      });
-      return;
-    }
+    const requestData = parse.data;
 
     const verificationReq: VerificationRequestV1 = {
       protocolVersion: CANONICAL_VERIFICATION_PROTOCOL,
@@ -123,11 +126,20 @@ export function createLeanRouter(proxy: KiminaClientProxy): Router {
       requireConsensus: requestData.requireConsensus,
     };
 
-    const adjudication = adjudicateHybridConsensus(
-      verificationReq,
-      kiminaEvidence as EngineEvidence,
-      lakeEvidence as EngineEvidence,
-    );
+    // Engine evidence must be generated server-side through genuine engine execution.
+    // Untrusted external requests without verified server-side evidence fail closed.
+    const adjudication: AdjudicationResultV1 = {
+      protocolVersion: CANONICAL_VERIFICATION_PROTOCOL,
+      requestId: verificationReq.requestId,
+      verdict: 'unconfirmed',
+      verified: false,
+      seal: null,
+      axiomPolicyCompliance: false,
+      enginesConsulted: ['kimina', 'lake'],
+      consensusAchieved: false,
+      reason: 'Server-side dual-engine execution required. Client cannot supply engine evidence.',
+      diagnostics: [],
+    };
 
     res.status(200).json(adjudication);
   });

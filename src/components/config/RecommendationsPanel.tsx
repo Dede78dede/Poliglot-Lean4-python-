@@ -236,3 +236,6 @@ export const RecommendationsPanel: React.FC = () => {
     </div>
   );
 };
+
+export default RecommendationsPanel;
+

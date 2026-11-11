@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Phase 14.9.9.2 Isolated Tools & Sensitive Artifacts
+reports/context/
+.codeindex/
+.ogrep/
+data/tokens.json
