@@ -16,6 +16,9 @@
 | **[14.9.9.1-flag-debt.md](14.9.9.1-flag-debt.md)** | Active flag debt tracking and retirement horizons | ZERO DEBT |
 | **[feature-flag-audit.md](feature-flag-audit.md)** | Complete 62/62 feature flags audit with squad ownership | PASSED |
 | **[14.9.9.1-final-signoff.md](14.9.9.1-final-signoff.md)** | Final sign-off and milestone certification | CERTIFIED |
+| **[14.9.9.2-final-signoff.md](14.9.9.2-final-signoff.md)** | P0 containment, runtime repair, and isolated tooling sign-off | CERTIFIED |
+| **[phase-15-launch-checklist.md](phase-15-launch-checklist.md)** | Phase 15 W1–W4 launch readiness checklist | VERIFIED |
+| **[phase-15-activation-signoff.md](phase-15-activation-signoff.md)** | Phase 15 W1–W4 activation sign-off (425 sub-tests) | CERTIFIED |
 
 ---
 

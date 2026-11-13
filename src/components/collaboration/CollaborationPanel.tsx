@@ -39,12 +39,12 @@ export function CollaborationPanel({
         </div>
         <div className="flex items-center space-x-1.5 text-xs">
           {isEnabled ? (
-            <span className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">
+            <span className="flex items-center space-x-1 px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
               <Radio className="w-3 h-3 animate-pulse" />
               <span>Ready</span>
             </span>
           ) : (
-            <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
               Disabled
             </span>
           )}
@@ -110,3 +110,5 @@ export function CollaborationPanel({
     </div>
   );
 }
+
+export default CollaborationPanel;

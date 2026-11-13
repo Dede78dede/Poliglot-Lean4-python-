@@ -90,6 +90,12 @@ export class BrowserOtelTracer {
     return this.currentTraceId;
   }
 
+  public getTraceparent(spanId?: string): string {
+    const traceId = this.getCurrentTraceId();
+    const sid = spanId || BrowserOtelTracer.generateSpanId();
+    return `00-${traceId}-${sid}-01`;
+  }
+
   public async withSpan<T>(
     name: string,
     attributes: Record<string, string | number | boolean>,
@@ -117,6 +123,16 @@ export class BrowserOtelTracer {
       throw err;
     } finally {
       const endTime = Date.now();
+      // Sanitize attributes to avoid secret leakage
+      const sanitizedAttrs: Record<string, string | number | boolean> = {};
+      for (const [k, v] of Object.entries(attributes)) {
+        if (/token|auth|secret|key|password|cookie/i.test(k)) {
+          sanitizedAttrs[k] = '[REDACTED]';
+        } else {
+          sanitizedAttrs[k] = v;
+        }
+      }
+
       const record: OtelSpanRecord = {
         spanId,
         traceId,
@@ -129,7 +145,7 @@ export class BrowserOtelTracer {
           'service.version': '11.2.0',
           'telemetry.sdk.language': 'webjs',
           'telemetry.sdk.version': OTEL_PINNED_VERSION,
-          ...attributes,
+          ...sanitizedAttrs,
         },
         status,
         events: [],

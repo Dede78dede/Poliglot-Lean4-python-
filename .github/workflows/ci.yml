@@ -61,7 +61,7 @@ jobs:
       - name: Run Primary Polyglot Verification Suite (Suites 134-172)
         run: npx tsx scripts/verify-all.ts
 
-      - name: Run Extended Polyglot Verification Suite (Suites 173-194)
+      - name: Run Extended Polyglot Verification Suite (Suites 173-200)
         run: npx tsx scripts/verify-extended.ts
 
       - name: Epistemic Seal Integrity Sweep (Final Gate)

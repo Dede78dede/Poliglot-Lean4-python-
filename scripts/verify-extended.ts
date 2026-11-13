@@ -45,9 +45,15 @@ import { runSuite191 } from '../tests/phase-14/suite-191-accessibility.test';
 import { runSuite192 } from '../tests/phase-14/suite-192-feature-flag-audit.test';
 import { runSuite193 } from '../tests/phase-14/suite-193-rate-limiting.test';
 import { runSuite194 } from '../tests/phase-14/suite-194-redaction-logging.test';
+import { runSuite195 } from '../tests/phase-14/suite-195-otel-observability.test';
+import { runSuite196 } from '../tests/phase-14/suite-196-lean-beam-speculation.test';
+import { runSuite197 } from '../tests/phase-14/suite-197-advanced-reasoners.test';
+import { runSuite198 } from '../tests/phase-14/suite-198-yjs-collaboration.test';
+import { runSuite199 } from '../tests/phase-14/suite-199-e2e-consensus-authority.test';
+import { runSuite200 } from '../tests/phase-14/suite-200-phase15-integration-readiness.test';
 
 async function main(): Promise<void> {
-  console.log('--- Starting Polyglot Code Studio Extended Verification Suite (Suites 173 through 194) ---');
+  console.log('--- Starting Polyglot Code Studio Extended Verification Suite (Suites 173 through 200) ---');
 
   const startTime = Date.now();
 
@@ -73,12 +79,18 @@ async function main(): Promise<void> {
   await runSuite192();
   await runSuite193();
   await runSuite194();
+  await runSuite195();
+  await runSuite196();
+  await runSuite197();
+  await runSuite198();
+  await runSuite199();
+  await runSuite200();
 
   const durationMs = Date.now() - startTime;
 
   console.log('\n======================================================');
-  console.log(`All Phase 14.9.9.2 Extended test suites PASSED! (${durationMs}ms)`);
-  console.log('Suites 173-194: 100% pass (89 sub-tests verified)');
+  console.log(`All Phase 15 Extended test suites PASSED! (${durationMs}ms)`);
+  console.log('Suites 173-200: 100% pass (122 sub-tests verified)');
   console.log('======================================================\n');
   process.exit(0);
 }

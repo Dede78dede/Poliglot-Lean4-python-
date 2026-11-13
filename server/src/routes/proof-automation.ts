@@ -3,6 +3,7 @@ import { ProofCoordinator } from '../services/proof/proof-coordinator';
 import { AxleAdvancedService } from '../services/proof/axle-advanced';
 import { BlueprintSyncService } from '../services/proof/blueprint-sync';
 import type { WorkspaceStore } from '../services/collaboration/workspace-store';
+import { ERROR_REGISTRY, createProblemDetails } from '../../../src/services/errors/error-registry';
 
 export function createProofAutomationRouter(
   coordinator: ProofCoordinator,
@@ -202,6 +203,103 @@ export function createProofAutomationRouter(
       }
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: 'INTERNAL_ERROR', message });
+    }
+  });
+
+  // Phase 15 Wave 2: Parallel Speculative Tactic Beam Search (/api/v1/proof/speculative)
+  router.post('/speculative', async (req: Request, res: Response) => {
+    const correlationId = String(req.headers['x-correlation-id'] || `spec-${Date.now()}`);
+    try {
+      const { featureFlagRegistry } = await import('../../../src/services/flags/feature-flag-registry');
+      if (!featureFlagRegistry.isEnabled('ENABLE_LEAN_BEAM')) {
+        const problem = createProblemDetails(ERROR_REGISTRY.FEATURE_DISABLED, correlationId, {
+          feature: 'ENABLE_LEAN_BEAM',
+          detail: 'Speculative tactic execution is disabled by feature flag ENABLE_LEAN_BEAM=false',
+        });
+        res.status(503).json(problem);
+        return;
+      }
+
+      const { path, version, line, character, text, tactics, workspace, toolchain, timeoutMs } = req.body || {};
+      const candidateTactics: string[] = Array.isArray(tactics)
+        ? tactics.filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+        : typeof text === 'string' && text.trim().length > 0
+        ? [text]
+        : [];
+
+      if (candidateTactics.length === 0) {
+        res.status(400).json(
+          createProblemDetails(ERROR_REGISTRY.INVALID_JSON_INPUT, correlationId, {
+            detail: 'Provide either a non-empty text string or tactics string array.',
+          })
+        );
+        return;
+      }
+
+      const timeoutBudgetMs = Math.min(Math.max(Number(timeoutMs) || 5000, 50), 5000);
+      const { defaultLeanBeamClient } = await import('../../../src/services/mcp/lean-beam-client');
+
+      const candidates = await Promise.all(
+        candidateTactics.map(async (tactic) => {
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          try {
+            const probePromise = defaultLeanBeamClient.runAt({
+              path: String(path || 'Main.lean'),
+              version: Number(version || 1),
+              line: Number(line || 1),
+              character: Number(character || 0),
+              text: tactic,
+              workspace: workspace ? String(workspace) : undefined,
+              toolchain: toolchain ? String(toolchain) : undefined,
+            });
+            const timeoutPromise = new Promise<never>((_resolve, reject) => {
+              timer = setTimeout(() => reject(new Error('SPECULATIVE_BEAM_TIMEOUT')), timeoutBudgetMs);
+            });
+            const probeResult = await Promise.race([probePromise, timeoutPromise]);
+            return {
+              tactic,
+              timedOut: false,
+              ...probeResult,
+            };
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return {
+              tactic,
+              valid: false,
+              timedOut: msg === 'SPECULATIVE_BEAM_TIMEOUT',
+              goalsBefore: [] as string[],
+              goalsAfter: [] as string[],
+              errors: [msg],
+              durationMs: timeoutBudgetMs,
+              speculativelyTested: true,
+            };
+          } finally {
+            if (timer) clearTimeout(timer);
+          }
+        })
+      );
+
+      res.status(200).json({
+        speculativelyTested: true,
+        verified: false,
+        certificationTier: 'SYNTAX_ONLY_UNVERIFIED',
+        timeoutBudgetMs,
+        candidates,
+      });
+    } catch (err: unknown) {
+      const bridgeErr = err as { code?: string; message?: string; toProblemDetails?: () => unknown };
+      if (bridgeErr && bridgeErr.code === 'LEAN_BEAM_TOOLCHAIN_UNSUPPORTED') {
+        res.status(422).json(
+          typeof bridgeErr.toProblemDetails === 'function'
+            ? bridgeErr.toProblemDetails()
+            : { error: bridgeErr.code, message: bridgeErr.message }
+        );
+        return;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json(
+        createProblemDetails(ERROR_REGISTRY.INTERNAL_SERVER_ERROR, correlationId, { detail: message })
+      );
     }
   });
 

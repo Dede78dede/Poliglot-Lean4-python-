@@ -66,6 +66,7 @@ export interface LeanBeamProbeResult {
   readonly errors: readonly string[];
   readonly handle?: string;              // present only for lean_run_at_handle
   readonly durationMs: number;
+  readonly speculativelyTested?: boolean;
 }
 
 export interface McpTool {
@@ -359,6 +360,7 @@ export class DefaultLeanBeamClient implements LeanBeamClient {
         goalsAfter: [],
         errors: [`Unknown tactic or evaluation error: '${request.text.trim()}'`],
         durationMs,
+        speculativelyTested: true,
       };
     }
 
@@ -375,6 +377,7 @@ export class DefaultLeanBeamClient implements LeanBeamClient {
       goalsAfter: isClosing ? [] : ['1 goal\ncase h\n⊢ 2 = 2'],
       errors: [],
       durationMs,
+      speculativelyTested: true,
     };
   }
 

@@ -58,6 +58,11 @@ const RecommendationsPanel = React.lazy(() =>
 const CommandPalette = React.lazy(() =>
   import('./components/navigation/CommandPalette').then((m) => ({ default: m.CommandPalette || (m as any).default }))
 );
+const CollaborationPanel = React.lazy(() =>
+  import('./components/collaboration/CollaborationPanel').then((m) => ({
+    default: m.CollaborationPanel || (m as any).default,
+  }))
+);
 
 function ViewFallback(): React.JSX.Element {
   return (
@@ -555,6 +560,13 @@ export function App(): React.JSX.Element {
               <React.Suspense fallback={<ViewFallback />}>
                 <RecommendationsPanel />
               </React.Suspense>
+
+              {/* Real-Time CRDT Collaboration Panel (Wave 4, Lazy-Loaded) */}
+              <div className="rounded-xl border border-slate-800 overflow-hidden">
+                <React.Suspense fallback={<ViewFallback />}>
+                  <CollaborationPanel activeDocId={activeTab} />
+                </React.Suspense>
+              </div>
             </div>
           )}
         </main>

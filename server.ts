@@ -19,13 +19,20 @@ import { diffRouter } from './server/src/routes/diff';
 import { createMcpServerRouter } from './server/src/routes/mcp-server-router';
 import { createLeanRouter } from './server/src/routes/lean';
 import { createProjectsRouter } from './server/src/routes/projects';
+import { createTelemetryRouter } from './server/src/routes/telemetry';
+import { createProofAutomationRouter } from './server/src/routes/proof-automation';
 import { KiminaClientProxy } from './server/src/services/kimina-client-proxy';
 import { resolveKiminaConfig } from './server/src/config/kimina-config';
 import { LeanProjectRunner } from './server/src/services/lean-project-runner';
 import { resolveLeanRunnerConfig } from './server/src/config/lean-runner-config';
+import { ProofCoordinator } from './server/src/services/proof/proof-coordinator';
+import { AxleAdvancedService } from './server/src/services/proof/axle-advanced';
+import { BlueprintSyncService } from './server/src/services/proof/blueprint-sync';
+import { WorkspaceStore } from './server/src/services/collaboration/workspace-store';
 import { authMiddleware } from './src/middleware/auth';
 import { standardRateLimiter, mcpRateLimiter } from './src/middleware/rate-limit';
 import { automationMetrics } from './src/services/proof/metrics/automation-metrics';
+import { backendOtelEngine } from './src/services/telemetry/otel-backend';
 
 const PORT = 3000;
 
@@ -47,9 +54,39 @@ async function startServer(): Promise<void> {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader(
       'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, X-Polyglot-Test-Secret, Mcp-Method, Mcp-Name, X-Correlation-ID'
+      'Content-Type, Authorization, X-Polyglot-Test-Secret, Mcp-Method, Mcp-Name, X-Correlation-ID, traceparent, tracestate'
     );
     if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  });
+
+  // Conditional OpenTelemetry Trace Correlation Middleware (Phase 15 Wave 1)
+  app.use((req, res, next) => {
+    if (!backendOtelEngine.isEnabled()) {
+      return next();
+    }
+    const startTime = Date.now();
+    const rawTraceparent = typeof req.headers.traceparent === 'string' ? req.headers.traceparent : '';
+    const parsed = rawTraceparent ? backendOtelEngine.parseTraceparent(rawTraceparent) : null;
+    if (parsed) {
+      res.on('finish', () => {
+        const endTime = Date.now();
+        backendOtelEngine.recordSpan({
+          spanId: parsed.spanId,
+          traceId: parsed.traceId,
+          name: `http_${req.method}_${req.path}`,
+          startTime,
+          endTime,
+          durationMs: endTime - startTime,
+          attributes: {
+            'http.method': req.method,
+            'http.status_code': res.statusCode,
+          },
+          status: { code: res.statusCode >= 500 ? 'ERROR' : 'OK' },
+          events: [],
+        });
+      });
+    }
     next();
   });
 
@@ -57,6 +94,10 @@ async function startServer(): Promise<void> {
   const kiminaProxy = new KiminaClientProxy(kiminaConfig);
   const leanRunnerConfig = resolveLeanRunnerConfig();
   const leanRunner = new LeanProjectRunner(leanRunnerConfig);
+  const proofCoordinator = new ProofCoordinator();
+  const axleService = new AxleAdvancedService();
+  const blueprintSync = new BlueprintSyncService();
+  const workspaceStore = new WorkspaceStore();
 
   // Health, liveness, and readiness endpoints (Public, Unauthenticated)
   app.get('/healthz', (_req, res) => {
@@ -100,6 +141,8 @@ async function startServer(): Promise<void> {
       securityObservability: true,
       kiminaMounted: true,
       projectsMounted: true,
+      telemetryMounted: true,
+      proofAutomationMounted: true,
     });
   });
 
@@ -126,6 +169,8 @@ async function startServer(): Promise<void> {
   app.get('/api/v1/proof/metrics', (_req, res) => {
     res.json(automationMetrics.getMetrics());
   });
+  app.use('/api/v1/proof', createProofAutomationRouter(proofCoordinator, axleService, blueprintSync, workspaceStore));
+  app.use('/api/v1/telemetry', createTelemetryRouter());
 
   if (!isProduction) {
     const vite = await createViteServer({

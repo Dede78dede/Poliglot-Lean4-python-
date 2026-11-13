@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-11T12:12:08.596Z",
+  "timestamp": "2026-11-13T12:11:01.996Z",
   "phase": "14.9.9.2",
   "methodology": {
     "scope": "dist/assets",
@@ -12,12 +12,12 @@
     "totalJsGzipMaxKb": 290
   },
   "measured": {
-    "mainEntryGzipKb": 28.84,
-    "totalJsGzipKb": 199.77,
-    "totalJsRawKb": 666.32,
+    "mainEntryGzipKb": 28.96,
+    "totalJsGzipKb": 204.55,
+    "totalJsRawKb": 690.06,
     "cssGzipKb": 16.57,
     "htmlGzipKb": 0.91,
-    "initialLoadGzipKb": 132.18
+    "initialLoadGzipKb": 132.3
   },
   "chunks": [
     {
@@ -29,39 +29,43 @@
       "gzipKb": 47.67
     },
     {
-      "name": "index-Dirw536a.js",
-      "gzipKb": 28.84
+      "name": "index-BvN5YYEn.js",
+      "gzipKb": 28.96
     },
     {
       "name": "zod-vendor-wQCyJjKA.js",
       "gzipKb": 24.73
     },
     {
-      "name": "CommandPalette-C3_gxMui.js",
+      "name": "CommandPalette-D-tsnMwl.js",
       "gzipKb": 19.55
     },
     {
-      "name": "RecommendationsPanel-CgHV6LQv.js",
-      "gzipKb": 8.97
+      "name": "RecommendationsPanel-LRHaTa6U.js",
+      "gzipKb": 8.98
     },
     {
-      "name": "NotebookPanel-Docru5RY.js",
-      "gzipKb": 3.79
+      "name": "CollaborationPanel-DvBPkzc0.js",
+      "gzipKb": 4.19
     },
     {
-      "name": "showcase-CSsfbCHq.js",
+      "name": "NotebookPanel-BBQpEWyi.js",
+      "gzipKb": 3.78
+    },
+    {
+      "name": "showcase-1YfDFaVy.js",
       "gzipKb": 3.62
     },
     {
-      "name": "FEMEVView-W8tokpuY.js",
+      "name": "FEMEVView-Hyv2di3S.js",
       "gzipKb": 3.6
     },
     {
-      "name": "icons-vendor-CvjH32Fg.js",
-      "gzipKb": 2.3
+      "name": "icons-vendor-epi5Iuo9.js",
+      "gzipKb": 2.76
     },
     {
-      "name": "tabs-BIVKX7XT.js",
+      "name": "tabs-yaDEijrg.js",
       "gzipKb": 0.66
     },
     {
@@ -70,45 +74,50 @@
     }
   ],
   "files": {
-    "CommandPalette-C3_gxMui.js": {
+    "CollaborationPanel-DvBPkzc0.js": {
+      "rawBytes": 22090,
+      "gzipBytes": 4290,
+      "gzipKb": 4.19
+    },
+    "CommandPalette-D-tsnMwl.js": {
       "rawBytes": 61249,
-      "gzipBytes": 20021,
+      "gzipBytes": 20020,
       "gzipKb": 19.55
     },
-    "FEMEVView-W8tokpuY.js": {
+    "FEMEVView-Hyv2di3S.js": {
       "rawBytes": 17636,
       "gzipBytes": 3688,
       "gzipKb": 3.6
     },
-    "NotebookPanel-Docru5RY.js": {
+    "NotebookPanel-BBQpEWyi.js": {
       "rawBytes": 13641,
-      "gzipBytes": 3877,
-      "gzipKb": 3.79
+      "gzipBytes": 3875,
+      "gzipKb": 3.78
     },
-    "RecommendationsPanel-CgHV6LQv.js": {
-      "rawBytes": 36427,
-      "gzipBytes": 9190,
-      "gzipKb": 8.97
+    "RecommendationsPanel-LRHaTa6U.js": {
+      "rawBytes": 36440,
+      "gzipBytes": 9196,
+      "gzipKb": 8.98
     },
     "aria-vendor-DAtJMEYJ.js": {
       "rawBytes": 158429,
       "gzipBytes": 48817,
       "gzipKb": 47.67
     },
-    "icons-vendor-CvjH32Fg.js": {
-      "rawBytes": 5792,
-      "gzipBytes": 2353,
-      "gzipKb": 2.3
+    "icons-vendor-epi5Iuo9.js": {
+      "rawBytes": 7317,
+      "gzipBytes": 2831,
+      "gzipKb": 2.76
+    },
+    "index-BvN5YYEn.js": {
+      "rawBytes": 101749,
+      "gzipBytes": 29654,
+      "gzipKb": 28.96
     },
     "index-CWQvxRyb.css": {
       "rawBytes": 111165,
       "gzipBytes": 16965,
       "gzipKb": 16.57
-    },
-    "index-Dirw536a.js": {
-      "rawBytes": 101061,
-      "gzipBytes": 29533,
-      "gzipKb": 28.84
     },
     "react-vendor-D_mjGnsX.js": {
       "rawBytes": 181287,
@@ -120,14 +129,14 @@
       "gzipBytes": 368,
       "gzipKb": 0.36
     },
-    "showcase-CSsfbCHq.js": {
+    "showcase-1YfDFaVy.js": {
       "rawBytes": 14680,
-      "gzipBytes": 3711,
+      "gzipBytes": 3707,
       "gzipKb": 3.62
     },
-    "tabs-BIVKX7XT.js": {
+    "tabs-yaDEijrg.js": {
       "rawBytes": 1415,
-      "gzipBytes": 676,
+      "gzipBytes": 679,
       "gzipKb": 0.66
     },
     "zod-vendor-wQCyJjKA.js": {
@@ -143,6 +152,6 @@
   },
   "status": "PASS",
   "verdict": "PASS",
-  "marginMainKb": 151.16,
-  "marginTotalKb": 90.23
+  "marginMainKb": 151.04,
+  "marginTotalKb": 85.45
 }

@@ -49,6 +49,14 @@ export class BackendOtelEngine {
     return process.env.OTEL_EXPORTER_OTLP_ENDPOINT || OTEL_DEFAULT_ENDPOINT;
   }
 
+  public parseTraceparent(traceparent: string): { traceId: string; spanId: string } | null {
+    const parts = traceparent.trim().split('-');
+    if (parts.length < 4) return null;
+    const [, traceId, spanId] = parts;
+    if (!traceId || !spanId || traceId.length !== 32 || spanId.length !== 16) return null;
+    return { traceId, spanId };
+  }
+
   public recordSpan(span: OtelSpanRecord): void {
     if (!this.spansByTrace.has(span.traceId)) {
       this.spansByTrace.set(span.traceId, []);

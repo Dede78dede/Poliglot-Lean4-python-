@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ## [Unreleased]
 
+### Phase 15 — Waves 1–4 Activation & Advanced Reasoners
+- **Wave 1 (Observability)**:
+  - Enabled browser OpenTelemetry tracing with standard W3C `traceparent` headers (`00-<traceId>-<spanId>-01`) and recursive attribute credential sanitization (`otel-browser.ts`).
+  - Added distributed trace correlation and traceparent parsing in Node.js backend engine (`otel-backend.ts`).
+  - Implemented Suite 195 (5 sub-tests passing).
+- **Wave 2 (Tactic Parallelism)**:
+  - Enabled LeanBeam speculative tactic execution pipeline with `speculativelyTested: true` (`lean-beam-client.ts`) and added parallel `POST /api/v1/proof/speculative` endpoint returning RFC 9457 `503` when disabled (`proof-automation.ts`).
+  - Upheld epistemic invariant: speculative probes never emit `verified: true` or `SEAL_KERNEL_VERIFIED_TIER5`.
+  - Implemented Suite 196 (6 sub-tests passing).
+- **Wave 3 (Advanced Reasoners)**:
+  - Activated Mathesis autoformalization bridge (`ENABLE_MATHESIS`), LP² lossy prototyping transpiler (`ENABLE_LP2`), and TreeThink MCTS search (`ENABLE_TREETHINK`).
+  - Enforced RFC 9457 fail-closed responses when flags are disabled; tagged all reasoner outputs as heuristic/unverified.
+  - Implemented Suite 197 (5 sub-tests passing).
+- **Wave 4 (Collaboration)**:
+  - Activated Monaco Yjs CRDT binding adapter (`ENABLE_YJS_COLLABORATION`), Hocuspocus collaboration server with token auth and origin allowlist enforcement (`monaco-yjs-adapter.ts`, `hocuspocus-server.ts`), and lazily mounted `CollaborationPanel` in Settings view (`src/App.tsx`).
+  - Implemented Suite 198 (5 sub-tests passing).
+- **End-to-End Consensus, Server Telemetry & Launch Readiness**:
+  - Mounted conditional `traceparent` correlation middleware, `/api/v1/telemetry`, and `/api/v1/proof` automation routers in `server.ts`.
+  - Implemented Suite 199 (E2E dual-engine consensus & epistemic authority gate, 5 sub-tests passing) and Suite 200 (Phase 15 integration & launch readiness gate, 7 sub-tests passing).
+  - Reached **67 active test suites / 425 sub-tests with 100% pass rate** (303 in `verify-all.ts`, 122 in `verify-extended.ts`), exceeding the ADR-016 target of 420 sub-tests.
+  - Bundle budgets strictly preserved: Main entry **28.96 KB** ($\le$ 180 KB), Total JS **204.55 KB** ($\le$ 290 KB).
+
 ### Phase 14.9.9.2 — Verification Authority Containment & Prerequisite Repair
 - **Verification Authority Containment (P0 Stop-Ship)**:
   - Contained Defect A: Excised synthetic synchronous certification from `HybridAdjudicator.adjudicate()`; all synchronous paths fail closed as `unconfirmed` with `verified: false` and null seal. Replaced truncated hex digest with standard SHA-256.

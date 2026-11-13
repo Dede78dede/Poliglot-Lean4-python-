@@ -153,17 +153,17 @@ Polyglot Code Studio executes two comprehensive automated test runners:
   # or:
   npx tsx scripts/verify-all.ts
   ```
-- **Extended Verification Suite (Suites 173–194)**: 89 sub-tests covering single-certifier epistemic authority, negative seal containment, rate limiting, and recursive redaction:
+- **Extended Verification Suite (Suites 173–200)**: 122 sub-tests covering single-certifier epistemic authority, negative seal containment, rate limiting, recursive redaction, and Phase 15 Waves W1–W4:
   ```bash
   npm run test:extended
   # or:
   npx tsx scripts/verify-extended.ts
   ```
-Cumulative active baseline: **61 suites / 392 sub-tests (100% pass rate)**.
+Cumulative active baseline: **67 active suites / 425 sub-tests (100% pass rate)**.
 
 ---
 
-## 8. Feature Status Matrix (Phase 14.9.9.2 Reconciled)
+## 8. Feature Status Matrix (Phase 15 Waves W1–W4 Activated)
 
 | Feature / Subsystem | Status | Engine / Provider | Gating & Policy |
 |---|---|---|---|
@@ -187,13 +187,13 @@ Cumulative active baseline: **61 suites / 392 sub-tests (100% pass rate)**.
 | Kimina Client Proxy | ready | Real HTTP client proxy | Mode: real/auto/simulator |
 | Lean Project Runner | ready | Lake process build executor | Dynamic toolchain resolution |
 | Local Re-implementation Bridges | local | Pastalean, Lungo, LeanCert, LeanScreen, LeanFlow, CRAMF, Nerodia, NumPySpec, ProvePy | Local heuristics / zero fetch calls |
-| LeanBeam Bridge | fallback | Client stub | Gated by ENABLE_LEAN_BEAM (off) |
-| Mathesis Integration | fallback | Remote endpoint client | Gated by ENABLE_MATHESIS (off) |
-| LP2 Transpiler | fallback | Lossy transpiler | Gated by ENABLE_LP2 (off) |
-| TreeThink Inference | fallback | vLLM GPU engine | Gated by ENABLE_TREETHINK (off) |
-| OpenTelemetry Browser | partial | Tracing bridge | Gated by ENABLE_OTEL_BROWSER (off) |
-| OpenTelemetry Node | partial | Server trace bridge | Gated by ENABLE_OTEL_NODE (off) |
-| Yjs Collaborative Editing | partial | Hocuspocus WebSocket | Gated by ENABLE_YJS_COLLABORATION (off) |
+| LeanBeam Bridge (W2) | wave-ready | Speculative tactic probe (`speculativelyTested: true`) | Gated by ENABLE_LEAN_BEAM (non-certifying) |
+| Mathesis Integration (W3) | wave-ready | Autoformalization + LeanScorer | Gated by ENABLE_MATHESIS (heuristic) |
+| LP2 Transpiler (W3) | wave-ready | Lossy transpiler + fidelity warnings | Gated by ENABLE_LP2 (non-certifying) |
+| TreeThink Inference (W3) | wave-ready | MCTS/BFTS search tree | Gated by ENABLE_TREETHINK (non-certifying) |
+| OpenTelemetry Browser (W1) | wave-ready | W3C traceparent + attribute redaction | Gated by ENABLE_OTEL_BROWSER |
+| OpenTelemetry Node (W1) | wave-ready | Conditional Express trace middleware | Gated by ENABLE_OTEL_NODE |
+| Yjs Collaborative Editing (W4) | wave-ready | Hocuspocus auth + MonacoYjsAdapter | Gated by ENABLE_YJS_COLLABORATION |
 | Paperproof Visualizer | partial | Playback service | Gated by ENABLE_PAPERPROOF_PLAYBACK (off) |
 
 ---
