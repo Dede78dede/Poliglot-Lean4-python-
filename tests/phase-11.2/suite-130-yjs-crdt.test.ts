@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import { HocuspocusServer } from '../../src/services/collaboration/hocuspocus-server';
+import { featureFlagRegistry } from '../../src/services/flags/feature-flag-registry';
 
 export async function runSuite130(): Promise<void> {
   console.log('\n--- Test Suite 130: Yjs CRDT Core & Hocuspocus Auth ---');
@@ -17,6 +18,7 @@ export async function runSuite130(): Promise<void> {
     allowedOrigins: ['http://localhost:3000'],
   });
 
+  featureFlagRegistry.set('ENABLE_YJS_COLLABORATION', true);
   try {
     // 130.1: CRDT State Convergence across replicas
     const docId = 'SharedTheorem.lean';
@@ -60,6 +62,7 @@ export async function runSuite130(): Promise<void> {
     console.log('  ✓ 130.5 Epistemic barrier: collaborative edits remain purely syntactic');
 
   } finally {
+    featureFlagRegistry.reset('ENABLE_YJS_COLLABORATION');
     fs.rmSync(testDir, { recursive: true, force: true });
   }
 }

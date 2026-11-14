@@ -308,18 +308,18 @@ export class ChatStore extends ExternalStoreBase<ChatStoreState> {
       this.notify();
 
       const startTime = Date.now();
-      await new Promise((r) => setTimeout(r, 60)); // simulation latency
 
       toolRecord.durationMs = Date.now() - startTime;
       toolRecord.status = 'completed';
       toolRecord.result = {
         tactics: ['induction n with | zero => rfl | succ n ih => rw [Nat.add_succ, ih]'],
-        confidence: 'high',
-        verified: true,
+        confidence: 'candidate',
+        verified: false,
+        candidateOnly: true,
       };
       session.toolCallsCount++;
 
-      msg.content = `I have verified the proof step using Lean 4 heuristics and tactic automation:\n\n\`\`\`lean\ntheorem add_zero_id (n : Nat) : n + 0 = n := by\n  induction n with\n  | zero => rfl\n  | succ n ih => rw [Nat.add_succ, ih]\n\`\`\``;
+      msg.content = `Generated draft Lean 4 proof candidate (unverified — run dual-engine kernel consensus to certify):\n\n\`\`\`lean\ntheorem add_zero_id (n : Nat) : n + 0 = n := by\n  induction n with\n  | zero => rfl\n  | succ n ih => rw [Nat.add_succ, ih]\n\`\`\``;
       msg.status = 'complete';
 
       if (activeFileContext && activeFileContext.path.endsWith('.lean')) {

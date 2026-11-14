@@ -19,6 +19,7 @@ export interface ProjectManifestConfig {
   readonly leanVersion?: string;
   readonly pythonVersion?: string;
   readonly kernelVerified?: boolean;
+  readonly kernelSeal?: string | null;
 }
 
 export class RoCrateService {
@@ -47,12 +48,12 @@ export class RoCrateService {
         { '@type': 'SoftwareApplication', name: 'Lean 4', version: config.leanVersion ?? 'v4.35.0-rc4' },
         { '@type': 'SoftwareApplication', name: 'Pyodide / Python', version: config.pythonVersion ?? '3.14' },
       ],
-      ...(config.kernelVerified
+      ...(config.kernelVerified && config.kernelSeal
         ? {
             formalVerification: {
-              status: 'kernel-verified',
-              seal: 'SEAL_KERNEL_VERIFIED_TIER5',
-              checker: 'Lean 4 Native Kernel',
+              status: 'consensus-verified',
+              seal: config.kernelSeal,
+              checker: 'Hybrid Dual-Engine Consensus (Kimina + Lake)',
             },
           }
         : {}),

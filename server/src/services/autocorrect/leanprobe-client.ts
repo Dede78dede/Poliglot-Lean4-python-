@@ -18,6 +18,7 @@ export interface LeanProbeCheckResult {
   readonly ok: boolean;
   readonly diagnostics: readonly LeanProbeDiagnostic[];
   readonly rawOutput: string;
+  readonly simulated: boolean;
 }
 
 export interface LeanProbeRepairResult {
@@ -142,6 +143,7 @@ export class LeanProbeClient {
           ok: json.ok && diagnostics.every((d) => d.severity !== 'error'),
           diagnostics,
           rawOutput: json.rawOutput ?? '',
+          simulated: false,
         };
       }
     } catch {
@@ -204,7 +206,8 @@ export class LeanProbeClient {
     return {
       ok,
       diagnostics,
-      rawOutput: ok ? 'Declaration checks passed cleanly.' : diagnostics.map((d) => d.message).join('\n'),
+      rawOutput: ok ? 'Declaration checks passed cleanly (local simulation).' : diagnostics.map((d) => d.message).join('\n'),
+      simulated: true,
     };
   }
 

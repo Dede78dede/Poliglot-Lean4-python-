@@ -30,15 +30,17 @@ RUN elan toolchain install leanprover/lean4:v4.28.0 && \
     elan toolchain install leanprover/lean4:v4.35.0-rc4 && \
     elan default leanprover/lean4:v4.35.0-rc4
 
-# 4. Prepare shared Mathlib cache volume directory (~20 GB allocation)
-RUN mkdir -p /root/.cache/mathlib && \
-    mkdir -p /workspace/projects
+# 4. Prepare non-root user and shared Mathlib cache volume directory (~20 GB allocation)
+RUN useradd -m -s /bin/bash leanrunner && \
+    mkdir -p /home/leanrunner/.cache/mathlib /workspace/projects /tmp/warmup && \
+    chown -R leanrunner:leanrunner /home/leanrunner /workspace /root/.elan /tmp/warmup
 
 WORKDIR /workspace
+USER leanrunner
+ENV HOME=/home/leanrunner
 
 # 5. Build-time Mathlib warm-up (fetches oleans so no runtime network is needed)
-# Run lake cache get for default toolchain v4.35.0-rc4
-RUN mkdir -p /tmp/warmup && cd /tmp/warmup && \
+RUN cd /tmp/warmup && \
     echo 'leanprover/lean4:v4.35.0-rc4' > lean-toolchain && \
     echo 'name = "warmup"' > lakefile.toml && \
     echo 'defaultTargets = ["Warmup"]' >> lakefile.toml && \
@@ -55,6 +57,6 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD elan toolchain list | grep -q "v4.35.0-rc4" || exit 1
 
-COPY server.js /workspace/server.js
+COPY --chown=leanrunner:leanrunner server.js /workspace/server.js
 
 CMD ["node", "/workspace/server.js"]

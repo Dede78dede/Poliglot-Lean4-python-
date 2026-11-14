@@ -8,6 +8,18 @@ import {
 import { sessionManager } from './session-manager';
 import { parseLeanProjectSyntax } from './lean-parser-fallback';
 import { evaluateFormalVerification } from './verification-formula';
+import { assertPathContained } from './verification/server-provenance';
+import {
+  attachServerProvenance,
+  CANONICAL_VERIFICATION_PROTOCOL,
+  STANDARD_AXIOM_ALLOWLIST,
+  type AxiomAuditReport,
+  type EngineEvidence,
+  type VerificationRequestV1,
+} from './verification/hybrid-adjudicator';
+
+const MAX_PROJECT_FILES = 500;
+const MAX_SINGLE_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export class ToolchainNotInstalledError extends Error {
   readonly requested: string;
@@ -49,6 +61,9 @@ export interface LeanBuildResultData {
   readonly fallback: boolean;
   readonly fallbackNotice?: string;
   readonly memoryBytes?: number;
+  readonly toolchain?: string;
+  readonly imageDigest?: string;
+  readonly axioms?: readonly string[];
 }
 
 export class LeanProjectRunner {
@@ -62,17 +77,37 @@ export class LeanProjectRunner {
     sessionId: string,
     files: readonly LeanProjectFile[],
   ): Promise<LeanBuildResultData> {
+    if (files.length > MAX_PROJECT_FILES) {
+      throw new Error(`PROJECT_QUOTA_EXCEEDED: File count ${files.length} exceeds limit of ${MAX_PROJECT_FILES}.`);
+    }
+
     const sessionDir = sessionManager.getSessionPath(sessionId);
     await sessionManager.createOrTouchSession(sessionId);
 
-    // Write all project files to the session directory
+    let batchBytes = 0;
     for (const f of files) {
-      const fullPath = path.join(sessionDir, f.path);
-      await fs.mkdir(path.dirname(fullPath), { recursive: true });
-      await fs.writeFile(fullPath, f.content, 'utf-8');
+      const byteLen = Buffer.byteLength(f.content, 'utf-8');
+      if (byteLen > MAX_SINGLE_FILE_BYTES) {
+        throw new Error(`PROJECT_QUOTA_EXCEEDED: File "${f.path}" exceeds 5 MB limit.`);
+      }
+      batchBytes += byteLen;
     }
 
-    // Check toolchain version from lean-toolchain if present
+    const withinQuota = await sessionManager.checkQuota(sessionId, batchBytes);
+    if (!withinQuota) {
+      throw new Error('PROJECT_QUOTA_EXCEEDED: Session or aggregate host storage quota exceeded.');
+    }
+
+    for (const f of files) {
+      const safeFullPath = assertPathContained(sessionDir, f.path);
+      await fs.mkdir(path.dirname(safeFullPath), { recursive: true });
+      await fs.writeFile(safeFullPath, f.content, 'utf-8');
+    }
+
+    if (files.length > 0) {
+      sessionManager.updateSessionBytes(sessionId, batchBytes, files.length);
+    }
+
     const toolchainFile = files.find(
       (f) => f.path === 'lean-toolchain' || f.path.endsWith('/lean-toolchain'),
     );
@@ -110,6 +145,123 @@ export class LeanProjectRunner {
     return result;
   }
 
+  async checkReady(): Promise<boolean> {
+    if (this.config.mode === 'simulator') return false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.min(2000, this.config.timeoutMs));
+    try {
+      const headers: Record<string, string> = {};
+      if (this.config.authToken) {
+        headers['Authorization'] = `Bearer ${this.config.authToken}`;
+      }
+      const res = await fetch(`${this.config.runnerUrl}/readyz`, { headers, signal: controller.signal });
+      return res.ok;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  toEngineEvidence(req: VerificationRequestV1, result: LeanBuildResultData): EngineEvidence {
+    const output = `${result.stdout}\n${result.stderr}`;
+    const hasSorry = /uses 'sorry'|sorryAx/i.test(output);
+    const explicitAxioms = result.axioms;
+    let observedAxioms: string[] = [];
+    let extracted = false;
+
+    if (Array.isArray(explicitAxioms)) {
+      observedAxioms = explicitAxioms.map((a) => a.trim()).filter(Boolean);
+      extracted = true;
+    } else {
+      const match = output.match(/depends on axioms:\s*\[([^\]]*)\]/i);
+      if (match) {
+        observedAxioms = match[1].split(',').map((s) => s.trim()).filter(Boolean);
+        extracted = true;
+      } else if (/does not depend on any axioms/i.test(output)) {
+        observedAxioms = [];
+        extracted = true;
+      }
+    }
+
+    const violations = observedAxioms.filter((ax) => !STANDARD_AXIOM_ALLOWLIST.includes(ax));
+
+    const axiomAudit: AxiomAuditReport = result.fallback
+      ? { status: 'not_run', observedAxioms: [], allowedAxioms: [...STANDARD_AXIOM_ALLOWLIST] }
+      : !extracted
+        ? {
+            status: 'not_run',
+            observedAxioms: [],
+            allowedAxioms: [...STANDARD_AXIOM_ALLOWLIST],
+            violations: ['Axiom audit telemetry not reported by Lake build output.'],
+          }
+        : violations.length > 0 || hasSorry
+          ? {
+              status: 'failed',
+              observedAxioms,
+              allowedAxioms: [...STANDARD_AXIOM_ALLOWLIST],
+              violations: [...violations, ...(hasSorry ? ['sorryAx'] : [])],
+            }
+          : {
+              status: 'passed',
+              observedAxioms,
+              allowedAxioms: [...STANDARD_AXIOM_ALLOWLIST],
+            };
+
+    const diagnostics = result.stderr
+      ? [{ severity: 'error' as const, message: result.stderr }]
+      : [];
+
+    if (result.fallback) {
+      return {
+        engine: 'simulator',
+        contractVersion: CANONICAL_VERIFICATION_PROTOCOL,
+        outcome: 'simulated',
+        requestId: req.requestId,
+        sourceDigest: req.sourceDigest,
+        contextDigest: req.contextDigest,
+        manifestDigest: req.environment.manifestDigest,
+        targetIds: req.targetIds,
+        toolchain: result.toolchain ?? req.environment.leanToolchain,
+        durationMs: result.durationMs,
+        exitCode: result.exitCode,
+        diagnostics,
+        axiomAudit,
+        error: result.fallbackNotice ?? 'Lake runner fell back to parser; real kernel execution unavailable.',
+      };
+    }
+
+    const passed =
+      result.exitCode === 0 &&
+      result.verified &&
+      !hasSorry &&
+      axiomAudit.status === 'passed';
+
+    const outcome = passed
+      ? 'accepted'
+      : result.exitCode === 0 && !result.verified
+        ? 'inconclusive'
+        : 'rejected';
+
+    return attachServerProvenance({
+      engine: 'lake',
+      contractVersion: CANONICAL_VERIFICATION_PROTOCOL,
+      outcome,
+      requestId: req.requestId,
+      sourceDigest: req.sourceDigest,
+      contextDigest: req.contextDigest,
+      manifestDigest: req.environment.manifestDigest,
+      imageDigest: result.imageDigest ?? req.environment.lakeRunnerImageDigest ?? 'lake-runner-live',
+      targetIds: req.targetIds,
+      toolchain: result.toolchain ?? req.environment.leanToolchain,
+      durationMs: result.durationMs,
+      exitCode: result.exitCode,
+      diagnostics,
+      axiomAudit,
+      error: passed ? null : result.stderr || 'Lake build did not pass formal verification and axiom audit.',
+    });
+  }
+
   private async buildAuto(
     sessionId: string,
     sessionDir: string,
@@ -135,13 +287,18 @@ export class LeanProjectRunner {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+    if (this.config.authToken) {
+      headers['Authorization'] = `Bearer ${this.config.authToken}`;
+    }
+
     try {
       const response = await fetch(`${this.config.runnerUrl}/build`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           sessionId,
           projectPath: sessionDir,
@@ -165,13 +322,14 @@ export class LeanProjectRunner {
         memoryBytes?: number;
         toolchain?: string;
         toolchains?: string[];
+        axioms?: string[];
+        imageDigest?: string;
       };
 
       const durationMs = json.durationMs ?? Math.round(performance.now() - startTime);
       const stdout = json.stdout ?? '';
       const stderr = json.stderr ?? '';
 
-      // Epistemic invariant: Never default missing exitCode to 0. Require explicit integer.
       if (typeof json.exitCode !== 'number') {
         throw new LakeProcessExecutionError(
           'Lake runner upstream response did not contain an explicit integer exitCode.',
@@ -181,7 +339,6 @@ export class LeanProjectRunner {
       }
       const exitCode = json.exitCode;
 
-      // Check toolchain version from lean-toolchain if present
       const toolchainFile = files.find(
         (f) => f.path === 'lean-toolchain' || f.path.endsWith('/lean-toolchain'),
       );
@@ -189,17 +346,18 @@ export class LeanProjectRunner {
       if (toolchainFile) {
         const required = toolchainFile.content.trim().replace(/^leanprover\/lean4:/, '');
         const runnerToolchains: string[] = Array.isArray(json.toolchains) ? json.toolchains : [];
-        const current = (json.toolchain as string) || (runnerToolchains.includes(required) ? required : DEFAULT_LEAN_TOOLCHAIN);
-        const isSupported = runnerToolchains.length > 0
-          ? runnerToolchains.includes(required)
-          : (AVAILABLE_LEAN_TOOLCHAINS as readonly string[]).includes(required);
+        const current =
+          (json.toolchain as string) ||
+          (runnerToolchains.includes(required) ? required : DEFAULT_LEAN_TOOLCHAIN);
+        const isSupported =
+          runnerToolchains.length > 0
+            ? runnerToolchains.includes(required)
+            : (AVAILABLE_LEAN_TOOLCHAINS as readonly string[]).includes(required);
         if (!isSupported) {
           toolchainMismatch = { required, current };
         }
       }
 
-      // Rigorous formal verification formula:
-      // verified ⟺ exitCode === 0 ∧ contains_proof_obligation ∧ ¬hasSorry ∧ ¬hasError ∧ ¬simulated ∧ ¬toolchainMismatch
       const evalResult = evaluateFormalVerification({
         codeOrFiles: files,
         stdout,
@@ -218,6 +376,9 @@ export class LeanProjectRunner {
         verified: evalResult.verified,
         fallback: false,
         memoryBytes: json.memoryBytes,
+        toolchain: json.toolchain,
+        imageDigest: json.imageDigest,
+        axioms: json.axioms,
       };
     } catch (err: unknown) {
       clearTimeout(timeout);
@@ -239,7 +400,7 @@ export class LeanProjectRunner {
       stderr: parseRes.errors.join('\n'),
       exitCode: parseRes.status === 'success' ? 0 : 1,
       durationMs,
-      verified: false, // ALWAYS false in fallback mode
+      verified: false,
       fallback: true,
       fallbackNotice: parseRes.notice,
     };

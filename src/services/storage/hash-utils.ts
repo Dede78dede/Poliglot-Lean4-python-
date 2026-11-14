@@ -1,5 +1,6 @@
 /**
- * Computes a hex-encoded SHA-256 hash of a string or Uint8Array using Web Crypto API.
+ * Computes a cryptographic hex-encoded SHA-256 hash using Web Crypto API or node:crypto.
+ * Fail-closed: never falls back to non-cryptographic pseudo-hashing.
  */
 export async function computeSha256(content: string | Uint8Array): Promise<string> {
   const data = typeof content === 'string' ? new TextEncoder().encode(content) : content;
@@ -7,8 +8,8 @@ export async function computeSha256(content: string | Uint8Array): Promise<strin
   let subtle: SubtleCrypto | undefined;
   if (typeof window !== 'undefined' && window.crypto?.subtle) {
     subtle = window.crypto.subtle;
-  } else if (typeof crypto !== 'undefined' && crypto.subtle) {
-    subtle = crypto.subtle;
+  } else if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.subtle) {
+    subtle = globalThis.crypto.subtle;
   }
 
   if (subtle) {
@@ -17,11 +18,10 @@ export async function computeSha256(content: string | Uint8Array): Promise<strin
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  // Pure JS fallback if SubtleCrypto is unavailable (deterministic fallback)
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    hash = (hash << 5) - hash + data[i]!;
-    hash |= 0;
+  try {
+    const nodeCrypto = await import('node:crypto');
+    return nodeCrypto.createHash('sha256').update(data).digest('hex');
+  } catch {
+    throw new Error('CRYPTO_UNAVAILABLE: Cryptographic SHA-256 digest unavailable in current runtime.');
   }
-  return Math.abs(hash).toString(16).padStart(16, '0');
 }

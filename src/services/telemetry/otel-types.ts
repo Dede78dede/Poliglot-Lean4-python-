@@ -13,6 +13,7 @@ export const OTEL_DEFAULT_ENDPOINT = 'http://localhost:4318/v1/traces';
 export interface OtelSpanContext {
   readonly traceId: string;
   readonly spanId: string;
+  readonly parentSpanId?: string;
   readonly traceFlags?: number;
   readonly traceState?: string;
 }
@@ -25,7 +26,7 @@ export interface OtelSpanRecord {
   readonly startTime: number;
   readonly endTime: number;
   readonly durationMs: number;
-  readonly attributes: Record<string, string | number | boolean>;
+  readonly attributes: Record<string, unknown>;
   readonly status: {
     readonly code: 'OK' | 'ERROR' | 'UNSET';
     readonly message?: string;
@@ -33,7 +34,7 @@ export interface OtelSpanRecord {
   readonly events: readonly {
     readonly name: string;
     readonly time: number;
-    readonly attributes?: Record<string, string | number | boolean>;
+    readonly attributes?: Record<string, unknown>;
   }[];
 }
 
@@ -49,5 +50,7 @@ export interface CorrelatedTraceResponse {
     readonly service: string;
     readonly message: string;
     readonly correlationId: string;
+    readonly traceId?: string;
+    readonly spanId?: string;
   }[];
 }

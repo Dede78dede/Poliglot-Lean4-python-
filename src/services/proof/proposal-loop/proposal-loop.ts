@@ -255,7 +255,7 @@ export class DefaultProposalLoop {
           details: { errorClass: 'TACTIC_FAILED', diagnostic: lastDiagnostic },
         });
       } else {
-        // Successful verification
+        // Preflight syntactic review passed; formal certification still requires dual-engine kernel consensus
         proved = true;
         finalProof = generatedProof;
         certificateSha256 = createHash('sha256')
@@ -267,16 +267,21 @@ export class DefaultProposalLoop {
           iteration,
           durationMs: Date.now() - revStart,
           status: 'success',
-          details: { certificateSha256, verified: true },
+          details: {
+            certificateSha256,
+            verified: false,
+            candidateSynthesized: true,
+            requiresKernelVerification: true,
+          },
         });
 
-        // 4. Memory Node: Record success into proof reuse cache
+        // 4. Memory Node: Only kernel-verified proofs may enter proof reuse cache (Epistemic Invariant)
         await proofReuseService.index(declarationId, {
           goal,
           proof: generatedProof,
           certificateSha256,
           leanToolchain: toolchain,
-          verified: true,
+          verified: false,
         });
 
         break;

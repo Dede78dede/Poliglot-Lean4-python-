@@ -16,6 +16,14 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         '@': path.resolve(import.meta.dirname, './src'),
+        'monaco-editor/esm/vs/editor/editor.api.js': path.resolve(
+          import.meta.dirname,
+          './src/services/collaboration/monaco-api-shim.ts'
+        ),
+        'monaco-editor': path.resolve(
+          import.meta.dirname,
+          './src/services/collaboration/monaco-api-shim.ts'
+        ),
       },
     },
     define: {

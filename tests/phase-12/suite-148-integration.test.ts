@@ -27,13 +27,19 @@ export async function runSuite148(): Promise<void> {
   // 148.1: Full Pipeline (NL -> Mathesis candidate -> Fidelity Check -> ProposalLoop -> Kernel)
   const correlationId = 'test-corr-pipeline-148-1';
 
-  // Step 1: Formalize with Mathesis
-  const mathesisRes = await mathesisProvider.formalize({
-    naturalLanguagePrompt: 'Prove that the successor of an integer is distinct from the integer',
-    endpointOverride: 'http://localhost:8088/v1/mathesis',
-    correlationId,
-    simulatedScore: 0.94,
-  });
+  // Step 1: Formalize with Mathesis over real HTTP
+  const { startMathesisMockServer } = await import('../phase-14/mocks/reasoner-mocks');
+  const mathMock = await startMathesisMockServer({ score: 0.94 });
+  let mathesisRes;
+  try {
+    mathesisRes = await mathesisProvider.formalize({
+      naturalLanguagePrompt: 'Prove that the successor of an integer is distinct from the integer',
+      endpointOverride: mathMock.url,
+      correlationId,
+    });
+  } finally {
+    await mathMock.close();
+  }
   assert.equal(mathesisRes.accepted, true);
   assert.equal(mathesisRes.declarations.length, 1);
 

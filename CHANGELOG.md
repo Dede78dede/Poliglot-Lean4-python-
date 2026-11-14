@@ -5,29 +5,28 @@ All notable changes to Polyglot Code Studio will be documented in this file.
 The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.3.0-rc] - Release Candidate
 
-### Phase 15 — Waves 1–4 Activation & Advanced Reasoners
+### Phase 15 — Waves 1–4 Real Protocols, Security Hardening & Bundle Discipline
 - **Wave 1 (Observability)**:
-  - Enabled browser OpenTelemetry tracing with standard W3C `traceparent` headers (`00-<traceId>-<spanId>-01`) and recursive attribute credential sanitization (`otel-browser.ts`).
+  - Enabled browser OpenTelemetry tracing with standard W3C `traceparent` headers (`00-<traceId>-<spanId>-01`), OTLP HTTP export, and recursive attribute credential sanitization (`otel-browser.ts`).
   - Added distributed trace correlation and traceparent parsing in Node.js backend engine (`otel-backend.ts`).
-  - Implemented Suite 195 (5 sub-tests passing).
+  - Verified via Suite 195 (5 observed sub-test checks passing).
 - **Wave 2 (Tactic Parallelism)**:
-  - Enabled LeanBeam speculative tactic execution pipeline with `speculativelyTested: true` (`lean-beam-client.ts`) and added parallel `POST /api/v1/proof/speculative` endpoint returning RFC 9457 `503` when disabled (`proof-automation.ts`).
+  - Upgraded LeanBeam to genuine HTTP JSON-RPC transport with `AbortController` timeout cancellation (`lean-beam-client.ts`) and `POST /api/v1/proof/speculative` returning RFC 9457 `503` when disabled (`proof-automation.ts`).
   - Upheld epistemic invariant: speculative probes never emit `verified: true` or `SEAL_KERNEL_VERIFIED_TIER5`.
-  - Implemented Suite 196 (6 sub-tests passing).
+  - Verified via Suite 196 (6 observed sub-test checks passing).
 - **Wave 3 (Advanced Reasoners)**:
-  - Activated Mathesis autoformalization bridge (`ENABLE_MATHESIS`), LP² lossy prototyping transpiler (`ENABLE_LP2`), and TreeThink MCTS search (`ENABLE_TREETHINK`).
+  - Upgraded Mathesis (`ENABLE_MATHESIS`) to real HTTP + Zod schema validation, LP² (`ENABLE_LP2`) to structural Python↔Lean AST transpilation with unsupported diagnostics, and TreeThink (`ENABLE_TREETHINK`) to bounded tree search with node-budget exhaustion.
   - Enforced RFC 9457 fail-closed responses when flags are disabled; tagged all reasoner outputs as heuristic/unverified.
-  - Implemented Suite 197 (5 sub-tests passing).
-- **Wave 4 (Collaboration)**:
-  - Activated Monaco Yjs CRDT binding adapter (`ENABLE_YJS_COLLABORATION`), Hocuspocus collaboration server with token auth and origin allowlist enforcement (`monaco-yjs-adapter.ts`, `hocuspocus-server.ts`), and lazily mounted `CollaborationPanel` in Settings view (`src/App.tsx`).
-  - Implemented Suite 198 (5 sub-tests passing).
-- **End-to-End Consensus, Server Telemetry & Launch Readiness**:
-  - Mounted conditional `traceparent` correlation middleware, `/api/v1/telemetry`, and `/api/v1/proof` automation routers in `server.ts`.
-  - Implemented Suite 199 (E2E dual-engine consensus & epistemic authority gate, 5 sub-tests passing) and Suite 200 (Phase 15 integration & launch readiness gate, 7 sub-tests passing).
-  - Reached **67 active test suites / 425 sub-tests with 100% pass rate** (303 in `verify-all.ts`, 122 in `verify-extended.ts`), exceeding the ADR-016 target of 420 sub-tests.
-  - Bundle budgets strictly preserved: Main entry **28.96 KB** ($\le$ 180 KB), Total JS **204.55 KB** ($\le$ 290 KB).
+  - Verified via Suite 197 (5 observed sub-test checks passing).
+- **Wave 4 (Real-Time CRDT Collaboration)**:
+  - Implemented live `Y.Doc` + `y-protocols` sync/awareness over `/collab` WebSocket (`hocuspocus-server.ts`), fail-closed origin & token authentication (`401`/`403`/`503`/`400`), workspace path containment, and collapsible Editor `Collab` drawer (`src/App.tsx`, `CollaborationPanel.tsx`).
+  - Verified via Suite 198 (7 real HTTP/WS sub-test checks passing).
+- **Bundle Optimization, Architecture & Release Governance (`2.3.0-rc`)**:
+  - Eliminated duplicate `monaco-editor` client bundling (`646.81 KB` gzip) via `monaco-api-shim.ts`, reducing Total JS gzip from `1286.77 KB` to **`234.37 KB`** (`Main: 38.42 KB`, `O1: 55.67 KB`, `O2: 169.61 KB`, `O3: 0.01 KB`), and enforced exit code `1` on budget failure in `scripts/measure-bundle.ts`.
+  - Created TS-aware `scripts/arch-check.ts` analyzing `354` TS/TSX modules (`401` ESM modules via `depcruise`) and resolved circular import in `result-envelope.ts` ↔ `with-envelope.ts`.
+  - Added `scripts/scan-secrets.ts` (`npm run scan:secrets`), updated `scripts/check-flag-expiry.ts --strict` to evaluate live `new Date()`, replaced static runner totals with live dynamic accounting (**67/67 suites / 365 observed sub-test checks** across Suites 134–200), and pinned all 26 production dependencies to exact versions in `package.json`.
 
 ### Phase 14.9.9.2 — Verification Authority Containment & Prerequisite Repair
 - **Verification Authority Containment (P0 Stop-Ship)**:

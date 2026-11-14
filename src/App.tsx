@@ -42,6 +42,7 @@ import Code2 from 'lucide-react/dist/esm/icons/code-2';
 import BookOpen from 'lucide-react/dist/esm/icons/book-open';
 import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check';
 import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
+import Users from 'lucide-react/dist/esm/icons/users';
 
 const DesignSystemShowcase = React.lazy(() =>
   import('./shared/ui/showcase').then((m) => ({ default: m.DesignSystemShowcase || (m as any).default }))
@@ -116,6 +117,7 @@ export function App(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<string>(DEFAULT_FILE_NAMES.LEAN_MAIN);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCollabDrawerOpen, setIsCollabDrawerOpen] = useState(false);
 
   const tabsState = useStoreSelector(editorTabsStore, (s) => s);
   const executionState = useStoreSelector(executionStore, (s) => s);
@@ -340,6 +342,18 @@ export function App(): React.JSX.Element {
                     </button>
                   )}
                   <button
+                    onClick={() => setIsCollabDrawerOpen((prev) => !prev)}
+                    className={`px-2.5 min-h-[36px] flex items-center gap-1.5 hover:text-slate-200 rounded touch-manipulation whitespace-nowrap shrink-0 ${
+                      isCollabDrawerOpen ? 'text-blue-400 bg-slate-800/60' : ''
+                    }`}
+                    title="Toggle Real-Time CRDT Collaboration"
+                    aria-label="Toggle Real-Time Collaboration"
+                    aria-expanded={isCollabDrawerOpen}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Collab</span>
+                  </button>
+                  <button
                     onClick={() => editorTabsStore.toggleSplit(activeTab)}
                     className={`p-2 min-h-[36px] min-w-[36px] flex items-center justify-center hover:text-slate-200 rounded touch-manipulation ${
                       tabsState.splitMode !== 'none' ? 'text-blue-400' : ''
@@ -394,8 +408,8 @@ export function App(): React.JSX.Element {
                           ⚠ SIMULATED — NON-CERTIFYING
                         </Badge>
                       ) : executionState.result.verified ? (
-                        <Badge variant="verified">
-                          SEAL_KERNEL_VERIFIED_TIER5
+                        <Badge variant="warning">
+                          KIMINA PASSED (SINGLE ENGINE — CONSENSUS REQUIRED)
                         </Badge>
                       ) : (
                         <Badge variant="error">
@@ -448,6 +462,23 @@ export function App(): React.JSX.Element {
                     )}
                   </div>
                 </div>
+
+                {isCollabDrawerOpen && (
+                  <aside
+                    aria-label="Editor Collaboration Drawer"
+                    className="col-span-1 md:col-span-2 border-t border-slate-800 max-h-[320px] overflow-y-auto"
+                  >
+                    <React.Suspense fallback={<ViewFallback />}>
+                      <CollaborationPanel
+                        activeDocId={activeTab}
+                        bufferContent={currentCode}
+                        onRemoteBufferChange={(nextContent) =>
+                          setFiles((prev) => ({ ...prev, [activeTab]: nextContent }))
+                        }
+                      />
+                    </React.Suspense>
+                  </aside>
+                )}
               </div>
             </div>
           )}
@@ -560,13 +591,6 @@ export function App(): React.JSX.Element {
               <React.Suspense fallback={<ViewFallback />}>
                 <RecommendationsPanel />
               </React.Suspense>
-
-              {/* Real-Time CRDT Collaboration Panel (Wave 4, Lazy-Loaded) */}
-              <div className="rounded-xl border border-slate-800 overflow-hidden">
-                <React.Suspense fallback={<ViewFallback />}>
-                  <CollaborationPanel activeDocId={activeTab} />
-                </React.Suspense>
-              </div>
             </div>
           )}
         </main>

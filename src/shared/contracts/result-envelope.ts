@@ -12,7 +12,6 @@
 
 import { BridgeError } from '../../services/errors/bridge-error';
 import { ERROR_REGISTRY, type ErrorCode } from '../../services/errors/error-registry';
-export { withEnvelope } from './with-envelope';
 
 /**
  * Serialized form of BridgeError (RFC 9457-compatible).
@@ -148,4 +147,16 @@ export function unwrapEnvelope<T>(envelope: ResultEnvelope<T>): T {
     envelope.correlationId,
     envelope.error.details
   );
+}
+
+export async function withEnvelope<T>(
+  operation: () => Promise<T>,
+  correlationId: string
+): Promise<ResultEnvelope<T>> {
+  try {
+    const value = await operation();
+    return createSuccessEnvelope(value, correlationId);
+  } catch (err: unknown) {
+    return createErrorEnvelope(err, correlationId);
+  }
 }

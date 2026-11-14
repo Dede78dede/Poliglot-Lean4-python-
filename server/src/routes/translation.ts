@@ -37,10 +37,10 @@ translationRouter.post('/fidelity-check', async (req, res) => {
 
 translationRouter.post('/lp2', async (req, res) => {
   if (!lp2Adapter.isEnabled()) {
-    return res.status(404).json({
-      type: 'https://polyglot.dev/errors/resource-not-found',
-      title: 'RESOURCE_NOT_FOUND',
-      status: 404,
+    return res.status(503).json({
+      type: 'https://polyglot.dev/errors/feature-disabled',
+      title: 'FEATURE_DISABLED',
+      status: 503,
       detail: 'LP² adapter is disabled by feature flag ENABLE_LP2=false.',
     });
   }
@@ -62,11 +62,13 @@ translationRouter.post('/lp2', async (req, res) => {
 
     return res.json(result);
   } catch (err: unknown) {
+    const anyErr = err as { httpStatus?: number; code?: string; message?: string };
+    const status = typeof anyErr?.httpStatus === 'number' ? anyErr.httpStatus : 500;
     const message = err instanceof Error ? err.message : String(err);
-    return res.status(500).json({
-      type: 'https://polyglot.dev/errors/internal-server-error',
-      title: 'INTERNAL_SERVER_ERROR',
-      status: 500,
+    return res.status(status).json({
+      type: `https://polyglot.dev/errors/${String(anyErr?.code ?? 'internal-server-error').toLowerCase().replace(/_/g, '-')}`,
+      title: anyErr?.code ?? 'INTERNAL_SERVER_ERROR',
+      status,
       detail: message,
     });
   }

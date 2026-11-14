@@ -99,7 +99,11 @@ export async function runSuite200(): Promise<void> {
   assert.ok(fs.existsSync(signoffPath), 'reports/phase-15-activation-signoff.md must exist');
   assert.ok(fs.existsSync(checklistPath), 'reports/phase-15-launch-checklist.md must exist');
   const signoffContent = fs.readFileSync(signoffPath, 'utf-8');
-  assert.ok(signoffContent.includes('425/425'), 'Sign-off report must document 425/425 cumulative sub-tests');
+  assert.ok(signoffContent.includes('2.3.0-rc'), 'Sign-off report must document release candidate version 2.3.0-rc');
+  assert.ok(
+    signoffContent.includes('Suites 134–172') && signoffContent.includes('Suites 173–200'),
+    'Sign-off report must document dynamic primary and extended verification suites'
+  );
   console.log('  ✓ 200.6 Phase 15 sign-off report and launch checklist verified complete');
 
   // 200.7: Server router mounts and lazy CollaborationPanel shell integration

@@ -360,7 +360,7 @@ export class FemevEngine {
 
   public async executePhase4Verification(code?: string): Promise<{
     verified: boolean;
-    multiKernelStatus: 'consensus' | 'disagreement';
+    multiKernelStatus: 'consensus' | 'disagreement' | 'unavailable';
     paranoidCheckPassed: boolean;
   }> {
     this.state = { ...this.state, isRunning: true, lastError: undefined };
@@ -379,11 +379,16 @@ export class FemevEngine {
       useSandbox: true,
     });
 
-    if (!res.verified) {
+    if (!res.verified || !res.certificate) {
       this.state = {
         ...this.state,
         isRunning: false,
-        lastError: res.error || 'Multi-kernel verification failed.',
+        phase4Certificate: undefined,
+        phase4: {
+          leanProposition: proofCode,
+          verified: false,
+        },
+        lastError: res.error || 'Server dual-engine consensus required to certify formal proof.',
       };
       this.notify();
       return {
@@ -399,15 +404,15 @@ export class FemevEngine {
       phase4Certificate: res.certificate,
       phase4: {
         leanProposition: proofCode,
-        verified: true,
+        verified: false,
         certificate: res.certificate,
       },
     };
     this.notify();
     return {
-      verified: true,
-      multiKernelStatus: 'consensus',
-      paranoidCheckPassed: true,
+      verified: false,
+      multiKernelStatus: res.multiKernelStatus,
+      paranoidCheckPassed: false,
     };
   }
 

@@ -116,3 +116,16 @@ Phase 14.9.3 resolves the residual bundle observations O1, O2, and O3 identified
 - **O1 (Max Single Chunk Cap)**: Preserved at ≤ 80.00 KB gzip (largest chunk measured: `react-vendor` at 66.06 KB).
 - **O2 (Initial Load Gzip)**: Main entry + core initial runtime chunks measured at 174.06 KB gzip (safely below the 200.00 KB ceiling).
 - **O3 (Chunk Sum Accounting)**: Sum of emitted chunk assets strictly matches `totalJsGzipKb` (216.91 KB) within 0.01 KB (well within the ≤ 0.50 KB tolerance).
+
+---
+
+## 7. Phase 15 (`2.3.0-rc`) — Yjs Wave 4 & Monaco Runtime Deduplication
+
+During Wave 4 activation, `y-monaco`'s direct import of `monaco-editor/esm/vs/editor/editor.api.js` initially dragged the full `monaco-editor` package (`646.81 KB` gzip, raising total JS to `1286.77 KB` gzip) into client assets alongside `@monaco-editor/react`'s runtime loader. Aliasing `monaco-editor` in Vite builds to `src/services/collaboration/monaco-api-shim.ts` (delegating to the active `globalThis.monaco` instance mounted by `EditorPane.tsx`) eliminated duplicate editor bundling while keeping `yjs-runtime` and `y-monaco` strictly lazy-loaded (`0 KB` added to O2):
+
+- **Main Entry (`index-*.js`)**: `38.42 KB gzip` ($\le 180.00\text{ KB}$)
+- **Total Client JS**: `234.37 KB gzip` ($\le 290.00\text{ KB}$ ADR-017 and $\le 260.00\text{ KB}$ Suite 170)
+- **O1 (Max Single Chunk)**: `55.67 KB gzip` (`react-vendor`, $\le 100.00\text{ KB}$)
+- **O2 (Initial Load parsed from `dist/index.html`)**: `169.61 KB gzip` (6 initial scripts, $\le 220.00\text{ KB}$)
+- **O3 (Accounting Discrepancy)**: `0.01 KB` ($\le 0.50\text{ KB}$)
+- **CLI Enforcement**: `scripts/measure-bundle.ts` now exits with status code `1` whenever any ceiling fails (`reports/bundle-post-15.json`).

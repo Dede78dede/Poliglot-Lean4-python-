@@ -8,7 +8,7 @@ import { AVAILABLE_LEAN_TOOLCHAINS } from '../../server/src/config/lean-runner-c
 async function runFemevSoundnessTests(): Promise<void> {
   console.log('--- Test Suite 33: FEMEV Integration & Kernel Soundness Hardening ---');
 
-  // Test 33.1: 6-Kernel Paranoid Check Consensus on v4.35.0
+  // Test 33.1: Fail-Closed Multi-Kernel Check when external paranoid runner binaries are unavailable locally
   {
     const paranoidResult = await multiKernelVerifier.verifyMultiKernel({
       projectRoot: '/test/workspace',
@@ -18,25 +18,13 @@ async function runFemevSoundnessTests(): Promise<void> {
       useSandbox: true,
     });
 
-    assert.equal(paranoidResult.verified, true, 'Paranoid check should pass with consensus');
-    assert.equal(paranoidResult.multiKernelStatus, 'consensus', 'Status must be consensus');
-    assert.equal(paranoidResult.kernelsUsed.length, 6, 'Must evaluate all 6 configurations');
-
-    const expectedKernels = [
-      'leanchecker',
-      'nanoda',
-      'lean4lean',
-      'con-leche',
-      'con-ron',
-      'leanchecker-hardened',
-    ];
-    for (const k of expectedKernels) {
-      assert.ok(paranoidResult.kernelsUsed.includes(k as any), `Kernel ${k} must be in kernelsUsed`);
-    }
-
-    assert.equal(paranoidResult.paranoidCheckPassed, true);
+    assert.equal(paranoidResult.verified, false, 'Must fail closed without real kernel consensus runner');
+    assert.equal(paranoidResult.multiKernelStatus, 'unavailable', 'Status must be unavailable');
+    assert.equal(paranoidResult.kernelsUsed.length, 0, 'No synthetic kernels may be reported as executed');
+    assert.equal(paranoidResult.paranoidCheckPassed, false);
     assert.equal(paranoidResult.cve2026_72844Status, 'not_affected');
-    console.log('  ✓ 33.1: 6-Kernel Paranoid Check Consensus on v4.35.0 verified');
+    assert.ok(paranoidResult.error?.toLowerCase().includes('unavailable'));
+    console.log('  ✓ 33.1: Multi-Kernel check strictly fails closed when external kernel runners are unavailable');
   }
 
   // Test 33.2: Rejection on Kernel Disagreement (KERNEL_DISAGREEMENT)
@@ -89,37 +77,42 @@ async function runFemevSoundnessTests(): Promise<void> {
     console.log('  ✓ 33.3: Sandbox Policy Enforcement (no --inadvisably-no-sandbox) verified');
   }
 
-  // Test 33.4: Extended SEAL_KERNEL_VERIFIED_TIER5 Certificate Schema
+  // Test 33.4: Local Extended SEAL_KERNEL_VERIFIED_TIER5 Certificate Minting Blocked + SHA-256 Digest Helper
   {
-    const cert = multiKernelVerifier.generateExtendedCertificate({
-      nodeId: 'node-feigenbaum-001',
-      theoremStatement: 'theorem feigenbaum_delta_positive : δ > 4.6 := by sorry',
-      proofContent: 'decide',
-      toolchain: 'v4.35.0',
-      paranoid: true,
-      kernelsUsed: [
-        'leanchecker',
-        'nanoda',
-        'lean4lean',
-        'con-leche',
-        'con-ron',
-        'leanchecker-hardened',
-      ],
-      signerIdentity: 'POLYGLOT-STUDIO-SEAL_KERNEL_VERIFIED_TIER5',
-    });
+    assert.throws(
+      () => {
+        multiKernelVerifier.generateExtendedCertificate({
+          nodeId: 'node-feigenbaum-001',
+          theoremStatement: 'theorem feigenbaum_delta_positive : δ > 4.6 := by sorry',
+          proofContent: 'decide',
+          toolchain: 'v4.35.0',
+          paranoid: true,
+          kernelsUsed: [
+            'leanchecker',
+            'nanoda',
+            'lean4lean',
+            'con-leche',
+            'con-ron',
+            'leanchecker-hardened',
+          ],
+          signerIdentity: 'POLYGLOT-STUDIO-SEAL_KERNEL_VERIFIED_TIER5',
+        });
+      },
+      /CERTIFICATION_AUTHORITY_DENIED/,
+      'Client MultiKernelVerifier must refuse to mint Tier-5 certificates'
+    );
 
-    assert.equal(cert.tier, 'SEAL_KERNEL_VERIFIED_TIER5');
-    assert.equal(cert.multiKernelStatus, 'consensus');
-    assert.equal(cert.kernelCheckPassed, true);
-    assert.equal(cert.paranoidCheckPassed, true);
-    assert.equal(cert.kernelsUsed?.length, 6);
-    assert.equal(cert.cve2026_72844Status, 'not_affected');
-    assert.ok(cert.certificateHash && cert.certificateHash.length >= 64, 'Certificate hash must be SHA256');
+    const digest = await multiKernelVerifier.computeDeclarationDigest(
+      'theorem feigenbaum_delta_positive : True := trivial',
+      'trivial',
+      'v4.35.0'
+    );
+    assert.equal(digest.length, 64, 'Declaration digest must be full 64-char SHA-256 hex');
 
     // Toolchain matrix includes v4.32.2 and v4.35.0
     assert.ok(AVAILABLE_LEAN_TOOLCHAINS.includes('v4.32.2'), 'v4.32.2 must be in toolchain matrix');
     assert.ok(AVAILABLE_LEAN_TOOLCHAINS.includes('v4.35.0'), 'v4.35.0 must be in toolchain matrix');
-    console.log('  ✓ 33.4: Extended SEAL_KERNEL_VERIFIED_TIER5 Certificate schema & CVE status verified');
+    console.log('  ✓ 33.4: Local Tier-5 certificate minting blocked & SHA-256 digest helper verified');
   }
 
   // Test 33.5: FEMEV 4-Phase Epistemic State Machine
@@ -157,10 +150,11 @@ async function runFemevSoundnessTests(): Promise<void> {
     assert.ok(state.phase4?.leanProposition.includes('feigenbaum_delta_approx'));
 
     const proofResult = await femevEngine.executePhase4Verification();
-    assert.equal(proofResult.verified, true);
-    assert.equal(proofResult.multiKernelStatus, 'consensus');
-    assert.equal(proofResult.paranoidCheckPassed, true);
-    console.log('  ✓ 33.5: FEMEV 4-Phase Epistemic State Machine transitions & execution verified');
+    assert.equal(proofResult.verified, false);
+    assert.equal(proofResult.multiKernelStatus, 'unavailable');
+    assert.equal(proofResult.paranoidCheckPassed, false);
+    assert.equal(femevEngine.getState().phase4Certificate, undefined);
+    console.log('  ✓ 33.5: FEMEV 4-Phase Epistemic State Machine transitions & fail-closed Phase 4 verified');
   }
 
   // Test 33.6: Logistic Map & Feigenbaum Constant Empirical Convergence

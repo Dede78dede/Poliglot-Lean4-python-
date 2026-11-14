@@ -36,29 +36,49 @@ export async function runSuite86(): Promise<void> {
   assert.equal(routerBlocked, true, 'Router must throw ROUTER_NO_PROVIDER_AVAILABLE when candidate strategy is disabled');
   console.log('  ✓ 86.2 Router throws ROUTER_NO_PROVIDER_AVAILABLE when candidates are disabled');
 
-  // 86.3: Mathesis throws MATHESIS_UNAVAILABLE when disabled; succeeds when enabled
+  // 86.3: Mathesis throws FEATURE_DISABLED when disabled, MATHESIS_UNAVAILABLE when unconfigured, succeeds with HTTP backend
   featureFlagRegistry.set('ENABLE_MATHESIS', false);
-  let mathesisBlocked = false;
+  let mathesisFlagBlocked = false;
   try {
     await mathesisProvider.formalize({
       naturalLanguagePrompt: 'Prove that 1 + 1 = 2',
     });
   } catch (err: unknown) {
-    if (err instanceof BridgeError && err.code === 'MATHESIS_UNAVAILABLE') {
-      mathesisBlocked = true;
+    if (err instanceof BridgeError && err.code === 'FEATURE_DISABLED') {
+      mathesisFlagBlocked = true;
     }
   }
-  assert.equal(mathesisBlocked, true, 'Mathesis must throw MATHESIS_UNAVAILABLE when disabled');
+  assert.equal(mathesisFlagBlocked, true, 'Mathesis must throw FEATURE_DISABLED when disabled');
 
-  // Enable flag and verify synthesis
   featureFlagRegistry.set('ENABLE_MATHESIS', true);
-  const mathRes = await mathesisProvider.formalize({
-    naturalLanguagePrompt: 'Prove that 1 + 1 = 2',
-  });
-  assert.equal(mathRes.provider, 'mathesis');
-  assert.ok(mathRes.leanCode.includes('theorem mathesis_synthesized_theorem'));
-  featureFlagRegistry.reset('ENABLE_MATHESIS');
-  console.log('  ✓ 86.3 Mathesis provider strictly respects ENABLE_MATHESIS flag lifecycle');
+  let mathesisEndpointBlocked = false;
+  try {
+    await mathesisProvider.formalize({
+      naturalLanguagePrompt: 'Prove that 1 + 1 = 2',
+      endpointOverride: '',
+    });
+  } catch (err: unknown) {
+    if (err instanceof BridgeError && err.code === 'MATHESIS_UNAVAILABLE') {
+      mathesisEndpointBlocked = true;
+    }
+  }
+  assert.equal(mathesisEndpointBlocked, true, 'Mathesis must fail closed when endpoint is empty');
+
+  const { startMathesisMockServer } = await import('../phase-14/mocks/reasoner-mocks');
+  const mathMock = await startMathesisMockServer({ score: 0.91 });
+  try {
+    const mathRes = await mathesisProvider.formalize({
+      naturalLanguagePrompt: 'Prove that 1 + 1 = 2',
+      endpointOverride: mathMock.url,
+    });
+    assert.equal(mathRes.provider, 'mathesis');
+    assert.ok(mathRes.leanCode.includes('theorem mathesis_synthesized_theorem'));
+    assert.ok(mathMock.requestCount() === 1);
+  } finally {
+    await mathMock.close();
+    featureFlagRegistry.reset('ENABLE_MATHESIS');
+  }
+  console.log('  ✓ 86.3 Mathesis provider strictly respects ENABLE_MATHESIS flag lifecycle & real HTTP backend');
 
   // 86.4: Paperproof throws PAPERPROOF_UNAVAILABLE when disabled; returns tree when enabled
   featureFlagRegistry.set('ENABLE_PAPERPROOF', false);
@@ -80,9 +100,10 @@ export async function runSuite86(): Promise<void> {
   assert.equal(tree.theoremName, 'test_thm');
   assert.ok(tree.nodes.length >= 3);
   assert.ok(tree.edges.length >= 2);
-  assert.equal(tree.verified, true);
+  assert.equal(tree.verified, false);
+  assert.ok(!('kernelSeal' in tree));
   featureFlagRegistry.reset('ENABLE_PAPERPROOF');
-  console.log('  ✓ 86.4 Paperproof client strictly respects ENABLE_PAPERPROOF and produces valid proof DAG');
+  console.log('  ✓ 86.4 Paperproof client strictly respects ENABLE_PAPERPROOF and produces unverified proof DAG');
 
   // 86.5: Educational Mode filters templates based on ENABLE_EDUCATIONAL_MODE
   featureFlagRegistry.set('ENABLE_EDUCATIONAL_MODE', false);

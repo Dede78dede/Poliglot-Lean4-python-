@@ -51,24 +51,24 @@ export class AxleAdvancedService {
 
     const stmt = request.statement.trim();
 
-    // Detect known false statements
+    // Detect known false statements (heuristic pre-screen; not kernel-certified)
     if (stmt.includes('1 = 2') || stmt.includes('2 + 2 = 5') || stmt.includes('False') || stmt.includes('0 = 1')) {
       return {
         hasCounterexample: true,
         counterexample: 'Contradiction: standard Peano arithmetic disproves equality of distinct constants',
         negationProof: 'theorem not_eq : ¬(1 = 2) := by decide',
-        verified: true,
+        verified: false,
         timeMs: Date.now() - startTime,
-        message: 'Counterexample found: statement is false in standard Lean 4 model',
+        message: 'Heuristic counterexample candidate found (requires kernel consensus to certify negation proof)',
       };
     }
 
-    // True or un-disprovable statement
+    // True or un-disprovable statement (not kernel-certified)
     return {
       hasCounterexample: false,
-      verified: true,
+      verified: false,
       timeMs: Date.now() - startTime,
-      message: 'No counterexample found: statement appears consistent or true',
+      message: 'No heuristic counterexample found (requires dual-engine kernel verification)',
     };
   }
 
@@ -156,7 +156,7 @@ export class AxleAdvancedService {
 
     return {
       simplifiedCode,
-      kernelVerified: true,
+      kernelVerified: false,
       originalLength: request.code.length,
       simplifiedLength: simplifiedCode.length,
       tacticsRemoved,

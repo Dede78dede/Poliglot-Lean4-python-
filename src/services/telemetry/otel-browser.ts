@@ -1,5 +1,5 @@
 /**
- * Browser OpenTelemetry Tracer (Phase 11.2, Sprint 11.2.3)
+ * Browser OpenTelemetry Tracer (Phase 11.2 & Phase 15 Wave 1)
  *
  * Pinned to OpenTelemetry Web SDK 2.12.0.
  * Exports traces exclusively to local collector: http://localhost:4318/v1/traces
@@ -8,12 +8,16 @@
 
 import { featureFlagRegistry } from '../flags/feature-flag-registry';
 import { BridgeError } from '../errors/bridge-error';
+import { redactSensitiveData } from '../logging/logger';
 import {
   OTEL_PINNED_VERSION,
   OTEL_DEFAULT_ENDPOINT,
   type OtelSpanRecord,
   type OtelSpanContext,
 } from './otel-types';
+
+const MAX_BROWSER_SPAN_BUFFER = 500;
+const BROWSER_EXPORT_TIMEOUT_MS = 2000;
 
 export class BrowserOtelTracer {
   private active = false;
@@ -65,7 +69,7 @@ export class BrowserOtelTracer {
     } else {
       for (let i = 0; i < 16; i++) arr[i] = Math.floor(Math.random() * 256);
     }
-    return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+    return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
   }
 
   public static generateSpanId(): string {
@@ -75,7 +79,7 @@ export class BrowserOtelTracer {
     } else {
       for (let i = 0; i < 8; i++) arr[i] = Math.floor(Math.random() * 256);
     }
-    return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+    return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
   }
 
   public startTrace(traceId?: string): string {
@@ -96,9 +100,20 @@ export class BrowserOtelTracer {
     return `00-${traceId}-${sid}-01`;
   }
 
+  public injectTraceHeaders(headers: Record<string, string>, spanId?: string): Record<string, string> {
+    if (!this.isEnabled()) {
+      return headers;
+    }
+    return {
+      ...headers,
+      traceparent: this.getTraceparent(spanId),
+      tracestate: 'polyglot=1',
+    };
+  }
+
   public async withSpan<T>(
     name: string,
-    attributes: Record<string, string | number | boolean>,
+    attributes: Record<string, unknown>,
     fn: (spanContext: OtelSpanContext) => Promise<T>
   ): Promise<T> {
     const traceId = this.getCurrentTraceId();
@@ -123,15 +138,7 @@ export class BrowserOtelTracer {
       throw err;
     } finally {
       const endTime = Date.now();
-      // Sanitize attributes to avoid secret leakage
-      const sanitizedAttrs: Record<string, string | number | boolean> = {};
-      for (const [k, v] of Object.entries(attributes)) {
-        if (/token|auth|secret|key|password|cookie/i.test(k)) {
-          sanitizedAttrs[k] = '[REDACTED]';
-        } else {
-          sanitizedAttrs[k] = v;
-        }
-      }
+      const sanitizedAttrs = (redactSensitiveData(attributes) as Record<string, unknown>) || {};
 
       const record: OtelSpanRecord = {
         spanId,
@@ -142,7 +149,7 @@ export class BrowserOtelTracer {
         durationMs: endTime - startTime,
         attributes: {
           'service.name': 'polyglot-code-studio',
-          'service.version': '11.2.0',
+          'service.version': '2.3.0-rc',
           'telemetry.sdk.language': 'webjs',
           'telemetry.sdk.version': OTEL_PINNED_VERSION,
           ...sanitizedAttrs,
@@ -152,25 +159,37 @@ export class BrowserOtelTracer {
       };
 
       this.spanBuffer.push(record);
+      if (this.spanBuffer.length > MAX_BROWSER_SPAN_BUFFER) {
+        this.spanBuffer.shift();
+      }
+
       // If enabled, asynchronously post to local exporter endpoint without blocking
       if (this.active && typeof fetch !== 'undefined') {
-        this.exportSpan(record).catch(() => {
-          // Silent local fallback
-        });
+        void this.exportSpan(record);
       }
     }
   }
 
   public async exportSpan(span: OtelSpanRecord): Promise<void> {
-    if (!this.active) return;
+    if (!this.active || typeof fetch !== 'function') return;
+    const sanitizedSpan: OtelSpanRecord = {
+      ...span,
+      attributes: (redactSensitiveData(span.attributes) as Record<string, unknown>) || {},
+    };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), BROWSER_EXPORT_TIMEOUT_MS);
     try {
       await fetch(this.endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resourceSpans: [{ scopeSpans: [{ spans: [span] }] }] }),
+        body: JSON.stringify({ resourceSpans: [{ scopeSpans: [{ spans: [sanitizedSpan] }] }] }),
+        signal: controller.signal,
+        keepalive: true,
       });
     } catch {
-      // Local exporter offline / ignored
+      // Local exporter offline / ignored silently
+    } finally {
+      clearTimeout(timer);
     }
   }
 

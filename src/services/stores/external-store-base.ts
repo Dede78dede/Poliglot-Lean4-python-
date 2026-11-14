@@ -23,6 +23,7 @@ export abstract class ExternalStoreBase<TState> {
     if (options.multiTabSync && typeof BroadcastChannel !== 'undefined') {
       try {
         this.broadcastChannel = new BroadcastChannel(`polyglot.store.${options.id}`);
+        (this.broadcastChannel as unknown as { unref?: () => void }).unref?.();
         this.broadcastChannel.onmessage = (event) => {
           if (event.data?.type === 'STORE_SYNC') {
             this.handleRemoteSync(event.data.state);

@@ -126,8 +126,9 @@ export const SKELETON_TOOLS: readonly McpServerToolDefinition[] = [
               type: 'local-lean-driver',
             },
             kernelVerification: {
-              available: true,
-              tier: 'SEAL_KERNEL_VERIFIED_TIER5',
+              available: false,
+              requiresDualEngineConsensus: true,
+              protocol: 'polyglot.verification.v1',
             },
           },
         },

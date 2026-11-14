@@ -4,6 +4,7 @@ export type KiminaMode = (typeof KIMINA_MODES)[number];
 interface KiminaConfigBase {
   readonly mode: KiminaMode;
   readonly timeoutMs: number;
+  readonly authToken?: string;
 }
 
 export interface KiminaRealConfig extends KiminaConfigBase {
@@ -30,8 +31,8 @@ export type KiminaConfig =
  *
  * Rules:
  * - In production: ONLY `real` is permitted. Startup throws otherwise (Fail-Fast).
- * - In `real` mode: `KIMINA_BASE_URL` is required.
- * - In `auto` mode: `KIMINA_BASE_URL` is used for primary attempt (defaults to http://localhost:8000).
+ * - In `real` mode: `KIMINA_BASE_URL` (or `KIMINA_URL`) is required.
+ * - In `auto` mode: `KIMINA_BASE_URL` (or `KIMINA_URL`) is used for primary attempt (defaults to http://localhost:8000).
  * - Default mode: `real` in production, `auto` in development/test.
  *
  * @throws {Error} If configuration is invalid for the current environment.
@@ -55,23 +56,25 @@ export function resolveKiminaConfig(env: Record<string, string | undefined> = pr
     );
   }
 
-  const baseUrl = env['KIMINA_BASE_URL'] ?? (rawMode === 'simulator' ? undefined : 'http://localhost:8000');
+  const resolvedUrl = env['KIMINA_BASE_URL'] ?? env['KIMINA_URL'];
+  const baseUrl = resolvedUrl ?? (rawMode === 'simulator' ? undefined : 'http://localhost:8000');
   const timeoutMs = Number(env['KIMINA_TIMEOUT_MS'] ?? 30_000);
+  const authToken = env['KIMINA_AUTH_TOKEN']?.trim() || undefined;
 
   if (Number.isNaN(timeoutMs) || timeoutMs <= 0) {
     throw new Error(`Invalid KIMINA_TIMEOUT_MS="${env['KIMINA_TIMEOUT_MS']}". Must be a positive integer.`);
   }
 
   if (rawMode === 'real' && !baseUrl) {
-    throw new Error(`KIMINA_MODE="real" requires KIMINA_BASE_URL to be set.`);
+    throw new Error(`KIMINA_MODE="real" requires KIMINA_BASE_URL (or KIMINA_URL) to be set.`);
   }
 
   switch (rawMode) {
     case 'real':
-      return { mode: 'real', baseUrl: baseUrl!, timeoutMs };
+      return { mode: 'real', baseUrl: baseUrl!, timeoutMs, authToken };
     case 'simulator':
-      return { mode: 'simulator', timeoutMs };
+      return { mode: 'simulator', timeoutMs, authToken };
     case 'auto':
-      return { mode: 'auto', baseUrl: baseUrl ?? 'http://localhost:8000', timeoutMs };
+      return { mode: 'auto', baseUrl: baseUrl ?? 'http://localhost:8000', timeoutMs, authToken };
   }
 }

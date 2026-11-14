@@ -98,12 +98,12 @@ export async function runSuite172(): Promise<void> {
 
   console.log('  ✓ 172.5 ProofOutcome non-certified outcomes guarantee absence of kernel seals in fallback paths');
 
-  // 172.6: verify-all.ts includes runSuite172 and asserts total 172 suites / 303 sub-tests
+  // 172.6: verify-all.ts includes runSuite172 with dynamic sub-test accounting
   const verifyAllPath = path.join(rootDir, 'scripts/verify-all.ts');
   const verifyAllCode = fs.readFileSync(verifyAllPath, 'utf-8');
   assert.ok(verifyAllCode.includes('runSuite172'), 'scripts/verify-all.ts must import and run runSuite172');
-  assert.ok(verifyAllCode.includes('172 suites') || verifyAllCode.includes('303'), 'scripts/verify-all.ts must document 172 suites / 303 sub-tests');
-  console.log('  ✓ 172.6 verify-all.ts correctly registers Suite 172 reaching 172 suites / 303 sub-tests');
+  assert.ok(verifyAllCode.includes('observedChecks'), 'scripts/verify-all.ts must use dynamic sub-test accounting');
+  console.log('  ✓ 172.6 verify-all.ts correctly registers Suite 172 with dynamic sub-test accounting');
 }
 
 if (process.env.VITEST) {

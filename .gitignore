@@ -7,8 +7,11 @@ coverage/
 .env*
 !.env.example
 
-# Phase 14.9.9.2 Isolated Tools & Sensitive Artifacts
+# Phase 14.9.9.2+ Isolated Tools, Collaboration State & Sensitive Artifacts
 reports/context/
+reports/*.tmp
 .codeindex/
 .ogrep/
+.collab/
+.collab-workspace/
 data/tokens.json

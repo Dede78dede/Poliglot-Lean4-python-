@@ -6,6 +6,7 @@
  */
 
 import express from 'express';
+import http from 'node:http';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { proofReuseRouter } from './server/src/routes/proof-reuse';
@@ -33,12 +34,19 @@ import { authMiddleware } from './src/middleware/auth';
 import { standardRateLimiter, mcpRateLimiter } from './src/middleware/rate-limit';
 import { automationMetrics } from './src/services/proof/metrics/automation-metrics';
 import { backendOtelEngine } from './src/services/telemetry/otel-backend';
+import { runWithTraceContext } from './src/services/logging/logger';
+import { hocuspocusServer } from './src/services/collaboration/hocuspocus-server';
+import { featureFlagRegistry } from './src/services/flags/feature-flag-registry';
 
 const PORT = 3000;
 
 async function startServer(): Promise<void> {
   const app = express();
   const isProduction = process.env.NODE_ENV === 'production';
+
+  if (process.env.ENABLE_YJS_COLLABORATION === 'true') {
+    featureFlagRegistry.set('ENABLE_YJS_COLLABORATION', true);
+  }
 
   app.use(express.json());
 
@@ -67,27 +75,31 @@ async function startServer(): Promise<void> {
     }
     const startTime = Date.now();
     const rawTraceparent = typeof req.headers.traceparent === 'string' ? req.headers.traceparent : '';
-    const parsed = rawTraceparent ? backendOtelEngine.parseTraceparent(rawTraceparent) : null;
-    if (parsed) {
-      res.on('finish', () => {
-        const endTime = Date.now();
-        backendOtelEngine.recordSpan({
-          spanId: parsed.spanId,
-          traceId: parsed.traceId,
-          name: `http_${req.method}_${req.path}`,
-          startTime,
-          endTime,
-          durationMs: endTime - startTime,
-          attributes: {
-            'http.method': req.method,
-            'http.status_code': res.statusCode,
-          },
-          status: { code: res.statusCode >= 500 ? 'ERROR' : 'OK' },
-          events: [],
-        });
+    const rawTracestate = typeof req.headers.tracestate === 'string' ? req.headers.tracestate : undefined;
+    const parentCtx = rawTraceparent ? backendOtelEngine.parseTraceparent(rawTraceparent) : null;
+    const serverSpanCtx = backendOtelEngine.createChildSpanContext(parentCtx, rawTracestate);
+
+    res.setHeader('X-Trace-ID', serverSpanCtx.traceId);
+    res.on('finish', () => {
+      const endTime = Date.now();
+      backendOtelEngine.recordSpan({
+        spanId: serverSpanCtx.spanId,
+        traceId: serverSpanCtx.traceId,
+        ...(serverSpanCtx.parentSpanId ? { parentSpanId: serverSpanCtx.parentSpanId } : {}),
+        name: `http_${req.method}_${req.path}`,
+        startTime,
+        endTime,
+        durationMs: endTime - startTime,
+        attributes: {
+          'http.method': req.method,
+          'http.status_code': res.statusCode,
+        },
+        status: { code: res.statusCode >= 500 ? 'ERROR' : 'OK' },
+        events: [],
       });
-    }
-    next();
+    });
+
+    runWithTraceContext(serverSpanCtx, () => next());
   });
 
   const kiminaConfig = resolveKiminaConfig();
@@ -104,19 +116,31 @@ async function startServer(): Promise<void> {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  app.get('/readyz', (_req, res) => {
-    const isReady = kiminaConfig.mode !== 'real' || Boolean(kiminaConfig.baseUrl);
+  app.get('/readyz', async (_req, res) => {
+    const [kiminaReady, runnerReady] = await Promise.all([
+      kiminaConfig.mode === 'real' ? kiminaProxy.checkReady() : Promise.resolve(false),
+      leanRunnerConfig.mode === 'real' ? leanRunner.checkReady() : Promise.resolve(false),
+    ]);
+
+    const realKiminaRequired = kiminaConfig.mode === 'real';
+    const realRunnerRequired = leanRunnerConfig.mode === 'real';
+    const isReady =
+      (!realKiminaRequired || (Boolean(kiminaConfig.baseUrl) && kiminaReady)) &&
+      (!realRunnerRequired || (Boolean(leanRunnerConfig.runnerUrl) && runnerReady));
+
     if (isReady) {
       res.status(200).json({
         status: 'ready',
         timestamp: new Date().toISOString(),
-        kimina: { mode: kiminaConfig.mode },
-        runner: { mode: leanRunnerConfig.mode },
+        kimina: { mode: kiminaConfig.mode, reachable: kiminaReady },
+        runner: { mode: leanRunnerConfig.mode, reachable: runnerReady },
       });
     } else {
       res.status(503).json({
         status: 'not_ready',
-        error: 'Kimina or Lake runner service unconfigured in real mode',
+        error: 'Kimina or Lake runner service unconfigured or unreachable in real mode',
+        kimina: { mode: kiminaConfig.mode, reachable: kiminaReady },
+        runner: { mode: leanRunnerConfig.mode, reachable: runnerReady },
       });
     }
   });
@@ -155,7 +179,7 @@ async function startServer(): Promise<void> {
   app.use('/api/v1', standardRateLimiter, authMiddleware);
 
   // Modular Routers
-  app.use('/api/v1/lean', createLeanRouter(kiminaProxy));
+  app.use('/api/v1/lean', createLeanRouter(kiminaProxy, leanRunner));
   app.use('/api/v1/projects', createProjectsRouter(leanRunner));
 
   app.use('/api/v1/proof/reuse', proofReuseRouter);
@@ -187,7 +211,13 @@ async function startServer(): Promise<void> {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const httpServer = http.createServer(app);
+  const collabWorkspaceRoot = process.env.POLYGLOT_COLLAB_ROOT
+    ? path.resolve(process.env.POLYGLOT_COLLAB_ROOT)
+    : path.resolve(process.cwd(), '.collab-workspace');
+  hocuspocusServer.attachUpgradeHandler(httpServer, { workspacePath: collabWorkspaceRoot });
+
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Polyglot Code Studio dev server listening on http://0.0.0.0:${PORT}`);
   });
 }

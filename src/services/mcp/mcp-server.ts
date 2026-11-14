@@ -144,8 +144,9 @@ export const FULL_MCP_SERVER_TOOLS: readonly McpServerTool[] = [
           type: 'local-lean-driver',
         },
         kernelVerification: {
-          available: true,
-          seal: 'SEAL_KERNEL_VERIFIED_TIER5',
+          available: false,
+          requiresDualEngineConsensus: true,
+          protocol: 'polyglot.verification.v1',
         },
       });
     },
@@ -174,7 +175,7 @@ export const FULL_MCP_SERVER_TOOLS: readonly McpServerTool[] = [
         license: 'MIT',
         leanVersion: 'v4.35.0-rc4',
         pythonVersion: '3.14',
-        kernelVerified: true,
+        kernelVerified: false,
       });
 
       return enforceSizeLimit('polyglot_get_project_manifest', manifest);

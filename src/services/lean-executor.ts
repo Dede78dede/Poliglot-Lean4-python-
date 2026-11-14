@@ -1,6 +1,7 @@
 import type { ExecutionRequest, ExecutionResult } from '../types/execution';
 import { ExecutionError } from '../types/execution';
 import { LeanExecuteResponseSchema } from '../types/contracts';
+import { browserOtelTracer } from './telemetry/otel-browser';
 
 const API_BASE = '/api/v1';
 
@@ -9,13 +10,15 @@ export async function executeLean(request: ExecutionRequest): Promise<ExecutionR
   const controller = new AbortController();
   const timeoutTimer = setTimeout(() => controller.abort(), timeoutMs + 3_000);
 
+  const headers = browserOtelTracer.injectTraceHeaders({
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  });
+
   try {
     const response = await fetch(`${API_BASE}/lean/execute`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         code: request.code,
         timeoutMs,

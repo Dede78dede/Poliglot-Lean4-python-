@@ -65,38 +65,52 @@ export async function runSuite133(): Promise<void> {
     console.log('  ✓ 133.2 Full Pipeline Trace: browser span and backend logger linked by traceId');
 
     // 133.3: Collaborative Formalization Pipeline: Mathesis -> CRDT -> Paperproof
+    const { startMathesisMockServer } = await import('../phase-14/mocks/reasoner-mocks');
+    const mathMock = await startMathesisMockServer({ score: 0.92 });
     featureFlagRegistry.set('ENABLE_MATHESIS', true);
-    const formalResult = await mathesisProvider.formalize({
-      naturalLanguagePrompt: 'True is trivially true',
-      endpointOverride: 'http://localhost:8088/v1/mathesis',
-    });
+    let formalResult;
+    try {
+      formalResult = await mathesisProvider.formalize({
+        naturalLanguagePrompt: 'True is trivially true',
+        endpointOverride: mathMock.url,
+      });
+    } finally {
+      await mathMock.close();
+    }
     assert.ok(formalResult.accepted);
 
     const server = new HocuspocusServer();
     const doc = server.applyUpdate(destWs, 'Synthesized.lean', { text: formalResult.leanCode });
     assert.ok(doc.content.includes('mathesis_synthesized_theorem'));
 
-    const proofSteps = await defaultPaperproofClient.callTool({
-      toolName: 'lean_proof_steps',
-      arguments: { path: 'Synthesized.lean', theoremName: 'mathesis_synthesized_theorem' },
-    });
+    featureFlagRegistry.set('ENABLE_PAPERPROOF', true);
+    let proofSteps;
+    try {
+      proofSteps = await defaultPaperproofClient.callTool({
+        toolName: 'lean_proof_steps',
+        arguments: { path: 'Synthesized.lean', theoremName: 'mathesis_synthesized_theorem' },
+      });
+    } finally {
+      featureFlagRegistry.set('ENABLE_PAPERPROOF', false);
+      featureFlagRegistry.set('ENABLE_MATHESIS', false);
+    }
     assert.equal(proofSteps.success, true);
-    featureFlagRegistry.set('ENABLE_MATHESIS', false);
     console.log('  ✓ 133.3 Collaborative Formalization: Mathesis candidate -> CRDT buffer -> Paperproof steps');
 
-    // 133.4: Complete Feature Flag matrix smoke test (51 flags)
+    // 133.4: Complete Feature Flag matrix smoke test (>= 51 baseline, currently 62 flags)
     const flagKeys = Object.keys(FEATURE_FLAGS);
-    assert.equal(flagKeys.length, 51, `Expected exactly 51 flags, found ${flagKeys.length}`);
+    assert.ok(flagKeys.length >= 51, `Expected at least 51 flags, found ${flagKeys.length}`);
+    assert.equal(flagKeys.length, 62, `Expected 62 canonical flags, found ${flagKeys.length}`);
     assert.ok('ENABLE_WORKSPACE_ARCHIVE' in FEATURE_FLAGS);
     assert.ok('ENABLE_PAPERPROOF_PLAYBACK' in FEATURE_FLAGS);
     assert.ok('ENABLE_OTEL_BROWSER' in FEATURE_FLAGS);
     assert.ok('ENABLE_OTEL_NODE' in FEATURE_FLAGS);
     assert.ok('ENABLE_YJS_COLLABORATION' in FEATURE_FLAGS);
-    console.log(`  ✓ 133.4 Feature Flag Matrix: all ${flagKeys.length} flags verified (exactly 51 target)`);
+    console.log(`  ✓ 133.4 Feature Flag Matrix: all ${flagKeys.length} flags verified (>= 51 baseline)`);
 
-    // 133.5: Error Registry verification (62 RFC 9457 error codes)
+    // 133.5: Error Registry verification (>= 62 baseline RFC 9457 error codes)
     const errorKeys = Object.keys(ERROR_REGISTRY);
-    assert.equal(errorKeys.length, 62, `Expected exactly 62 error codes, found ${errorKeys.length}`);
+    assert.ok(errorKeys.length >= 62, `Expected at least 62 error codes, found ${errorKeys.length}`);
     assert.ok('WORKSPACE_ARCHIVE_INVALID' in ERROR_REGISTRY);
     assert.ok('WORKSPACE_ARCHIVE_CHECKSUM_MISMATCH' in ERROR_REGISTRY);
     assert.ok('WORKSPACE_RESTORE_CONFLICT' in ERROR_REGISTRY);
@@ -107,7 +121,7 @@ export async function runSuite133(): Promise<void> {
     assert.ok('YJS_SYNC_FAILED' in ERROR_REGISTRY);
     assert.ok('HOCUSPOCUS_AUTH_FAILED' in ERROR_REGISTRY);
     assert.ok('CRDT_CONFLICT_UNRESOLVED' in ERROR_REGISTRY);
-    console.log(`  ✓ 133.5 Error Registry: all ${errorKeys.length} RFC 9457 error codes verified (exactly 62 target)`);
+    console.log(`  ✓ 133.5 Error Registry: all ${errorKeys.length} RFC 9457 error codes verified (>= 62 baseline)`);
 
     // 133.6: Kernel Seal Non-Bypass Invariant
     const SEAL = 'SEAL_KERNEL_VERIFIED_TIER5';

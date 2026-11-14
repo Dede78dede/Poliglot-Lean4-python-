@@ -23,9 +23,9 @@ export async function runSuite114(): Promise<void> {
   assert.ok(semverRegex.test(mockVersion), 'Version must be semver formatted');
   console.log('  ✓ 114.1 lean-beam --version returns valid semver format (0.1.0 / 0.2.0-beta)');
 
-  // 114.2: lean-beam-mcp lists stdio transport
-  assert.equal(client.transport, 'stdio', 'lean-beam-mcp transport must be stdio');
-  console.log('  ✓ 114.2 lean-beam-mcp stdio transport confirmed');
+  // 114.2: lean-beam-mcp lists http-jsonrpc transport
+  assert.equal(client.transport, 'http-jsonrpc', 'lean-beam-mcp transport must be http-jsonrpc');
+  console.log('  ✓ 114.2 lean-beam-mcp http-jsonrpc transport confirmed');
 
   // 114.3: lean-beam run-at CLI parameter support (--stdin and --text-file)
   const dockerfilePath = path.resolve(process.cwd(), 'docker/femev-runner/Dockerfile');

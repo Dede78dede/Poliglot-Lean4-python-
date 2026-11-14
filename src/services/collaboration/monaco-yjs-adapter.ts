@@ -1,14 +1,13 @@
 /**
- * Monaco Yjs CRDT Adapter (Phase 11.2, Sprint 11.2.5)
+ * Monaco Yjs CRDT Adapter (Phase 11.2 & Phase 15 Wave 4)
  *
- * Encapsulates y-monaco (pinned to v0.1.6) to isolate third-party maintenance debt
- * from the rest of Polyglot Code Studio.
- *
- * Gated by ENABLE_YJS_COLLABORATION:
- * When flag is false, operates in isolated no-op mode without bundle penalty.
+ * Encapsulates y-monaco (pinned to v0.1.6) and dynamically lazy-loads `./yjs-runtime`
+ * ONLY when ENABLE_YJS_COLLABORATION is enabled, preserving zero bundle overhead when off.
  */
 
 import { featureFlagRegistry } from '../flags/feature-flag-registry';
+import { BridgeError } from '../errors/bridge-error';
+import type { LiveCollabSession, LiveCollabSessionOptions } from './yjs-runtime';
 
 export const Y_MONACO_PINNED_VERSION = '0.1.6';
 
@@ -33,11 +32,11 @@ export class MonacoYjsAdapter {
   }
 
   /**
-   * Binds a Monaco editor model to a collaborative CRDT text document.
-   * If ENABLE_YJS_COLLABORATION is false, returns a safe no-op handle.
+   * Synchronously prepares a Monaco editor model binding handle gated by ENABLE_YJS_COLLABORATION.
+   * When flag is false, returns a safe no-op handle with zero runtime overhead.
    */
   public static bindMonacoEditor(
-    editorModel: { getValue: () => string; setValue: (val: string) => void },
+    _editorModel: { getValue: () => string; setValue: (val: string) => void },
     options: MonacoYjsBindingOptions
   ): MonacoYjsBindingHandle {
     if (!this.isCollaborationEnabled()) {
@@ -49,15 +48,29 @@ export class MonacoYjsAdapter {
       };
     }
 
-    let isDisposed = false;
-
     return {
       isBound: true,
       version: Y_MONACO_PINNED_VERSION,
       docId: options.docId,
-      destroy: () => {
-        isDisposed = true;
-      },
+      destroy: () => {},
     };
+  }
+
+  /**
+   * Dynamically loads `./yjs-runtime` and connects to `/collab` WebSocket only when
+   * ENABLE_YJS_COLLABORATION is enabled. Fails closed with 503 FEATURE_DISABLED otherwise.
+   */
+  public static async connectSession(
+    options: LiveCollabSessionOptions
+  ): Promise<LiveCollabSession> {
+    if (!this.isCollaborationEnabled()) {
+      throw new BridgeError('FEATURE_DISABLED', `yjs-client-${Date.now()}`, {
+        feature: 'ENABLE_YJS_COLLABORATION',
+        message: 'Yjs collaboration is disabled by feature flag ENABLE_YJS_COLLABORATION',
+      });
+    }
+
+    const runtime = await import('./yjs-runtime');
+    return runtime.startLiveYjsSession(options);
   }
 }

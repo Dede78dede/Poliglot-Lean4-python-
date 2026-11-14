@@ -28,6 +28,9 @@ export function EditorPane({
 
   const handleEditorMount: OnMount = useCallback(
     async (editor, monaco) => {
+      if (typeof globalThis !== 'undefined' && !(globalThis as { monaco?: unknown }).monaco) {
+        (globalThis as { monaco?: unknown }).monaco = monaco;
+      }
       // Register custom Lean 4 syntax highlighting if not already done
       if (!isRegisteredRef.current) {
         if (!monaco.languages.getLanguages().some((l: { id: string }) => l.id === 'lean4')) {

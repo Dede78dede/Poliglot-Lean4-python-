@@ -1,16 +1,20 @@
 /**
- * Mathesis Autoformalization Provider with LeanScorer (Phase 11.2 & Phase 12, Sprint 12.4, Task CI1)
+ * Mathesis Autoformalization Provider with LeanScorer (Phase 11.2, 12 & Phase 15 Wave 3)
  *
- * Implements natural language to Lean 4 formalization using remote Mathesis service (ICLR 2026).
- * Validates candidate formalizations with LeanScorer (score in [0, 1], acceptance threshold >= 0.8).
+ * Implements natural language to Lean 4 formalization using remote Mathesis HTTP service.
+ * Validates remote payloads with Zod and enforces LeanScorer threshold (>= 0.8).
  *
- * If MATHESIS_ENDPOINT is unconfigured or empty, fails fast with MATHESIS_UNAVAILABLE.
+ * Fail-closed rules:
+ * - ENABLE_MATHESIS=false -> 503 FEATURE_DISABLED
+ * - MATHESIS_ENDPOINT unconfigured/empty, HTTP >= 400, network failure, timeout, or invalid JSON -> 503 MATHESIS_UNAVAILABLE
+ * - Zero hardcoded theorem stubs or score simulation bypasses.
  *
  * Epistemic barrier:
  * Mathesis confidence and LeanScorer scores are heuristic ratings and do NOT certify truth.
  * Only SEAL_KERNEL_VERIFIED_TIER5 certifies truth.
  */
 
+import { z } from 'zod';
 import { featureFlagRegistry } from '../flags/feature-flag-registry';
 import { BridgeError } from '../errors/bridge-error';
 import { createLogger, StructuredLogger } from '../logging/logger';
@@ -19,6 +23,7 @@ const logger = createLogger('mathesis-provider');
 
 export const MATHESIS_MIN_SCORE = 0.8;
 export const MATHESIS_SCORE_THRESHOLD = MATHESIS_MIN_SCORE;
+export const DEFAULT_MATHESIS_TIMEOUT_MS = 10_000;
 
 export interface MathesisFormalizeRequest {
   readonly naturalLanguagePrompt: string;
@@ -26,7 +31,7 @@ export interface MathesisFormalizeRequest {
   readonly targetToolchain?: string;
   readonly correlationId?: string;
   readonly endpointOverride?: string;
-  readonly simulatedScore?: number;
+  readonly timeoutMs?: number;
 }
 
 export interface MathesisCandidate {
@@ -49,11 +54,27 @@ export interface MathesisFormalizeResult {
   readonly candidates: readonly MathesisCandidate[];
 }
 
+const MathesisRemoteCandidateSchema = z.object({
+  declarationName: z.string().min(1),
+  leanCode: z.string().min(1),
+  rawScore: z.number().min(0).max(1).optional(),
+  leanScorerScore: z.number().min(0).max(1),
+  fallbackCompilationScore: z.number().min(0).max(1).optional(),
+});
+
+const MathesisRemoteResponseSchema = z.object({
+  leanCode: z.string().min(1).optional(),
+  declarations: z.array(z.string().min(1)).optional(),
+  leanScorerScore: z.number().min(0).max(1).optional(),
+  confidenceScore: z.number().min(0).max(1).optional(),
+  candidates: z.array(MathesisRemoteCandidateSchema).min(1),
+});
+
 export class MathesisProvider {
   public readonly name = 'mathesis';
 
   public getEndpoint(override?: string): string {
-    if (override !== undefined) return override;
+    if (override !== undefined) return override.trim();
     if (typeof process !== 'undefined' && process.env?.MATHESIS_ENDPOINT) {
       return process.env.MATHESIS_ENDPOINT.trim();
     }
@@ -62,11 +83,17 @@ export class MathesisProvider {
 
   public isAvailable(endpointOverride?: string): boolean {
     const endpoint = this.getEndpoint(endpointOverride);
-    return endpoint.length > 0;
+    if (endpoint.length === 0) return false;
+    try {
+      const parsed = new URL(endpoint);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
   }
 
   /**
-   * Evaluates a Lean 4 formal candidate using LeanScorer heuristics or AST verification.
+   * Evaluates a Lean 4 formal candidate using LeanScorer structural heuristics.
    * Returns a score between 0.0 and 1.0.
    */
   public evaluateCandidateWithLeanScorer(leanCode: string, prompt: string): number {
@@ -101,59 +128,117 @@ export class MathesisProvider {
     }
 
     const endpoint = this.getEndpoint(request.endpointOverride);
-
-    // Fail-fast check on unconfigured endpoint
     if (!this.isAvailable(request.endpointOverride)) {
-      logger.warn('Mathesis invocation failed fast: MATHESIS_ENDPOINT is unconfigured or empty', correlationId);
-
+      logger.warn('Mathesis invocation failed fast: MATHESIS_ENDPOINT is unconfigured or invalid', correlationId);
       throw new BridgeError('MATHESIS_UNAVAILABLE', correlationId, {
-        reason: 'MATHESIS_ENDPOINT is unconfigured or empty.',
+        reason: 'MATHESIS_ENDPOINT is unconfigured, empty, or not a valid http(s) URL.',
         instructions: 'Configure MATHESIS_ENDPOINT in .env or Settings (e.g. MATHESIS_ENDPOINT="http://localhost:8088/v1/mathesis").',
       });
     }
+
+    const timeoutMs = Math.max(100, request.timeoutMs ?? DEFAULT_MATHESIS_TIMEOUT_MS);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    timer.unref?.();
 
     logger.info('Executing Mathesis formalization via remote endpoint', correlationId, {
       endpoint,
       promptLength: request.naturalLanguagePrompt.length,
     });
 
-    const prompt = request.naturalLanguagePrompt.trim();
-    const target = request.targetToolchain ?? 'v4.16.0';
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Correlation-ID': correlationId,
+        },
+        body: JSON.stringify({
+          prompt: request.naturalLanguagePrompt.trim(),
+          context: request.context,
+          targetToolchain: request.targetToolchain ?? 'v4.34.0-rc1',
+          correlationId,
+        }),
+        signal: controller.signal,
+      });
 
-    const rawCode = [
-      `-- Formalized via Mathesis NL-to-Lean 4 Bridge (${target})`,
-      'import Mathlib.Data.Nat.Basic',
-      '',
-      `theorem mathesis_synthesized_theorem : True := by`,
-      '  trivial',
-    ].join('\n');
+      if (!response.ok) {
+        throw new BridgeError('MATHESIS_UNAVAILABLE', correlationId, {
+          reason: `Remote Mathesis endpoint returned HTTP ${response.status}`,
+          httpStatus: response.status,
+          endpoint,
+        });
+      }
 
-    const scorerScore = request.simulatedScore !== undefined
-      ? request.simulatedScore
-      : this.evaluateCandidateWithLeanScorer(rawCode, prompt);
+      let rawJson: unknown;
+      try {
+        rawJson = await response.json();
+      } catch (parseErr) {
+        throw new BridgeError('MATHESIS_UNAVAILABLE', correlationId, {
+          reason: 'Remote Mathesis endpoint returned invalid JSON',
+          detail: parseErr instanceof Error ? parseErr.message : String(parseErr),
+        });
+      }
 
-    const passed = scorerScore >= MATHESIS_MIN_SCORE;
+      const parsed = MathesisRemoteResponseSchema.safeParse(rawJson);
+      if (!parsed.success) {
+        throw new BridgeError('MATHESIS_UNAVAILABLE', correlationId, {
+          reason: 'Remote Mathesis payload failed Zod schema validation',
+          issues: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
+        });
+      }
 
-    const candidate: MathesisCandidate = {
-      declarationName: 'mathesis_synthesized_theorem',
-      leanCode: rawCode,
-      rawScore: scorerScore,
-      leanScorerScore: scorerScore,
-      passedThreshold: passed,
-      fallbackCompilationScore: 0.95,
-    };
+      const remote = parsed.data;
+      const normalizedCandidates: MathesisCandidate[] = remote.candidates.map((cand) => {
+        const scorerScore = Number(cand.leanScorerScore);
+        return {
+          declarationName: cand.declarationName,
+          leanCode: cand.leanCode,
+          rawScore: cand.rawScore ?? scorerScore,
+          leanScorerScore: scorerScore,
+          passedThreshold: scorerScore >= MATHESIS_MIN_SCORE,
+          fallbackCompilationScore: cand.fallbackCompilationScore,
+        };
+      });
 
-    const duration = Date.now() - startTime;
-    return {
-      provider: 'mathesis',
-      leanCode: rawCode,
-      declarations: ['mathesis_synthesized_theorem'],
-      confidenceScore: scorerScore,
-      leanScorerScore: scorerScore,
-      accepted: passed,
-      executionDurationMs: duration,
-      candidates: [candidate],
-    };
+      // Select highest-scoring candidate for primary result
+      const bestCandidate = normalizedCandidates.reduce((best, curr) =>
+        curr.leanScorerScore > best.leanScorerScore ? curr : best
+      );
+
+      const primaryScore = bestCandidate.leanScorerScore;
+      const accepted = bestCandidate.passedThreshold;
+      const leanCode = remote.leanCode ?? bestCandidate.leanCode;
+      const declarations =
+        remote.declarations && remote.declarations.length > 0
+          ? remote.declarations
+          : normalizedCandidates.map((c) => c.declarationName);
+
+      return {
+        provider: 'mathesis',
+        leanCode,
+        declarations,
+        confidenceScore: remote.confidenceScore ?? primaryScore,
+        leanScorerScore: primaryScore,
+        accepted,
+        executionDurationMs: Date.now() - startTime,
+        candidates: normalizedCandidates,
+      };
+    } catch (err: unknown) {
+      if (err instanceof BridgeError) {
+        throw err;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      throw new BridgeError('MATHESIS_UNAVAILABLE', correlationId, {
+        reason: controller.signal.aborted
+          ? `Mathesis request timed out after ${timeoutMs}ms`
+          : `Failed to reach remote Mathesis endpoint: ${message}`,
+        endpoint,
+        instructions: 'Ensure remote Mathesis HTTP service is running and reachable at MATHESIS_ENDPOINT.',
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 

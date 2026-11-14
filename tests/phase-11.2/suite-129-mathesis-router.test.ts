@@ -1,10 +1,11 @@
 /**
- * Test Suite 129: Mathesis Router & Dispatcher (Phase 11.2, Sprint 11.2.4)
+ * Test Suite 129: Mathesis Router & Dispatcher (Phase 11.2 & Phase 15 Wave 3)
  */
 
 import assert from 'node:assert/strict';
 import { AutoformalizationRouter } from '../../src/services/formalization/autoformalization-router';
 import { featureFlagRegistry } from '../../src/services/flags/feature-flag-registry';
+import { startMathesisMockServer } from '../phase-14/mocks/reasoner-mocks';
 
 export async function runSuite129(): Promise<void> {
   console.log('\n--- Test Suite 129: Mathesis Router & Dispatcher ---');
@@ -31,9 +32,10 @@ export async function runSuite129(): Promise<void> {
   assert.equal(failed, true, 'Must fail when provider is disabled');
   console.log('  ✓ 129.2 Problem details: ROUTER_NO_PROVIDER_AVAILABLE raised cleanly');
 
-  // 129.3: Fallback routing works when enabled
+  // 129.3: Fallback routing works when enabled against a real HTTP endpoint
+  const mathMock = await startMathesisMockServer({ score: 0.91 });
   featureFlagRegistry.set('ENABLE_MATHESIS', true);
-  process.env.MATHESIS_ENDPOINT = 'http://localhost:8088/v1/mathesis';
+  process.env.MATHESIS_ENDPOINT = mathMock.url;
   try {
     const res = await router.routeFormalization({
       inputType: 'natural_language',
@@ -41,8 +43,10 @@ export async function runSuite129(): Promise<void> {
     });
     assert.ok(res.generatedLeanCode.length > 0);
     assert.equal(res.providerUsed, 'mathesis');
-    console.log('  ✓ 129.3 Fallback routing: autoformalization dispatched to mathesis provider successfully');
+    assert.equal(mathMock.requestCount(), 1);
+    console.log('  ✓ 129.3 Fallback routing: autoformalization dispatched to real HTTP mathesis provider');
   } finally {
+    await mathMock.close();
     featureFlagRegistry.set('ENABLE_MATHESIS', false);
     delete process.env.MATHESIS_ENDPOINT;
   }

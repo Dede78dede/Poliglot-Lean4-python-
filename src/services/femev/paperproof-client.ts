@@ -61,37 +61,40 @@ export class PaperproofClient {
       codeLength: leanCode.length,
     });
 
-    const theoremMatch = leanCode.match(/theorem\s+([a-zA-Z0-9_']+)/);
+    const theoremMatch = leanCode.match(/theorem\s+([a-zA-Z0-9_']+)\s*([^:=]*)/);
     const theoremName = options?.theoremName ?? (theoremMatch ? theoremMatch[1] : 'anonymous_proof');
+    const goalExpression = theoremMatch?.[2]?.trim() || 'Goal pending server inspection';
+    const tacticMatch = leanCode.match(/\b(rfl|omega|linarith|ring|simp|exact\b[^\n]*|decide)\b/);
+    const tacticName = tacticMatch?.[1] ?? 'pending';
 
-    // Parse proof structure into pedagogical proof graph
+    // Parse proof structure into pedagogical diagnostic graph (non-certifying)
     const nodes: PaperproofNode[] = [
       {
         id: 'node-0',
         label: 'Initial Goal',
         type: 'goal',
-        expression: '1 + 1 = 2',
+        expression: goalExpression,
         stepIndex: 0,
       },
       {
         id: 'node-1',
-        label: 'Tactic: rfl',
+        label: `Tactic: ${tacticName}`,
         type: 'tactic',
-        expression: 'by rfl',
+        expression: `by ${tacticName}`,
         stepIndex: 1,
       },
       {
         id: 'node-2',
-        label: 'QED',
+        label: 'Draft Playback End',
         type: 'qed',
-        expression: 'Goals accomplished',
+        expression: 'Pedagogical trace (requires dual-engine kernel verification)',
         stepIndex: 2,
       },
     ];
 
     const edges: PaperproofEdge[] = [
-      { id: 'edge-0-1', source: 'node-0', target: 'node-1', tactic: 'rfl' },
-      { id: 'edge-1-2', source: 'node-1', target: 'node-2', tactic: 'qed' },
+      { id: 'edge-0-1', source: 'node-0', target: 'node-1', tactic: tacticName },
+      { id: 'edge-1-2', source: 'node-1', target: 'node-2', tactic: 'trace' },
     ];
 
     return {
@@ -99,7 +102,7 @@ export class PaperproofClient {
       nodes: Object.freeze(nodes),
       edges: Object.freeze(edges),
       totalSteps: 2,
-      verified: true,
+      verified: false,
     };
   }
 }

@@ -72,7 +72,7 @@ export interface VerifyMultiKernelArgs {
 
 export interface VerifyMultiKernelOutput {
   readonly verified: boolean;
-  readonly multiKernelStatus: 'consensus' | 'disagreement';
+  readonly multiKernelStatus: 'consensus' | 'disagreement' | 'unavailable';
   readonly kernelsUsed: readonly ParanoidKernelName[];
   readonly paranoidCheckPassed: boolean;
   readonly cve2026_72844Status: 'not_affected' | 'fixed-by-version' | 'mitigated-by-paranoid-check' | 'patched' | 'not-applicable';
@@ -85,7 +85,6 @@ export interface VerifyMultiKernelOutput {
 export class MultiKernelVerifier {
   /**
    * Evaluates the CVE-2026-72844 status based on toolchain and verification method.
-   * Fixed in v4.32.2+. Older versions are vulnerable unless mitigated by paranoid check.
    */
   public getCveStatus(
     toolchain: string,
@@ -112,7 +111,7 @@ export class MultiKernelVerifier {
   public buildLakeCheckCommand(options: LakeCheckCommandOptions): string {
     if (options.useSandbox === false) {
       throw new Error(
-        'SANDBOX_POLICY_VIOLATION: lake check sandbox must remain enabled. Disabling sandbox via --inadvisably-no-sandbox is strictly prohibited.'
+        'SANDBOX_POLICY_VIOLATION: lake check sandbox must remain enabled. Disabling sandbox via --inadvisably-no-sandbox is strictly prohibited.',
       );
     }
 
@@ -127,12 +126,13 @@ export class MultiKernelVerifier {
   }
 
   /**
-   * Unified multi-kernel verification runner supporting lake check --paranoid orchestration.
+   * Fail-closed multi-kernel runner: client runtime cannot synthesize multi-kernel consensus locally.
+   * Formal certification requires server-side /api/v1/lean/consensus execution.
    */
   public async verifyMultiKernel(args: VerifyMultiKernelArgs): Promise<VerifyMultiKernelOutput> {
     if (args.useSandbox === false) {
       throw new Error(
-        'SANDBOX_POLICY_VIOLATION: lake check sandbox must remain enabled. Disabling sandbox via --inadvisably-no-sandbox is strictly prohibited.'
+        'SANDBOX_POLICY_VIOLATION: lake check sandbox must remain enabled. Disabling sandbox via --inadvisably-no-sandbox is strictly prohibited.',
       );
     }
 
@@ -150,81 +150,40 @@ export class MultiKernelVerifier {
       inadvisablyNoSandbox: false,
     });
 
-    if (!paranoidResult.success) {
-      const disagreements = paranoidResult.error?.disagreements || (simulatedDisagreement ? [simulatedDisagreement] : ['kernel-check-failed']);
-      return {
-        verified: false,
-        multiKernelStatus: 'disagreement',
-        kernelsUsed: PARANOID_KERNELS,
-        paranoidCheckPassed: false,
-        cve2026_72844Status: this.getCveStatus(toolchain, false),
-        kernelDisagreements: disagreements,
-        error: paranoidResult.error?.message || `KERNEL_DISAGREEMENT: ${disagreements.join(', ')} failed consensus`,
-        kernelStatuses: paranoidResult.kernelStatuses,
-      };
-    }
+    const disagreements = paranoidResult.error?.disagreements ?? [];
+    const status: VerifyMultiKernelOutput['multiKernelStatus'] =
+      disagreements.length > 0 ? 'disagreement' : 'unavailable';
 
     return {
-      verified: true,
-      multiKernelStatus: 'consensus',
-      kernelsUsed: PARANOID_KERNELS,
-      paranoidCheckPassed: true,
-      cve2026_72844Status: 'not_affected',
-      kernelDisagreements: [],
+      verified: false,
+      multiKernelStatus: status,
+      kernelsUsed: [],
+      paranoidCheckPassed: false,
+      cve2026_72844Status: this.getCveStatus(toolchain, false),
+      kernelDisagreements: disagreements,
+      error:
+        paranoidResult.error?.message ||
+        'MULTI_KERNEL_UNAVAILABLE: Local multi-kernel simulation cannot certify proofs; invoke server dual-engine consensus.',
       kernelStatuses: paranoidResult.kernelStatuses,
-      certificate: paranoidResult.certificate,
     };
   }
 
   /**
-   * Generates extended SEAL_KERNEL_VERIFIED_TIER5 certificate with multi-kernel provenance.
+   * Prohibited client-side seal minting path: server hybrid-adjudicator owns certification.
    */
-  public generateExtendedCertificate(params: {
-    readonly nodeId?: string;
-    readonly theoremStatement: string;
-    readonly proofContent: string;
-    readonly toolchain: string;
-    readonly paranoid: boolean;
-    readonly kernelsUsed: readonly string[];
-    readonly signerIdentity: string;
-  }): KernelVerificationCertificate {
-    const rawContent = `${params.theoremStatement}\n${params.proofContent}\n${params.toolchain}`;
-    // Simple fast sync hash fallback for test synchronously
-    let hash = 0;
-    for (let i = 0; i < rawContent.length; i++) {
-      hash = (hash << 5) - hash + rawContent.charCodeAt(i);
-      hash |= 0;
-    }
-    const pseudoHash = Math.abs(hash).toString(16).padStart(64, 'a');
+  public async computeDeclarationDigest(theoremStatement: string, proofContent: string, toolchain: string): Promise<string> {
+    return computeSha256(`${theoremStatement}\n${proofContent}\n${toolchain}`);
+  }
 
-    return {
-      seal: 'SEAL_KERNEL_VERIFIED_TIER5',
-      tier: 'SEAL_KERNEL_VERIFIED_TIER5',
-      verifiedAt: new Date().toISOString(),
-      contentHash: pseudoHash,
-      declarationHash: pseudoHash,
-      certificateHash: pseudoHash,
-      kernelTermsChecked: params.kernelsUsed.length,
-      durationMs: 95,
-      toolchain: params.toolchain,
-      toolchainVersion: params.toolchain,
-      zeroSorryVerified: true,
-      sorriesFound: 0,
-      strictGoalsTerm: true,
-      signatureSeal: `${params.signerIdentity}_${pseudoHash.slice(0, 16)}`,
-      axiomsUsed: Object.freeze(['propext', 'Classical.choice', 'Quot.sound']),
-      signerIdentity: params.signerIdentity,
-      multiKernelStatus: 'consensus',
-      kernelCheckPassed: true,
-      paranoidCheckPassed: params.paranoid,
-      kernelsUsed: params.kernelsUsed,
-      kernelDisagreements: Object.freeze([]),
-      cve2026_72844Status: 'not_affected',
-    };
+  public generateExtendedCertificate(): never {
+    throw new Error(
+      'CERTIFICATION_AUTHORITY_DENIED: Client MultiKernelVerifier cannot mint Tier-5 certificates without server dual-engine consensus.',
+    );
   }
 
   /**
-   * Executes multi-kernel verification for a Lean 4 declaration or development.
+   * Fail-closed pre-check: validates sandbox, sorry-ban, and toolchain gates locally,
+   * then reports KERNEL_CHECK_FAILED until genuine server runners execute.
    */
   public async verifyParanoid(
     options: MultiKernelVerificationOptions,
@@ -236,7 +195,6 @@ export class MultiKernelVerifier {
       inadvisablyNoSandbox = false,
     } = options;
 
-    // 1. Mandatory Sandbox Enforcement
     if (inadvisablyNoSandbox) {
       return {
         success: false,
@@ -248,8 +206,7 @@ export class MultiKernelVerifier {
       };
     }
 
-    // 2. Proof Obligation and Sorry Gate
-    if (code.includes('sorry') || code.includes('admit')) {
+    if (/\b(sorry|admit)\b/.test(code)) {
       return {
         success: false,
         error: {
@@ -260,7 +217,6 @@ export class MultiKernelVerifier {
       };
     }
 
-    // 3. Toolchain Compatibility Check
     const isToolchain435 = toolchainVersion.startsWith('v4.35') || toolchainVersion.includes('4.35.0');
     if (!isToolchain435 && !toolchainVersion.includes('4.32.2')) {
       return {
@@ -273,96 +229,54 @@ export class MultiKernelVerifier {
       };
     }
 
-    // 4. Compute Declaration SHA-256 Hash
-    const declarationHash = await computeSha256(code);
-    const startTime = Date.now();
-
-    // 5. Execute 6 Kernel Configurations
-    const kernelStatuses: MultiKernelStatus[] = [];
-    const disagreements: string[] = [];
-
-    for (const kernel of PARANOID_KERNELS) {
-      let language: 'cpp' | 'lean4' | 'rust' | 'haskell' = 'cpp';
-      if (kernel === 'nanoda') language = 'haskell';
-      else if (kernel === 'lean4lean' || kernel === 'con-leche') language = 'lean4';
-      else if (kernel === 'con-ron') language = 'rust';
-
-      // Check simulated disagreement or failure
-      if (simulatedDisagreementKernel === kernel) {
-        disagreements.push(kernel);
-        kernelStatuses.push({
-          kernelName: kernel,
-          status: 'failed',
-          language,
-          executionTimeMs: 45,
-          details: `Simulated divergence detected in kernel ${kernel}: rejected declaration structure`,
-        });
-      } else {
-        // Successful verification execution
-        const timeMs = kernel === 'con-leche' ? 32 : kernel === 'con-ron' ? 28 : 42;
-        kernelStatuses.push({
-          kernelName: kernel,
-          status: 'passed',
-          language,
-          executionTimeMs: timeMs,
-          details: kernel === 'con-leche'
-            ? 'Checked and proven consistent under Carneiro set theory model (0.69x instructions)'
-            : kernel === 'con-ron'
-            ? 'Aeneas-verified Rust implementation: independent compiler/runtime target'
-            : kernel === 'leanchecker-hardened'
-            ? 'Hardened memory allocator variant: zero memory corruption detected'
-            : 'Formally type-checked without metaprogramming baggage',
-        });
-      }
-    }
-
-    // 6. Handle Disagreements (Strict Consensus Required)
-    if (disagreements.length > 0) {
+    if (simulatedDisagreementKernel) {
       return {
         success: false,
         error: {
           code: 'KERNEL_DISAGREEMENT',
-          message: `KERNEL_DISAGREEMENT: Multi-kernel verification rejected: consensus failed. Disagreeing kernel(s): ${disagreements.join(', ')}.`,
-          disagreements,
+          message: `KERNEL_DISAGREEMENT: Simulated disagreement triggered on kernel ${simulatedDisagreementKernel}.`,
+          disagreements: [simulatedDisagreementKernel],
         },
-        kernelStatuses,
+        kernelStatuses: PARANOID_KERNELS.map((kernel) => ({
+          kernelName: kernel,
+          status: kernel === simulatedDisagreementKernel ? 'failed' : 'skipped',
+          language:
+            kernel === 'nanoda'
+              ? 'haskell'
+              : kernel === 'lean4lean' || kernel === 'con-leche'
+                ? 'lean4'
+                : kernel === 'con-ron'
+                  ? 'rust'
+                  : 'cpp',
+          executionTimeMs: 0,
+          details:
+            kernel === simulatedDisagreementKernel
+              ? `Simulated divergence detected in kernel ${kernel}`
+              : 'Server kernel execution not invoked in client runtime.',
+        })),
       };
     }
 
-    // 7. Issue SEAL_KERNEL_VERIFIED_TIER5 Certificate
-    const durationMs = Date.now() - startTime;
-    const cveStatus = this.getCveStatus(toolchainVersion, true);
-
-    const certificate: KernelVerificationCertificate = {
-      seal: 'SEAL_KERNEL_VERIFIED_TIER5',
-      tier: 'SEAL_KERNEL_VERIFIED_TIER5',
-      verifiedAt: new Date().toISOString(),
-      contentHash: declarationHash,
-      declarationHash,
-      certificateHash: declarationHash,
-      kernelTermsChecked: 6,
-      durationMs: Math.max(durationMs, 85),
-      toolchain: toolchainVersion,
-      toolchainVersion,
-      zeroSorryVerified: true,
-      sorriesFound: 0,
-      strictGoalsTerm: true,
-      signatureSeal: `SEAL_KERNEL_VERIFIED_TIER5_PARANOID_${declarationHash.slice(0, 16).toUpperCase()}`,
-      axiomsUsed: Object.freeze(['propext', 'Classical.choice', 'Quot.sound']),
-      signerIdentity: 'POLYGLOT-STUDIO-SEAL_KERNEL_VERIFIED_TIER5',
-      multiKernelStatus: 'consensus',
-      kernelCheckPassed: true,
-      paranoidCheckPassed: true,
-      kernelsUsed: PARANOID_KERNELS,
-      kernelDisagreements: Object.freeze([]),
-      cve2026_72844Status: cveStatus,
-      kernelDetails: Object.freeze(kernelStatuses),
-    };
-
     return {
-      success: true,
-      certificate,
-      kernelStatuses,
+      success: false,
+      error: {
+        code: 'KERNEL_CHECK_FAILED',
+        message: 'Local multi-kernel binary execution unavailable in browser/unconnected mode; server consensus required.',
+      },
+      kernelStatuses: PARANOID_KERNELS.map((kernel) => ({
+        kernelName: kernel,
+        status: 'skipped',
+        language:
+          kernel === 'nanoda'
+            ? 'haskell'
+            : kernel === 'lean4lean' || kernel === 'con-leche'
+              ? 'lean4'
+              : kernel === 'con-ron'
+                ? 'rust'
+                : 'cpp',
+        executionTimeMs: 0,
+        details: 'Requires live server-side kernel runner execution.',
+      })),
     };
   }
 }

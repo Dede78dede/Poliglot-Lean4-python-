@@ -161,15 +161,18 @@ export function createProofAutomationRouter(
     }
   });
 
-  // Phase 11.1: Speculative Tactic Execution via lean-beam
+  // Phase 11.1 & Phase 15 Wave 2: Speculative Tactic Execution via lean-beam
   router.post('/probe', async (req: Request, res: Response) => {
+    const correlationId = String(req.headers['x-correlation-id'] || `probe-${Date.now()}`);
     try {
       const { featureFlagRegistry } = await import('../../../src/services/flags/feature-flag-registry');
       if (!featureFlagRegistry.isEnabled('ENABLE_LEAN_BEAM')) {
-        res.status(404).json({
-          error: 'FEATURE_DISABLED',
-          message: 'Speculative tactic execution is disabled by feature flag ENABLE_LEAN_BEAM=false',
-        });
+        res.status(503).json(
+          createProblemDetails(ERROR_REGISTRY.FEATURE_DISABLED, correlationId, {
+            feature: 'ENABLE_LEAN_BEAM',
+            detail: 'Speculative tactic execution is disabled by feature flag ENABLE_LEAN_BEAM=false',
+          })
+        );
         return;
       }
 
@@ -194,11 +197,19 @@ export function createProofAutomationRouter(
     } catch (err: unknown) {
       const bridgeErr = err as { code?: string; message?: string; toProblemDetails?: () => unknown };
       if (bridgeErr && bridgeErr.code === 'LEAN_BEAM_TOOLCHAIN_UNSUPPORTED') {
-        res.status(422).json(typeof bridgeErr.toProblemDetails === 'function' ? bridgeErr.toProblemDetails() : { error: bridgeErr.code, message: bridgeErr.message });
+        res.status(422).json(
+          typeof bridgeErr.toProblemDetails === 'function'
+            ? bridgeErr.toProblemDetails()
+            : { error: bridgeErr.code, message: bridgeErr.message }
+        );
         return;
       }
       if (bridgeErr && bridgeErr.code === 'LEAN_BEAM_UNAVAILABLE') {
-        res.status(503).json(typeof bridgeErr.toProblemDetails === 'function' ? bridgeErr.toProblemDetails() : { error: bridgeErr.code, message: bridgeErr.message });
+        res.status(503).json(
+          typeof bridgeErr.toProblemDetails === 'function'
+            ? bridgeErr.toProblemDetails()
+            : createProblemDetails(ERROR_REGISTRY.LEAN_BEAM_UNAVAILABLE, correlationId, { detail: bridgeErr.message })
+        );
         return;
       }
       const message = err instanceof Error ? err.message : String(err);
@@ -236,14 +247,46 @@ export function createProofAutomationRouter(
         return;
       }
 
+      const MAX_SPECULATIVE_CANDIDATES = 8;
+      if (candidateTactics.length > MAX_SPECULATIVE_CANDIDATES) {
+        res.status(400).json(
+          createProblemDetails(ERROR_REGISTRY.INVALID_JSON_INPUT, correlationId, {
+            detail: `Speculative batch size ${candidateTactics.length} exceeds cap of ${MAX_SPECULATIVE_CANDIDATES}.`,
+          })
+        );
+        return;
+      }
+
       const timeoutBudgetMs = Math.min(Math.max(Number(timeoutMs) || 5000, 50), 5000);
       const { defaultLeanBeamClient } = await import('../../../src/services/mcp/lean-beam-client');
+      const batchController = new AbortController();
+      const batchTimer = setTimeout(() => batchController.abort(), timeoutBudgetMs);
+      (batchTimer as unknown as { unref?: () => void }).unref?.();
 
-      const candidates = await Promise.all(
-        candidateTactics.map(async (tactic) => {
-          let timer: ReturnType<typeof setTimeout> | undefined;
+      const MAX_CONCURRENCY = 4;
+      const candidates: Array<{
+        tactic: string;
+        valid: boolean;
+        timedOut: boolean;
+        goalsBefore: readonly string[];
+        goalsAfter: readonly string[];
+        errors: readonly string[];
+        durationMs: number;
+        speculativelyTested: boolean;
+      }> = new Array(candidateTactics.length);
+
+      let nextIndex = 0;
+      let unavailableCount = 0;
+      const unavailableBox: { err: { toProblemDetails?: () => unknown; message?: string } | null } = { err: null };
+      let fatalToolchainErr: unknown = null;
+
+      const worker = async (): Promise<void> => {
+        while (nextIndex < candidateTactics.length) {
+          const idx = nextIndex++;
+          const tactic = candidateTactics[idx]!;
+          const startedAt = Date.now();
           try {
-            const probePromise = defaultLeanBeamClient.runAt({
+            const probeResult = await defaultLeanBeamClient.runAt({
               path: String(path || 'Main.lean'),
               version: Number(version || 1),
               line: Number(line || 1),
@@ -251,33 +294,67 @@ export function createProofAutomationRouter(
               text: tactic,
               workspace: workspace ? String(workspace) : undefined,
               toolchain: toolchain ? String(toolchain) : undefined,
+              signal: batchController.signal,
+              timeoutMs: timeoutBudgetMs,
             });
-            const timeoutPromise = new Promise<never>((_resolve, reject) => {
-              timer = setTimeout(() => reject(new Error('SPECULATIVE_BEAM_TIMEOUT')), timeoutBudgetMs);
-            });
-            const probeResult = await Promise.race([probePromise, timeoutPromise]);
-            return {
+            candidates[idx] = {
               tactic,
               timedOut: false,
               ...probeResult,
-            };
-          } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            return {
-              tactic,
-              valid: false,
-              timedOut: msg === 'SPECULATIVE_BEAM_TIMEOUT',
-              goalsBefore: [] as string[],
-              goalsAfter: [] as string[],
-              errors: [msg],
-              durationMs: timeoutBudgetMs,
               speculativelyTested: true,
             };
-          } finally {
-            if (timer) clearTimeout(timer);
+          } catch (err: unknown) {
+            const bridgeErr = err as { code?: string; name?: string; message?: string; toProblemDetails?: () => unknown };
+            if (bridgeErr?.code === 'LEAN_BEAM_TOOLCHAIN_UNSUPPORTED') {
+              fatalToolchainErr = err;
+              batchController.abort();
+              return;
+            }
+            const isTimeoutAbort =
+              batchController.signal.aborted ||
+              bridgeErr?.name === 'AbortError' ||
+              bridgeErr?.message === 'SPECULATIVE_BEAM_TIMEOUT';
+            if (!isTimeoutAbort && bridgeErr?.code === 'LEAN_BEAM_UNAVAILABLE') {
+              unavailableCount += 1;
+              unavailableBox.err = bridgeErr;
+            }
+            candidates[idx] = {
+              tactic,
+              valid: false,
+              timedOut: isTimeoutAbort,
+              goalsBefore: [],
+              goalsAfter: [],
+              errors: [isTimeoutAbort ? 'SPECULATIVE_BEAM_TIMEOUT' : (bridgeErr?.message || String(err))],
+              durationMs: Math.max(1, Date.now() - startedAt),
+              speculativelyTested: true,
+            };
           }
-        })
-      );
+        }
+      };
+
+      try {
+        await Promise.all(
+          Array.from({ length: Math.min(MAX_CONCURRENCY, candidateTactics.length) }, () => worker())
+        );
+      } finally {
+        clearTimeout(batchTimer);
+      }
+
+      if (fatalToolchainErr) {
+        throw fatalToolchainErr;
+      }
+
+      if (unavailableCount === candidateTactics.length && unavailableBox.err) {
+        const lastUnavailableErr = unavailableBox.err;
+        const problem =
+          typeof lastUnavailableErr.toProblemDetails === 'function'
+            ? lastUnavailableErr.toProblemDetails()
+            : createProblemDetails(ERROR_REGISTRY.LEAN_BEAM_UNAVAILABLE, correlationId, {
+                detail: lastUnavailableErr.message || 'lean-beam MCP server unreachable or unconfigured',
+              });
+        res.status(503).json(problem);
+        return;
+      }
 
       res.status(200).json({
         speculativelyTested: true,
@@ -293,6 +370,14 @@ export function createProofAutomationRouter(
           typeof bridgeErr.toProblemDetails === 'function'
             ? bridgeErr.toProblemDetails()
             : { error: bridgeErr.code, message: bridgeErr.message }
+        );
+        return;
+      }
+      if (bridgeErr && bridgeErr.code === 'LEAN_BEAM_UNAVAILABLE') {
+        res.status(503).json(
+          typeof bridgeErr.toProblemDetails === 'function'
+            ? bridgeErr.toProblemDetails()
+            : createProblemDetails(ERROR_REGISTRY.LEAN_BEAM_UNAVAILABLE, correlationId, { detail: bridgeErr.message })
         );
         return;
       }

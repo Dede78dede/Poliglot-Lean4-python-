@@ -137,10 +137,11 @@ export async function repairPythonWithContractGate(code: string): Promise<PyFixe
   }
 
   return {
-    verified: true,
+    verified: false,
     originalCode: code,
     repairedCode,
     workerReports: reports,
     contractGatePassed: true,
+    reason: 'Static behavioral contract gate passed; execution and formal certification require downstream verification',
   };
 }

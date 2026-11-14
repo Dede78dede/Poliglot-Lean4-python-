@@ -11,20 +11,27 @@ import {
   DEFAULT_LEAN_TOOLCHAIN,
 } from '../config/lean-runner-config';
 import { sessionManager } from '../services/session-manager';
+import { assertPathContained } from '../services/verification/server-provenance';
 import { featureFlagRegistry } from '../../../src/services/flags/feature-flag-registry';
 import { lspecCiTemplateGenerator, type LSpecCiTemplateOptions } from '../../../src/services/lean-tooling/lspec-ci-template-generator';
 import { BridgeError } from '../../../src/services/errors/bridge-error';
 import { ERROR_REGISTRY, createProblemDetails } from '../../../src/services/errors/error-registry';
 import { StructuredLogger } from '../../../src/services/logging/logger';
 
+const MAX_UPLOAD_FILES = 500;
+const MAX_SINGLE_FILE_BYTES = 5 * 1024 * 1024;
+const SAFE_PROJECT_ID_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
+
 const UploadRequestSchema = z.object({
   sessionId: z.string().uuid(),
-  files: z.array(
-    z.object({
-      path: z.string().min(1),
-      content: z.string(),
-    }),
-  ),
+  files: z
+    .array(
+      z.object({
+        path: z.string().min(1),
+        content: z.string(),
+      }),
+    )
+    .max(MAX_UPLOAD_FILES),
 });
 
 const BuildRequestSchema = z.object({
@@ -36,6 +43,7 @@ const BuildRequestSchema = z.object({
         content: z.string(),
       }),
     )
+    .max(MAX_UPLOAD_FILES)
     .optional(),
 });
 
@@ -75,11 +83,38 @@ export function createProjectsRouter(runner: LeanProjectRunner): Router {
       await sessionManager.createOrTouchSession(sessionId);
 
       let totalBytes = 0;
+      const verifiedTargets: { fullPath: string; content: string; byteLen: number }[] = [];
+
       for (const f of files) {
-        const fullPath = path.join(sessionDir, f.path);
-        await fs.mkdir(path.dirname(fullPath), { recursive: true });
-        await fs.writeFile(fullPath, f.content, 'utf-8');
-        totalBytes += Buffer.byteLength(f.content, 'utf-8');
+        const byteLen = Buffer.byteLength(f.content, 'utf-8');
+        if (byteLen > MAX_SINGLE_FILE_BYTES) {
+          res.status(413).json({
+            type: 'https://polyglot.dev/errors/payload-too-large',
+            title: 'File Too Large',
+            status: 413,
+            detail: `File "${f.path}" exceeds 5 MB per-file quota.`,
+          });
+          return;
+        }
+        const safePath = assertPathContained(sessionDir, f.path);
+        totalBytes += byteLen;
+        verifiedTargets.push({ fullPath: safePath, content: f.content, byteLen });
+      }
+
+      const withinQuota = await sessionManager.checkQuota(sessionId, totalBytes);
+      if (!withinQuota) {
+        res.status(413).json({
+          type: 'https://polyglot.dev/errors/quota-exceeded',
+          title: 'Session Storage Quota Exceeded',
+          status: 413,
+          detail: 'Session or host aggregate storage quota exceeded.',
+        });
+        return;
+      }
+
+      for (const target of verifiedTargets) {
+        await fs.mkdir(path.dirname(target.fullPath), { recursive: true });
+        await fs.writeFile(target.fullPath, target.content, 'utf-8');
       }
 
       sessionManager.updateSessionBytes(sessionId, totalBytes, files.length);
@@ -91,11 +126,21 @@ export function createProjectsRouter(runner: LeanProjectRunner): Router {
         totalBytes,
       });
     } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.startsWith('PATH_TRAVERSAL_REJECTED')) {
+        res.status(400).json({
+          type: 'https://polyglot.dev/errors/invalid-path',
+          title: 'Path Traversal Rejected',
+          status: 400,
+          detail: msg,
+        });
+        return;
+      }
       res.status(500).json({
         type: 'https://polyglot.dev/errors/upload-failed',
         title: 'Project Upload Failed',
         status: 500,
-        detail: err instanceof Error ? err.message : String(err),
+        detail: msg,
       });
     }
   });
@@ -134,11 +179,31 @@ export function createProjectsRouter(runner: LeanProjectRunner): Router {
         return;
       }
 
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.startsWith('PATH_TRAVERSAL_REJECTED')) {
+        res.status(400).json({
+          type: 'https://polyglot.dev/errors/invalid-path',
+          title: 'Path Traversal Rejected',
+          status: 400,
+          detail: msg,
+        });
+        return;
+      }
+      if (msg.startsWith('PROJECT_QUOTA_EXCEEDED')) {
+        res.status(413).json({
+          type: 'https://polyglot.dev/errors/quota-exceeded',
+          title: 'Project Quota Exceeded',
+          status: 413,
+          detail: msg,
+        });
+        return;
+      }
+
       res.status(502).json({
         type: 'https://polyglot.dev/errors/build-failed',
         title: 'Lean 4 Lake Build Failed',
         status: 502,
-        detail: err instanceof Error ? err.message : String(err),
+        detail: msg,
       });
     }
   });
@@ -282,15 +347,27 @@ export function createProjectsRouter(runner: LeanProjectRunner): Router {
       return;
     }
 
+    const rawId = id ?? 'default';
+    if (!SAFE_PROJECT_ID_REGEX.test(rawId)) {
+      res.status(400).json({
+        type: 'https://polyglot.dev/errors/invalid-project-id',
+        title: 'Invalid Project Identifier',
+        status: 400,
+        detail: 'Project ID must match /^[a-zA-Z0-9_-]{1,64}$/ without path separators or traversal.',
+      });
+      return;
+    }
+
     const options: LSpecCiTemplateOptions = {
-      projectName: req.body?.options?.projectName || req.body?.projectName || id || 'lean-project',
+      projectName: req.body?.options?.projectName || req.body?.projectName || rawId,
       branch: req.body?.options?.branch || req.body?.branch,
       leanVersion: req.body?.options?.leanVersion || req.body?.leanVersion,
       includeCache: req.body?.options?.includeCache ?? req.body?.includeCache,
       correlationId,
     };
 
-    const projectPath = path.resolve(process.cwd(), 'projects', id || 'default');
+    const projectsRoot = path.resolve(process.cwd(), 'projects');
+    const projectPath = assertPathContained(projectsRoot, rawId);
 
     try {
       const result = await lspecCiTemplateGenerator.generateTemplate(projectPath, options);

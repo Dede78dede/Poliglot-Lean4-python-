@@ -1,27 +1,9 @@
 /**
- * Test Suite 158: Feature Flag Wiring Verification (Phase 13.9, Task 04)
+ * Test Suite 158: Feature Flag Wiring Verification (Phase 13.9 & Phase 15 Waves 2-3)
  *
  * Verifies that all 8 optional/experimental tools cleanly check their feature flag
  * and reject execution with 503 FEATURE_DISABLED (RFC 9457) when disabled,
- * and execute or initialize cleanly when enabled.
- *
- * 16 Sub-tests:
- * 158.1  [lean-beam:off] rejects runAt with 503 FEATURE_DISABLED when ENABLE_LEAN_BEAM is false
- * 158.2  [lean-beam:on] executes speculative tactic probe successfully when ENABLE_LEAN_BEAM is true
- * 158.3  [mathesis:off] rejects formalize with 503 FEATURE_DISABLED when ENABLE_MATHESIS is false
- * 158.4  [mathesis:on] executes formalization successfully when ENABLE_MATHESIS is true
- * 158.5  [lp2:off] rejects pyToLean with 503 FEATURE_DISABLED when ENABLE_LP2 is false
- * 158.6  [lp2:on] translates python code to Lean 4 when ENABLE_LP2 is true
- * 158.7  [treethink:off] rejects treeSearch with 503 FEATURE_DISABLED when ENABLE_TREETHINK is false
- * 158.8  [treethink:on] executes tree exploration successfully when ENABLE_TREETHINK is true
- * 158.9  [otel-browser:off] rejects checkEnabled with 503 FEATURE_DISABLED when ENABLE_OTEL_BROWSER is false
- * 158.10 [otel-browser:on] initializes and records spans cleanly when ENABLE_OTEL_BROWSER is true
- * 158.11 [otel-node:off] rejects checkEnabled with 503 FEATURE_DISABLED when ENABLE_OTEL_NODE is false
- * 158.12 [otel-node:on] initializes and tracks spans cleanly when ENABLE_OTEL_NODE is true
- * 158.13 [yjs:off] rejects authentication with 503 FEATURE_DISABLED when ENABLE_YJS_COLLABORATION is false
- * 158.14 [yjs:on] authenticates permitted tokens when ENABLE_YJS_COLLABORATION is true
- * 158.15 [paperproof:off] rejects callTool with 503 FEATURE_DISABLED when ENABLE_PAPERPROOF is false
- * 158.16 [paperproof:on] connects and executes tools successfully when ENABLE_PAPERPROOF is true
+ * and execute against genuine backends when enabled.
  */
 
 import assert from 'node:assert/strict';
@@ -35,6 +17,8 @@ import { backendOtelEngine } from '../../src/services/telemetry/otel-backend';
 import { hocuspocusServer } from '../../src/services/collaboration/hocuspocus-server';
 import { defaultPaperproofClient } from '../../src/services/mcp/paperproof-client';
 import { BridgeError } from '../../src/services/errors/bridge-error';
+import { startLeanBeamMockServer } from './mocks/lean-beam-mock';
+import { startMathesisMockServer, startTreeThinkMockServer } from './mocks/reasoner-mocks';
 
 export async function runSuite158(): Promise<void> {
   console.log('Running Suite 158: Feature Flag Wiring Verification (8 tools x off/on = 16 sub-tests)...');
@@ -61,17 +45,25 @@ export async function runSuite158(): Promise<void> {
   assert.equal(err1?.toProblemDetails().status, 503);
   console.log('  ✓ 158.1 [lean-beam:off] rejects runAt with 503 FEATURE_DISABLED');
 
-  // 158.2: lean-beam on
-  featureFlagRegistry.set('ENABLE_LEAN_BEAM', true);
-  const res2 = await defaultLeanBeamClient.runAt({
-    path: 'Test.lean',
-    version: 1,
-    line: 1,
-    character: 0,
-    text: 'rfl',
-  });
-  assert.equal(res2.valid, true);
-  console.log('  ✓ 158.2 [lean-beam:on] executes speculative tactic probe successfully');
+  // 158.2: lean-beam on (over real JSON-RPC HTTP mock)
+  const beamMock = await startLeanBeamMockServer();
+  const prevBeamEndpoint = defaultLeanBeamClient.getEndpoint();
+  try {
+    featureFlagRegistry.set('ENABLE_LEAN_BEAM', true);
+    defaultLeanBeamClient.setEndpoint(beamMock.url);
+    const res2 = await defaultLeanBeamClient.runAt({
+      path: 'Test.lean',
+      version: 1,
+      line: 1,
+      character: 0,
+      text: 'rfl',
+    });
+    assert.equal(res2.valid, true);
+    console.log('  ✓ 158.2 [lean-beam:on] executes speculative tactic probe over JSON-RPC');
+  } finally {
+    defaultLeanBeamClient.setEndpoint(prevBeamEndpoint);
+    await beamMock.close();
+  }
 
   // 158.3: mathesis off
   featureFlagRegistry.set('ENABLE_MATHESIS', false);
@@ -89,17 +81,21 @@ export async function runSuite158(): Promise<void> {
   assert.equal(err3?.httpStatus, 503);
   console.log('  ✓ 158.3 [mathesis:off] rejects formalize with 503 FEATURE_DISABLED');
 
-  // 158.4: mathesis on
-  featureFlagRegistry.set('ENABLE_MATHESIS', true);
-  const res4 = await mathesisProvider.formalize({
-    naturalLanguagePrompt: 'Prove 1 + 1 = 2',
-    endpointOverride: 'http://localhost:8088/v1/mathesis',
-    simulatedScore: 0.95,
-  });
-  assert.equal(res4.provider, 'mathesis');
-  assert.equal(res4.accepted, true);
-  assert.equal(res4.confidenceScore, 0.95);
-  console.log('  ✓ 158.4 [mathesis:on] executes formalization successfully');
+  // 158.4: mathesis on (over real HTTP mock)
+  const mathMock = await startMathesisMockServer({ score: 0.95 });
+  try {
+    featureFlagRegistry.set('ENABLE_MATHESIS', true);
+    const res4 = await mathesisProvider.formalize({
+      naturalLanguagePrompt: 'Prove 1 + 1 = 2',
+      endpointOverride: mathMock.url,
+    });
+    assert.equal(res4.provider, 'mathesis');
+    assert.equal(res4.accepted, true);
+    assert.equal(res4.confidenceScore, 0.95);
+    console.log('  ✓ 158.4 [mathesis:on] executes formalization over HTTP');
+  } finally {
+    await mathMock.close();
+  }
 
   // 158.5: lp2 off
   featureFlagRegistry.set('ENABLE_LP2', false);
@@ -134,12 +130,21 @@ export async function runSuite158(): Promise<void> {
   assert.equal(err7?.httpStatus, 503);
   console.log('  ✓ 158.7 [treethink:off] rejects treeSearch with 503 FEATURE_DISABLED');
 
-  // 158.8: treethink on
-  featureFlagRegistry.set('ENABLE_TREETHINK', true);
-  const res8 = await treeThinkProvider.treeSearch({ goal: '⊢ ∀ n, n + 0 = n', method: 'mcts' });
-  assert.equal(res8.proved, true);
-  assert.equal(res8.method, 'mcts');
-  console.log('  ✓ 158.8 [treethink:on] executes tree exploration successfully');
+  // 158.8: treethink on (over real HTTP mock)
+  const treeMock = await startTreeThinkMockServer({ closeOnDepth: 1 });
+  try {
+    featureFlagRegistry.set('ENABLE_TREETHINK', true);
+    const res8 = await treeThinkProvider.treeSearch({
+      goal: '⊢ ∀ n, n + 0 = n',
+      method: 'mcts',
+      endpointOverride: treeMock.url,
+    });
+    assert.equal(res8.proved, true);
+    assert.equal(res8.method, 'mcts');
+    console.log('  ✓ 158.8 [treethink:on] executes tree exploration over HTTP');
+  } finally {
+    await treeMock.close();
+  }
 
   // 158.9: otel-browser off
   featureFlagRegistry.set('ENABLE_OTEL_BROWSER', false);

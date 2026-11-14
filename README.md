@@ -146,24 +146,14 @@ RUN apt-get update && apt-get install -y \
 
 ## 7. Verification and Test Suites
 
-Polyglot Code Studio executes two comprehensive automated test runners:
-- **Default Verification Suite (Suites 134–172)**: 303 sub-tests covering React architecture, contracts, error registries, and core verification pipelines:
-  ```bash
-  npm test
-  # or:
-  npx tsx scripts/verify-all.ts
-  ```
-- **Extended Verification Suite (Suites 173–200)**: 122 sub-tests covering single-certifier epistemic authority, negative seal containment, rate limiting, recursive redaction, and Phase 15 Waves W1–W4:
-  ```bash
-  npm run test:extended
-  # or:
-  npx tsx scripts/verify-extended.ts
-  ```
-Cumulative active baseline: **67 active suites / 425 sub-tests (100% pass rate)**.
+Polyglot Code Studio executes two dynamic verification runners (counting live executed suites and assertions with zero hardcoded pass totals):
+- **Primary Verification Suite (`npm test`, Suites 134–172)**: 39 active suites / 230 dynamically observed sub-test checks covering React architecture, contracts, error registries, bundle budgets, and core verification pipelines.
+- **Extended Verification Suite (`npm run test:extended`, Suites 173–200)**: 28 active suites / 135 dynamically observed sub-test checks covering single-certifier epistemic authority, negative seal containment, rate limiting, recursive redaction, and Phase 15 Waves W1–W4.
+Cumulative active software baseline: **67/67 active suites (`Suites 134–200`, 365 observed sub-test checks, 100% pass rate)**.
 
 ---
 
-## 8. Feature Status Matrix (Phase 15 Waves W1–W4 Activated)
+## 8. Feature Status Matrix (`2.3.0-rc` — Phase 15 Waves W1–W4)
 
 | Feature / Subsystem | Status | Engine / Provider | Gating & Policy |
 |---|---|---|---|
@@ -184,16 +174,16 @@ Cumulative active baseline: **67 active suites / 425 sub-tests (100% pass rate)*
 | API Rate Limiting | ready | In-memory sliding window (100 rpm) | 429 Retry-After + RFC headers |
 | Security Observability | ready | Standalone security-events emitter | Recursive redaction at log sink |
 | MCP 2026-07-28 Server | ready | Stateless JSON-RPC at /mcp | Dedicated 30 rpm rate limit |
-| Kimina Client Proxy | ready | Real HTTP client proxy | Mode: real/auto/simulator |
-| Lean Project Runner | ready | Lake process build executor | Dynamic toolchain resolution |
+| Kimina Client Proxy | ready | Real HTTP client proxy | Mode: real/auto/simulator (live kernel requires external Kimina container) |
+| Lean Project Runner | ready | Lake process build executor | Dynamic toolchain resolution (live build requires external Lake runner) |
 | Local Re-implementation Bridges | local | Pastalean, Lungo, LeanCert, LeanScreen, LeanFlow, CRAMF, Nerodia, NumPySpec, ProvePy | Local heuristics / zero fetch calls |
-| LeanBeam Bridge (W2) | wave-ready | Speculative tactic probe (`speculativelyTested: true`) | Gated by ENABLE_LEAN_BEAM (non-certifying) |
-| Mathesis Integration (W3) | wave-ready | Autoformalization + LeanScorer | Gated by ENABLE_MATHESIS (heuristic) |
-| LP2 Transpiler (W3) | wave-ready | Lossy transpiler + fidelity warnings | Gated by ENABLE_LP2 (non-certifying) |
-| TreeThink Inference (W3) | wave-ready | MCTS/BFTS search tree | Gated by ENABLE_TREETHINK (non-certifying) |
-| OpenTelemetry Browser (W1) | wave-ready | W3C traceparent + attribute redaction | Gated by ENABLE_OTEL_BROWSER |
-| OpenTelemetry Node (W1) | wave-ready | Conditional Express trace middleware | Gated by ENABLE_OTEL_NODE |
-| Yjs Collaborative Editing (W4) | wave-ready | Hocuspocus auth + MonacoYjsAdapter | Gated by ENABLE_YJS_COLLABORATION |
+| LeanBeam Bridge (W2) | implemented (default-off) | HTTP JSON-RPC + AbortController timeout (`speculativelyTested: true`) | Gated by ENABLE_LEAN_BEAM=false (non-certifying) |
+| Mathesis Integration (W3) | implemented (default-off) | HTTP+Zod autoformalization + LeanScorer | Gated by ENABLE_MATHESIS=false (heuristic) |
+| LP2 Transpiler (W3) | implemented (default-off) | Bidirectional AST transpiler + unsupported diagnostics | Gated by ENABLE_LP2=false (non-certifying) |
+| TreeThink Inference (W3) | implemented (default-off) | Bounded tree search + budget exhaustion | Gated by ENABLE_TREETHINK=false (non-certifying) |
+| OpenTelemetry Browser (W1) | implemented (default-off) | W3C traceparent + attribute redaction + OTLP | Gated by ENABLE_OTEL_BROWSER=false |
+| OpenTelemetry Node (W1) | implemented (default-off) | Conditional Express AsyncLocalStorage trace middleware | Gated by ENABLE_OTEL_NODE=false |
+| Yjs Collaborative Editing (W4) | implemented (default-off) | Live `/collab` WS (`Y.Doc` + `y-protocols`) + Editor drawer UI | Gated by ENABLE_YJS_COLLABORATION=false; fail-closed auth |
 | Paperproof Visualizer | partial | Playback service | Gated by ENABLE_PAPERPROOF_PLAYBACK (off) |
 
 ---
@@ -233,19 +223,19 @@ Cumulative active baseline: **67 active suites / 425 sub-tests (100% pass rate)*
   - Hermetic project repository compilation via isolated Lake runner (`POST /api/v1/projects/lean/build`).
 - **Transitive Axiom Policy (`polyglot.axioms.standard.v1`)**: Enforces allowlist strictly restricted to `propext`, `Classical.choice`, and `Quot.sound`. Any custom axioms or `sorryAx` references forbid certification.
 - **Hybrid Consensus Adjudicator**: Evaluates comparability (source digest, context digest, toolchain digest) and arbitrates between sub-engine evidence. Yields `confirmed_valid` (`SEAL_KERNEL_VERIFIED_TIER5`), `confirmed_invalid`, or `unconfirmed`.
-- **Cumulative Verification Suite**: Baseline suites 1 through 172 (303 sub-tests) achieve 100% pass rate. Extended suites 173 through 191 (377 sub-tests) verified.
+- **Active Software Suites**: Suites 134–172 (39 suites, 230 observed checks) and Suites 173–200 (28 suites, 135 observed checks) pass 100%.
 
 ---
 
-## 13. Phase 14.9.9.1 Epistemic Hardening & Phase 15 Scope
+## 13. Release Candidate `2.3.0-rc` Hardening & Readiness
 
-- **Milestone**: `14.9.9.1` (SemVer `2.3.0`).
-- **Epistemic Isolation**: Strict static verification enforcing that `hybrid-adjudicator.ts:264` is the exclusive certifier (`npm run arch:check-epistemic-authority`).
+- **Release Candidate**: `2.3.0-rc` (GA promotion to `2.3.0` gated on external Docker/Kimina/Lake container E2E verification).
+- **Epistemic Isolation**: Strict static verification enforcing that `hybrid-adjudicator.ts:264` is the exclusive certifier (`npm run arch:check-epistemic-authority` + `./scripts/seal-integrity-sweep.sh`).
 - **ProofOutcome Discriminated Union**: Complete Zod ↔ Pydantic v2 contract parity across all 6 variants (`certified`, `numeric-certificate`, `transport`, `preflight`, `unavailable`, `metadata`).
-- **Feature Flag Governance**: 62/62 registered flags assigned squad owners, fail-closed behaviors, and retirement dates (`npm run check-flag-expiry:strict`).
-- **Supply Chain Security**: All 23 production dependencies pinned to exact versions; `npm ci --ignore-scripts` verified in CI.
-- **Architectural Documentation**: Master indexes available in [`docs/INDEX.md`](docs/INDEX.md) and [`reports/INDEX.md`](reports/INDEX.md). Key ADRs: [ADR-016](docs/adr/ADR-016-phase-15-scope.md), [ADR-017](docs/adr/ADR-017-bundle-budget-revision.md), [ADR-018](docs/adr/ADR-018-removal-of-client-seal-path.md).
-- **Phase 15 Roadmap**: 4 activation waves targeting 195 suites / 420 sub-tests under revised bundle budget ceilings (O1 $\le$ 100 KB, O2 $\le$ 220 KB, total $\le$ 290 KB).
+- **Feature Flag Governance**: 62/62 registered flags assigned squad owners, fail-closed behaviors, default-off experiments, and live-clock `--strict` validation (`npm run check-flag-expiry:strict`).
+- **Supply Chain Security**: All 26 production dependencies pinned to exact versions; `npm ci --ignore-scripts` and `npm run scan:secrets` verified in CI.
+- **Bundle Discipline (ADR-017)**: Main entry `38.42 KB gzip` ($\le 180\text{ KB}$), Total client JS `234.37 KB gzip` ($\le 290\text{ KB}$), O2 initial load `169.61 KB gzip` ($\le 220\text{ KB}$).
+
 
 
 

@@ -418,7 +418,10 @@ Every integer $n > 1$ has at least one prime divisor.
             <div className="space-y-4">
               {/* Epistemic Status Banner (Phase 10.9.5 Unification) */}
               {(() => {
-                const currentEpistemicStatus: EpistemicStatus = state.phase4Certificate
+                const isFormallyCertified = Boolean(
+                  state.phase4Certificate?.kernelCheckPassed && state.phase4?.verified
+                );
+                const currentEpistemicStatus: EpistemicStatus = isFormallyCertified
                   ? 'formally-proven'
                   : state.phase3Validation
                   ? 'heuristically-validated'
@@ -433,9 +436,9 @@ Every integer $n > 1$ has at least one prime divisor.
                       </div>
                       <p className="text-[11px] text-slate-400 font-sans">{palette.description}</p>
                     </div>
-                    {currentEpistemicStatus === 'formally-proven' && (
+                    {isFormallyCertified && state.phase4Certificate && (
                       <span className="text-[10px] px-2 py-0.5 border border-emerald-800 bg-emerald-950/60 text-emerald-300 font-bold">
-                        SEAL_KERNEL_VERIFIED_TIER5
+                        {state.phase4Certificate.seal}
                       </span>
                     )}
                   </div>
@@ -517,14 +520,14 @@ Every integer $n > 1$ has at least one prime divisor.
                       {state.phase2Conjecture.formalStatementLean}
                     </pre>
 
-                    {/* Phase 10.8 LeanCert Pre-Check Badge */}
-                    <div className="flex items-center justify-between text-[11px] font-mono p-2 bg-[#0E1420] border border-emerald-900/40 text-emerald-300">
+                    {/* Phase 10.8 LeanCert Numeric Pre-Check Notice */}
+                    <div className="flex items-center justify-between text-[11px] font-mono p-2 bg-[#0E1420] border border-amber-900/40 text-amber-300">
                       <div className="flex items-center gap-1.5">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>LeanCert Pre-Check: Interval Bounds Verified [4.668, 4.670]</span>
+                        <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                        <span>LeanCert Pre-Check: Numeric Interval Bounds [4.668, 4.670]</span>
                       </div>
-                      <span className="text-[10px] text-slate-400 border border-emerald-800/60 px-1 py-0.2">
-                        v4.32.0 CERTIFIED
+                      <span className="text-[10px] text-slate-400 border border-amber-800/60 px-1 py-0.2">
+                        UNVERIFIED DRAFT · REQUIRES CONSENSUS
                       </span>
                     </div>
                   </div>
@@ -580,7 +583,7 @@ Every integer $n > 1$ has at least one prime divisor.
                   </div>
                   {state.phase4Certificate && (
                     <span className="text-[10px] font-mono text-emerald-400 border border-emerald-800/80 bg-emerald-950/40 px-2 py-0.5 flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> SEAL_KERNEL_VERIFIED_TIER5
+                      <ShieldCheck className="w-3 h-3" /> {state.phase4Certificate.seal}
                     </span>
                   )}
                 </div>

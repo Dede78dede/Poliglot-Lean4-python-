@@ -90,7 +90,7 @@ test.describe('Phase 8 Advanced Proof Automation - E2E Spec', () => {
 
     expect(result.status).toBe(200);
     expect(result.data.hasCounterexample).toBe(true);
-    expect(result.data.verified).toBe(true);
+    expect(result.data.verified).toBe(false);
     expect(result.data.negationProof.includes('¬(1 = 2)')).toBeTruthy();
   });
 
@@ -136,7 +136,7 @@ test.describe('Phase 8 Advanced Proof Automation - E2E Spec', () => {
     });
 
     expect(result.status).toBe(200);
-    expect(result.data.kernelVerified).toBe(true);
+    expect(result.data.kernelVerified).toBe(false);
     expect(result.data.tacticsRemoved > 0).toBeTruthy();
     expect(result.data.simplifiedLength < result.data.originalLength).toBeTruthy();
   });

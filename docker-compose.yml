@@ -24,8 +24,12 @@ services:
       - PORT=3000
       - LEAN_RUNNER_MODE=real
       - LEAN_RUNNER_URL=http://lean-runner:8080
+      - LEAN_RUNNER_AUTH_TOKEN=${LEAN_RUNNER_AUTH_TOKEN:-}
       - PANTOGRAPH_URL=http://pantograph:8081
-      - KIMINA_URL=http://kimina-backend:8080
+      - KIMINA_MODE=real
+      - KIMINA_BASE_URL=${KIMINA_BASE_URL:-http://kimina-backend:8000}
+      - KIMINA_URL=${KIMINA_BASE_URL:-http://kimina-backend:8000}
+      - KIMINA_AUTH_TOKEN=${KIMINA_AUTH_TOKEN:-}
       - PIPELINE_STRICT_GOALS=false
       - WS_PORT=3000
       - CLAIM_TTL_MS=1800000
@@ -47,20 +51,21 @@ services:
       retries: 3
       start_period: 30s
 
+  # Dedicated Kimina Lean Server container implementing POST /api/check and GET /health
   kimina-backend:
-    build:
-      context: ./docker/lean-runner
-      dockerfile: Dockerfile
+    image: ${KIMINA_SERVER_IMAGE:-projectnumina/kimina-lean-server:latest}
     restart: unless-stopped
     ports:
-      - "8082:8080"
+      - "8000:8000"
+    environment:
+      - KIMINA_AUTH_TOKEN=${KIMINA_AUTH_TOKEN:-}
     networks:
       - polyglot-net
       - lean-isolated-net
     volumes:
-      - mathlib-cache:/root/.cache/mathlib
+      - mathlib-cache:/root/.cache/mathlib:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/readyz"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -72,12 +77,14 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "8000:8080"
+      - "8080:8080"
+    environment:
+      - LEAN_RUNNER_AUTH_TOKEN=${LEAN_RUNNER_AUTH_TOKEN:-}
     networks:
       - polyglot-net
       - lean-isolated-net
     volumes:
-      - mathlib-cache:/root/.cache/mathlib
+      - mathlib-cache:/home/leanrunner/.cache/mathlib
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/readyz"]
       interval: 15s

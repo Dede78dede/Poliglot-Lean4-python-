@@ -16,6 +16,7 @@ export interface MatrixOperation {
 
 export interface MatrixVerificationResult {
   readonly verified: boolean;
+  readonly dimensionsCompatible?: boolean;
   readonly certificate?: string;
   readonly operation: MatrixOperation['operation'];
   readonly error?: string;
@@ -58,6 +59,7 @@ export class NumpySpecBridge {
       if (!op.shapeB || op.shapeA[1] !== op.shapeB[0]) {
         return {
           verified: false,
+          dimensionsCompatible: false,
           operation: op.operation,
           enabled: true,
           error: `DIMENSION_MISMATCH: Cannot multiply shapes [${op.shapeA.join(',')}] and [${op.shapeB?.join(',') ?? 'none'}]`,
@@ -67,6 +69,7 @@ export class NumpySpecBridge {
       if (op.shapeA[0] !== op.shapeA[1]) {
         return {
           verified: false,
+          dimensionsCompatible: false,
           operation: op.operation,
           enabled: true,
           error: `SQUARE_MATRIX_REQUIRED: Operation requires square matrix, got shape [${op.shapeA.join(',')}]`,
@@ -75,8 +78,9 @@ export class NumpySpecBridge {
     }
 
     return {
-      verified: true,
-      certificate: `numpyspec:verified:${op.operation}:${op.shapeA.join('x')}`,
+      verified: false,
+      dimensionsCompatible: true,
+      certificate: `numpyspec:dimensions-compatible:${op.operation}:${op.shapeA.join('x')}`,
       operation: op.operation,
       enabled: true,
     };

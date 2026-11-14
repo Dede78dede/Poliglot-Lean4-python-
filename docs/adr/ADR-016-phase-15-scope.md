@@ -62,3 +62,10 @@ Feature flags gating resource-intensive or network-dependent modules are schedul
 
 ### Negative
 - Any third-party solver or numerical assistant must route through the server hybrid-adjudicator to obtain formal promotion to `formally-proven`.
+
+---
+
+## 4. Release Candidate (`2.3.0-rc`) Status Note
+- **Implemented & Software-Verified**: P0 containment, real W1–W4 protocols gated default-off (`false`), TS-aware `arch:check` (`0` violations across `354` modules), ADR-017 bundle gate (`38.42 KB` main / `234.37 KB` total JS), and `67/67` active suites (`Suites 134–200`, `365` dynamically observed checks).
+- **GA Prerequisite**: Live container E2E verification against external `kimina-backend` and `lean-runner` containers remains required before promoting `2.3.0-rc` to `2.3.0`.
+

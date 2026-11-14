@@ -1,26 +1,8 @@
 /**
- * Polyglot Code Studio Extended Verification Runner (Phase 14.9.9.1 / Phase 15 Pre-flight)
+ * Polyglot Code Studio Extended Verification Runner (Suites 173 through 200)
  *
- * Runs test suites 173 through 191 (74 sub-tests):
- * - Suite 173: Bridge Residuals ProofOutcome Migration (4 sub-tests)
- * - Suite 174: TypeScript Strict Configuration & Compiler Flags (4 sub-tests)
- * - Suite 175: Dependency Rule Boundary Enforcement (3 sub-tests)
- * - Suite 176: Contract Parity Static Sync (4 sub-tests)
- * - Suite 177: Testing Discipline & MSW Isolation (3 sub-tests)
- * - Suite 178: API Security & OWASP BOLA Hardening (6 sub-tests)
- * - Suite 179: Observability & Trace Correlation (4 sub-tests)
- * - Suite 180: Feature Flag Governance & Expiry (4 sub-tests)
- * - Suite 181: Bundle Residuals O1-O3 Closure (4 sub-tests)
- * - Suite 182: Python Standards & PEP Compliance (5 sub-tests)
- * - Suite 183: CI/CD Pipeline & Supply Chain Hardening (4 sub-tests)
- * - Suite 184: Epistemic Authority Gate & Single Certifier Isolation (4 sub-tests)
- * - Suite 185: Feature Flag Governance & Audit Verification (4 sub-tests)
- * - Suite 186: Circuit Breaker HALF_OPEN & Fault Injection (5 sub-tests)
- * - Suite 187: Negative Seal — Rejection of Unauthorized Certification Pathways (5 sub-tests)
- * - Suite 188: Fallback SINGLE_ENGINE_DEGRADED & F7 Compliance (5 sub-tests)
- * - Suite 189: Contract Parity Runtime Verification (5 sub-tests)
- * - Suite 190: Property-Based Testing with fast-check (4 sub-tests)
- * - Suite 191: Accessibility Standards & Design Tokens (5 sub-tests)
+ * Dynamically tallies executed suites and verified sub-test checks from live
+ * test execution (zero hardcoded pass counts).
  */
 
 import { runSuite173 } from '../tests/phase-14/suite-173-bridge-proof-outcome.test';
@@ -52,45 +34,74 @@ import { runSuite198 } from '../tests/phase-14/suite-198-yjs-collaboration.test'
 import { runSuite199 } from '../tests/phase-14/suite-199-e2e-consensus-authority.test';
 import { runSuite200 } from '../tests/phase-14/suite-200-phase15-integration-readiness.test';
 
+const EXTENDED_SUITES: ReadonlyArray<readonly [number, () => Promise<void>]> = [
+  [173, runSuite173],
+  [174, runSuite174],
+  [175, runSuite175],
+  [176, runSuite176],
+  [177, runSuite177],
+  [178, runSuite178],
+  [179, runSuite179],
+  [180, runSuite180],
+  [181, runSuite181],
+  [182, runSuite182],
+  [183, runSuite183],
+  [184, runSuite184],
+  [185, runSuite185],
+  [186, runSuite186],
+  [187, runSuite187],
+  [188, runSuite188],
+  [189, runSuite189],
+  [190, runSuite190],
+  [191, runSuite191],
+  [192, runSuite192],
+  [193, runSuite193],
+  [194, runSuite194],
+  [195, runSuite195],
+  [196, runSuite196],
+  [197, runSuite197],
+  [198, runSuite198],
+  [199, runSuite199],
+  [200, runSuite200],
+];
+
 async function main(): Promise<void> {
-  console.log('--- Starting Polyglot Code Studio Extended Verification Suite (Suites 173 through 200) ---');
+  console.log(
+    `--- Starting Polyglot Code Studio Extended Verification Suite (Suites 173–200, ${EXTENDED_SUITES.length} suites) ---`
+  );
 
   const startTime = Date.now();
+  let suitesPassed = 0;
+  let observedChecks = 0;
+  const origLog = console.log;
 
-  await runSuite173();
-  await runSuite174();
-  await runSuite175();
-  await runSuite176();
-  await runSuite177();
-  await runSuite178();
-  await runSuite179();
-  await runSuite180();
-  await runSuite181();
-  await runSuite182();
-  await runSuite183();
-  await runSuite184();
-  await runSuite185();
-  await runSuite186();
-  await runSuite187();
-  await runSuite188();
-  await runSuite189();
-  await runSuite190();
-  await runSuite191();
-  await runSuite192();
-  await runSuite193();
-  await runSuite194();
-  await runSuite195();
-  await runSuite196();
-  await runSuite197();
-  await runSuite198();
-  await runSuite199();
-  await runSuite200();
+  for (const [suiteId, runFn] of EXTENDED_SUITES) {
+    let suiteChecks = 0;
+    console.log = (...args: unknown[]) => {
+      const line = args.map(String).join(' ');
+      if (/^\s*✓\s+/.test(line)) {
+        suiteChecks++;
+      }
+      origLog.apply(console, args);
+    };
+    try {
+      await runFn();
+      suitesPassed++;
+      observedChecks += Math.max(suiteChecks, 1);
+    } finally {
+      console.log = origLog;
+    }
+    if (suiteChecks === 0) {
+      origLog(`  ✓ Suite ${suiteId} completed`);
+    }
+  }
 
   const durationMs = Date.now() - startTime;
 
   console.log('\n======================================================');
-  console.log(`All Phase 15 Extended test suites PASSED! (${durationMs}ms)`);
-  console.log('Suites 173-200: 100% pass (122 sub-tests verified)');
+  console.log(
+    `Extended Suites (173–200) PASSED: ${suitesPassed}/${EXTENDED_SUITES.length} suites, ${observedChecks} observed sub-test checks verified (${durationMs}ms)`
+  );
   console.log('======================================================\n');
   process.exit(0);
 }

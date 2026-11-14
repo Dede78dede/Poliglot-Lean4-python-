@@ -1,7 +1,7 @@
 {
   "name": "polyglot-code-studio",
   "private": true,
-  "version": "2.3.0",
+  "version": "2.3.0-rc",
   "description": "A browser-based dual-runtime code editor and formal verification studio for Python 3.14 and Lean 4.",
   "license": "MIT",
   "repository": {
@@ -28,9 +28,11 @@
     "contracts:generate": "tsx scripts/export-schemas.ts && tsx scripts/generate-contracts.ts",
     "contracts:check": "tsx scripts/check-contracts.ts",
     "bundle:measure": "tsx scripts/measure-bundle.ts",
-    "arch:check": "depcruise src server/src --config .dependency-cruiser.cjs",
+    "arch:check": "tsx scripts/arch-check.ts",
     "arch:check-epistemic-authority": "tsx scripts/check-epistemic-authority.ts",
+    "check-flag-expiry": "tsx scripts/check-flag-expiry.ts",
     "check-flag-expiry:strict": "tsx scripts/check-flag-expiry.ts --strict",
+    "scan:secrets": "tsx scripts/scan-secrets.ts",
     "tokens:rotate": "tsx scripts/tokens-cli.ts rotate",
     "tokens:revoke": "tsx scripts/tokens-cli.ts revoke",
     "audit": "npm audit --audit-level=high",
@@ -48,6 +50,7 @@
     "dotenv": "17.2.3",
     "express": "4.21.2",
     "fflate": "0.8.3",
+    "lib0": "0.2.120",
     "lucide-react": "0.546.0",
     "minisearch": "7.2.0",
     "motion": "12.23.24",
@@ -59,6 +62,9 @@
     "tinykeys": "4.0.1",
     "vite": "8.3.0",
     "ws": "8.22.0",
+    "y-monaco": "0.1.6",
+    "y-protocols": "1.0.7",
+    "yjs": "13.6.33",
     "zod": "4.6.6"
   },
   "devDependencies": {

@@ -124,7 +124,8 @@ theorem nat_add_comm (a b : Nat) : a + b = b + a := Nat.add_comm a b
     assert.ok(bir.checkedClaims.length > 0);
     const claim = bir.checkedClaims[0]!;
     assert.ok(claim.theoremSignature.includes('nat_add_comm'));
-    assert.equal(claim.status, 'verified');
+    assert.equal(claim.status, 'unverified');
+    assert.equal(claim.proofCarried, 'UNVERIFIED_DRAFT');
     assert.ok(claim.certificateHash.length >= 64);
 
     const check = lungoBridge.verifyIntegrity(bir.runtimeDigestSha256, bir.runtimeDigestSha256);

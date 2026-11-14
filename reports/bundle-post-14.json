@@ -1,143 +1,175 @@
 {
-  "timestamp": "2026-11-13T12:11:01.996Z",
-  "phase": "14.9.9.2",
+  "timestamp": "2026-11-14T18:33:49.824Z",
+  "phase": "2.3.0-rc",
   "methodology": {
     "scope": "dist/assets",
     "compression": "zlib.gzipSync (default)",
     "mainEntryPattern": "index-*.js",
-    "excludesServer": true
+    "excludesServer": true,
+    "initialLoadSource": "dist/index.html"
   },
   "budgetLimits": {
     "mainBundleGzipMaxKb": 180,
-    "totalJsGzipMaxKb": 290
+    "totalJsGzipMaxKb": 290,
+    "maxSingleChunkGzipKb": 100,
+    "initialLoadGzipMaxKb": 220,
+    "maxAccountingDiscrepancyKb": 0.5
   },
   "measured": {
-    "mainEntryGzipKb": 28.96,
-    "totalJsGzipKb": 204.55,
-    "totalJsRawKb": 690.06,
-    "cssGzipKb": 16.57,
+    "mainEntryGzipKb": 38.42,
+    "totalJsGzipKb": 234.37,
+    "totalJsRawKb": 785.6,
+    "cssGzipKb": 16.54,
     "htmlGzipKb": 0.91,
-    "initialLoadGzipKb": 132.3
+    "initialLoadGzipKb": 169.61,
+    "maxSingleChunkGzipKb": 55.67,
+    "accountingDiscrepancyKb": 0.02
   },
+  "initialLoadChunks": [
+    "index-CeJUZ7a0.js",
+    "rolldown-runtime-hePW80VL.js",
+    "react-vendor-DAUJOu26.js",
+    "aria-vendor-pgwtFOX1.js",
+    "icons-vendor-CZzsirrs.js",
+    "zod-vendor-wQCyJjKA.js"
+  ],
   "chunks": [
     {
-      "name": "react-vendor-D_mjGnsX.js",
+      "name": "react-vendor-DAUJOu26.js",
       "gzipKb": 55.67
     },
     {
-      "name": "aria-vendor-DAtJMEYJ.js",
+      "name": "aria-vendor-pgwtFOX1.js",
       "gzipKb": 47.67
     },
     {
-      "name": "index-BvN5YYEn.js",
-      "gzipKb": 28.96
+      "name": "index-CeJUZ7a0.js",
+      "gzipKb": 38.42
+    },
+    {
+      "name": "yjs-runtime-BWtVk4IZ.js",
+      "gzipKb": 24.99
     },
     {
       "name": "zod-vendor-wQCyJjKA.js",
       "gzipKb": 24.73
     },
     {
-      "name": "CommandPalette-D-tsnMwl.js",
+      "name": "CommandPalette-DUIt3zHS.js",
       "gzipKb": 19.55
     },
     {
-      "name": "RecommendationsPanel-LRHaTa6U.js",
-      "gzipKb": 8.98
+      "name": "RecommendationsPanel-CWueqRN3.js",
+      "gzipKb": 4.2
     },
     {
-      "name": "CollaborationPanel-DvBPkzc0.js",
-      "gzipKb": 4.19
+      "name": "NotebookPanel-DMF-8Ti-.js",
+      "gzipKb": 3.79
     },
     {
-      "name": "NotebookPanel-BBQpEWyi.js",
-      "gzipKb": 3.78
+      "name": "showcase-C7bdbdkx.js",
+      "gzipKb": 3.63
     },
     {
-      "name": "showcase-1YfDFaVy.js",
-      "gzipKb": 3.62
+      "name": "FEMEVView-jMmvz5JN.js",
+      "gzipKb": 3.61
     },
     {
-      "name": "FEMEVView-Hyv2di3S.js",
-      "gzipKb": 3.6
+      "name": "CollaborationPanel-BD67GYlO.js",
+      "gzipKb": 2.87
     },
     {
-      "name": "icons-vendor-epi5Iuo9.js",
-      "gzipKb": 2.76
+      "name": "icons-vendor-CZzsirrs.js",
+      "gzipKb": 2.7
     },
     {
-      "name": "tabs-yaDEijrg.js",
+      "name": "y-monaco-CGyk9QaK.js",
+      "gzipKb": 1.48
+    },
+    {
+      "name": "tabs-CvKYdVyV.js",
       "gzipKb": 0.66
     },
     {
-      "name": "rolldown-runtime-CbXtAM7H.js",
-      "gzipKb": 0.36
+      "name": "rolldown-runtime-hePW80VL.js",
+      "gzipKb": 0.42
     }
   ],
   "files": {
-    "CollaborationPanel-DvBPkzc0.js": {
-      "rawBytes": 22090,
-      "gzipBytes": 4290,
-      "gzipKb": 4.19
+    "CollaborationPanel-BD67GYlO.js": {
+      "rawBytes": 11044,
+      "gzipBytes": 2940,
+      "gzipKb": 2.87
     },
-    "CommandPalette-D-tsnMwl.js": {
+    "CommandPalette-DUIt3zHS.js": {
       "rawBytes": 61249,
-      "gzipBytes": 20020,
+      "gzipBytes": 20018,
       "gzipKb": 19.55
     },
-    "FEMEVView-Hyv2di3S.js": {
+    "FEMEVView-jMmvz5JN.js": {
       "rawBytes": 17636,
-      "gzipBytes": 3688,
-      "gzipKb": 3.6
+      "gzipBytes": 3692,
+      "gzipKb": 3.61
     },
-    "NotebookPanel-BBQpEWyi.js": {
+    "NotebookPanel-DMF-8Ti-.js": {
       "rawBytes": 13641,
-      "gzipBytes": 3875,
-      "gzipKb": 3.78
+      "gzipBytes": 3877,
+      "gzipKb": 3.79
     },
-    "RecommendationsPanel-LRHaTa6U.js": {
-      "rawBytes": 36440,
-      "gzipBytes": 9196,
-      "gzipKb": 8.98
+    "RecommendationsPanel-CWueqRN3.js": {
+      "rawBytes": 15293,
+      "gzipBytes": 4296,
+      "gzipKb": 4.2
     },
-    "aria-vendor-DAtJMEYJ.js": {
+    "aria-vendor-pgwtFOX1.js": {
       "rawBytes": 158429,
-      "gzipBytes": 48817,
+      "gzipBytes": 48818,
       "gzipKb": 47.67
     },
-    "icons-vendor-epi5Iuo9.js": {
-      "rawBytes": 7317,
-      "gzipBytes": 2831,
-      "gzipKb": 2.76
+    "icons-vendor-CZzsirrs.js": {
+      "rawBytes": 7223,
+      "gzipBytes": 2760,
+      "gzipKb": 2.7
     },
-    "index-BvN5YYEn.js": {
-      "rawBytes": 101749,
-      "gzipBytes": 29654,
-      "gzipKb": 28.96
+    "index-C7qEB0OR.css": {
+      "rawBytes": 110724,
+      "gzipBytes": 16934,
+      "gzipKb": 16.54
     },
-    "index-CWQvxRyb.css": {
-      "rawBytes": 111165,
-      "gzipBytes": 16965,
-      "gzipKb": 16.57
+    "index-CeJUZ7a0.js": {
+      "rawBytes": 142499,
+      "gzipBytes": 39343,
+      "gzipKb": 38.42
     },
-    "react-vendor-D_mjGnsX.js": {
+    "react-vendor-DAUJOu26.js": {
       "rawBytes": 181287,
       "gzipBytes": 57010,
       "gzipKb": 55.67
     },
-    "rolldown-runtime-CbXtAM7H.js": {
-      "rawBytes": 589,
-      "gzipBytes": 368,
-      "gzipKb": 0.36
+    "rolldown-runtime-hePW80VL.js": {
+      "rawBytes": 716,
+      "gzipBytes": 428,
+      "gzipKb": 0.42
     },
-    "showcase-1YfDFaVy.js": {
+    "showcase-C7bdbdkx.js": {
       "rawBytes": 14680,
-      "gzipBytes": 3707,
-      "gzipKb": 3.62
+      "gzipBytes": 3712,
+      "gzipKb": 3.63
     },
-    "tabs-yaDEijrg.js": {
+    "tabs-CvKYdVyV.js": {
       "rawBytes": 1415,
-      "gzipBytes": 679,
+      "gzipBytes": 678,
       "gzipKb": 0.66
+    },
+    "y-monaco-CGyk9QaK.js": {
+      "rawBytes": 4488,
+      "gzipBytes": 1516,
+      "gzipKb": 1.48
+    },
+    "yjs-runtime-BWtVk4IZ.js": {
+      "rawBytes": 84750,
+      "gzipBytes": 25586,
+      "gzipKb": 24.99
     },
     "zod-vendor-wQCyJjKA.js": {
       "rawBytes": 90104,
@@ -146,12 +178,13 @@
     },
     "index.html": {
       "rawBytes": 2147,
-      "gzipBytes": 931,
+      "gzipBytes": 929,
       "gzipKb": 0.91
     }
   },
   "status": "PASS",
   "verdict": "PASS",
-  "marginMainKb": 151.04,
-  "marginTotalKb": 85.45
+  "failureReasons": [],
+  "marginMainKb": 141.58,
+  "marginTotalKb": 55.63
 }

@@ -104,11 +104,11 @@ export class LungoBridge {
         claims.push({
           claimId: `claim-${tm[1]}`,
           theoremSignature: `theorem ${tm[1]} ${tm[2]!.trim()}`,
-          axiomsUsed: Object.freeze(['propext', 'Classical.choice']),
+          axiomsUsed: Object.freeze([]),
           certificateHash: await computeSha256(tm[0]),
           verifiedAt: new Date().toISOString(),
-          status: 'verified',
-          proofCarried: 'SEAL_KERNEL_VERIFIED_TIER5',
+          status: 'unverified',
+          proofCarried: 'UNVERIFIED_DRAFT',
         });
       }
     }

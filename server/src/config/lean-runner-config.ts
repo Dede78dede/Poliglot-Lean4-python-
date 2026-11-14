@@ -20,6 +20,7 @@ export interface LeanRunnerConfig {
   readonly mode: LeanRunnerMode;
   readonly runnerUrl: string;
   readonly timeoutMs: number;
+  readonly authToken?: string;
 }
 
 export function resolveLeanRunnerConfig(
@@ -45,6 +46,7 @@ export function resolveLeanRunnerConfig(
 
   const runnerUrl = env['LEAN_RUNNER_URL'] ?? 'http://lean-runner:8080';
   const timeoutMs = Number(env['LEAN_BUILD_TIMEOUT_MS'] ?? 300_000); // 5 minutes default
+  const authToken = env['LEAN_RUNNER_AUTH_TOKEN']?.trim() || undefined;
 
   if (Number.isNaN(timeoutMs) || timeoutMs <= 0) {
     throw new Error(`Invalid LEAN_BUILD_TIMEOUT_MS="${env['LEAN_BUILD_TIMEOUT_MS']}".`);
@@ -58,5 +60,6 @@ export function resolveLeanRunnerConfig(
     mode: rawMode,
     runnerUrl,
     timeoutMs,
+    authToken,
   };
 }

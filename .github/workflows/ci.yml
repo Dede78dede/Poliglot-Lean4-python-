@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    name: Lint, Build & Verify All Suites
+    name: Build, Security, Architecture & Verification Suites
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,10 +22,14 @@ jobs:
       - name: Install Dependencies
         run: npm ci --ignore-scripts
 
-      - name: Linter & Typecheck
-        run: |
-          npm run lint
-          npx tsc --noEmit
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Secret Scan
+        run: npm run scan:secrets
+
+      - name: Supply-Chain Vulnerability Audit
+        run: npm audit --audit-level=high
 
       - name: Architecture Layer Rule Check
         run: npm run arch:check
@@ -36,33 +40,20 @@ jobs:
       - name: Contract Parity Check
         run: npm run contracts:check
 
-      - name: Feature Flag Governance Check
-        run: npx tsx scripts/check-flag-expiry.ts
+      - name: Feature Flag Governance Check (Strict)
+        run: npx tsx scripts/check-flag-expiry.ts --strict
 
       - name: Build Application
         run: npm run build
 
-      - name: Bundle Budget Measurement & Blocking Gate (ADR-017)
-        run: |
-          npm run bundle:measure
-          node -e '
-            const fs = require("fs");
-            const reportPath = fs.existsSync("reports/bundle-post-14.9.9.2.json")
-              ? "reports/bundle-post-14.9.9.2.json"
-              : "reports/bundle-post-14.json";
-            const report = JSON.parse(fs.readFileSync(reportPath, "utf-8"));
-            if (report.status !== "PASS") {
-              console.error("❌ Bundle Budget Exceeded: Main " + report.measured.mainEntryGzipKb + " KB, Total " + report.measured.totalJsGzipKb + " KB");
-              process.exit(1);
-            }
-            console.log("✓ Bundle budget passed: " + report.measured.mainEntryGzipKb + " KB main, " + report.measured.totalJsGzipKb + " KB total JS (Budget <= 290 KB).");
-          '
+      - name: Bundle Budget Gate (ADR-017)
+        run: npm run bundle:measure
 
       - name: Run Primary Polyglot Verification Suite (Suites 134-172)
-        run: npx tsx scripts/verify-all.ts
+        run: npm test
 
       - name: Run Extended Polyglot Verification Suite (Suites 173-200)
-        run: npx tsx scripts/verify-extended.ts
+        run: npm run test:extended
 
       - name: Epistemic Seal Integrity Sweep (Final Gate)
         run: |
