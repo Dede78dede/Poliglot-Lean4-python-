@@ -2,6 +2,7 @@ import type { ExecutionRequest, ExecutionResult } from '../types/execution';
 import { ExecutionError } from '../types/execution';
 import { LeanExecuteResponseSchema } from '../types/contracts';
 import { browserOtelTracer } from './telemetry/otel-browser';
+import { authorizedFetch } from './auth/api-client';
 
 const API_BASE = '/api/v1';
 
@@ -16,7 +17,7 @@ export async function executeLean(request: ExecutionRequest): Promise<ExecutionR
   });
 
   try {
-    const response = await fetch(`${API_BASE}/lean/execute`, {
+    const response = await authorizedFetch(`${API_BASE}/lean/execute`, {
       method: 'POST',
       headers,
       body: JSON.stringify({

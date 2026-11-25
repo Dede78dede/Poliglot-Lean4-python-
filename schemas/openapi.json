@@ -1,0 +1,1192 @@
+{
+  "components": {
+    "schemas": {
+      "ConsensusAdjudicationResult": {
+        "additionalProperties": false,
+        "properties": {
+          "axiomPolicyCompliance": {
+            "type": "boolean"
+          },
+          "consensusAchieved": {
+            "type": "boolean"
+          },
+          "diagnostics": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "enginesConsulted": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "protocolVersion": {
+            "const": "polyglot.verification.v1"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "seal": {
+            "anyOf": [
+              {
+                "const": "SEAL_KERNEL_VERIFIED_TIER5"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verdict": {
+            "enum": [
+              "confirmed_valid",
+              "confirmed_invalid",
+              "unconfirmed"
+            ],
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "protocolVersion",
+          "requestId",
+          "verdict",
+          "verified",
+          "seal",
+          "axiomPolicyCompliance",
+          "enginesConsulted",
+          "consensusAchieved",
+          "reason",
+          "diagnostics"
+        ],
+        "type": "object"
+      },
+      "ConsensusEnvironment": {
+        "additionalProperties": false,
+        "properties": {
+          "kiminaImageDigest": {
+            "type": "string"
+          },
+          "lakeRunnerImageDigest": {
+            "type": "string"
+          },
+          "leanToolchain": {
+            "type": "string"
+          },
+          "manifestDigest": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "leanToolchain"
+        ],
+        "type": "object"
+      },
+      "ConsensusProjectFile": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "type": "object"
+      },
+      "ConsensusRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "axiomPolicyId": {
+            "default": "polyglot.axioms.standard.v1",
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "contextDigest": {
+            "type": "string"
+          },
+          "environment": {
+            "additionalProperties": false,
+            "properties": {
+              "kiminaImageDigest": {
+                "type": "string"
+              },
+              "lakeRunnerImageDigest": {
+                "type": "string"
+              },
+              "leanToolchain": {
+                "type": "string"
+              },
+              "manifestDigest": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "leanToolchain"
+            ],
+            "type": "object"
+          },
+          "files": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "content": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "content"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "protocolVersion": {
+            "const": "polyglot.verification.v1"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "requireConsensus": {
+            "default": true,
+            "type": "boolean"
+          },
+          "scope": {
+            "enum": [
+              "snippet",
+              "project"
+            ],
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "sourceDigest": {
+            "type": "string"
+          },
+          "targetIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "timeoutMs": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "protocolVersion",
+          "requestId",
+          "scope",
+          "sourceDigest",
+          "environment"
+        ],
+        "type": "object"
+      },
+      "HealthCheckResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "kiminaConnected": {
+            "type": "boolean"
+          },
+          "kiminaMode": {
+            "enum": [
+              "real",
+              "simulator",
+              "auto"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "const": "ok"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "kiminaMode",
+          "kiminaConnected",
+          "version"
+        ],
+        "type": "object"
+      },
+      "LeanExecuteRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "default": 10000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "LeanExecuteResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "durationMs": {
+            "type": "number"
+          },
+          "exitCode": {
+            "type": "number"
+          },
+          "simulated": {
+            "type": "boolean"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "stdout": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "stdout",
+          "stderr",
+          "exitCode",
+          "durationMs",
+          "verified"
+        ],
+        "type": "object"
+      },
+      "Lp2TranslationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "py2lean",
+              "lean2py"
+            ],
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "direction",
+          "source"
+        ],
+        "type": "object"
+      },
+      "ProblemDetails": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "status": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail"
+        ],
+        "type": "object"
+      },
+      "ProofOutcome": {
+        "discriminator": {
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "axioms": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "certificationTier": {
+                "const": "KERNEL_VERIFIED_TIER5"
+              },
+              "digest": {
+                "type": "string"
+              },
+              "kind": {
+                "const": "certified"
+              },
+              "seal": {
+                "const": "SEAL_KERNEL_VERIFIED_TIER5"
+              },
+              "verified": {
+                "const": true
+              }
+            },
+            "required": [
+              "kind",
+              "seal",
+              "certificationTier",
+              "verified",
+              "digest",
+              "axioms"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "bounds": {
+                "additionalProperties": false,
+                "properties": {
+                  "lower": {
+                    "type": "number"
+                  },
+                  "upper": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "lower",
+                  "upper"
+                ],
+                "type": "object"
+              },
+              "certificate": {
+                "type": "string"
+              },
+              "certificationTier": {
+                "const": "NUMERIC_CERTIFICATE_UNVERIFIED"
+              },
+              "kind": {
+                "const": "numeric-certificate"
+              },
+              "methodUsed": {
+                "enum": [
+                  "interval",
+                  "taylor-model",
+                  "solver"
+                ],
+                "type": "string"
+              },
+              "verified": {
+                "const": false
+              }
+            },
+            "required": [
+              "kind",
+              "certificationTier",
+              "verified",
+              "certificate",
+              "methodUsed"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "certificationTier": {
+                "const": "DEGRADED_FALLBACK_UNVERIFIED"
+              },
+              "kind": {
+                "const": "transport"
+              },
+              "payload": {
+                "additionalProperties": false,
+                "properties": {
+                  "axioms": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "declarationCount": {
+                    "type": "number"
+                  },
+                  "durationMs": {
+                    "type": "number"
+                  },
+                  "theoremName": {
+                    "type": "string"
+                  },
+                  "unprovenCount": {
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              },
+              "source": {
+                "enum": [
+                  "hybrid-adjudicator",
+                  "bridge_fallback"
+                ],
+                "type": "string"
+              },
+              "verified": {
+                "const": false
+              }
+            },
+            "required": [
+              "kind",
+              "certificationTier",
+              "verified",
+              "source",
+              "payload"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "certificationTier": {
+                "const": "SYNTAX_ONLY_UNVERIFIED"
+              },
+              "kind": {
+                "const": "preflight"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "sorryFree": {
+                "type": "boolean"
+              },
+              "syntaxValid": {
+                "type": "boolean"
+              },
+              "verified": {
+                "const": false
+              }
+            },
+            "required": [
+              "kind",
+              "certificationTier",
+              "verified",
+              "syntaxValid",
+              "sorryFree",
+              "reason"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "certificationTier": {
+                "const": "UNAVAILABLE"
+              },
+              "kind": {
+                "const": "unavailable"
+              },
+              "reason": {
+                "enum": [
+                  "client_stub",
+                  "adjudicator_unreachable",
+                  "feature_disabled"
+                ],
+                "type": "string"
+              },
+              "verified": {
+                "const": false
+              }
+            },
+            "required": [
+              "kind",
+              "certificationTier",
+              "verified",
+              "reason"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "certificationTier": {
+                "const": "SYNTAX_ONLY_UNVERIFIED"
+              },
+              "kind": {
+                "const": "metadata"
+              },
+              "note": {
+                "type": "string"
+              },
+              "verified": {
+                "const": false
+              }
+            },
+            "required": [
+              "kind",
+              "certificationTier",
+              "verified",
+              "note"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "ProofReuseQuery": {
+        "additionalProperties": false,
+        "properties": {
+          "goal": {
+            "type": "string"
+          },
+          "leanToolchain": {
+            "type": "string"
+          },
+          "minSimilarity": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "goal",
+          "leanToolchain"
+        ],
+        "type": "object"
+      },
+      "ProofReuseResult": {
+        "additionalProperties": false,
+        "properties": {
+          "certificateSha256": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "dependencies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "goalHash": {
+            "type": "string"
+          },
+          "proof": {
+            "type": "string"
+          },
+          "similarity": {
+            "type": "number"
+          },
+          "sourceDeclaration": {
+            "type": "string"
+          },
+          "warning": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "goalHash",
+          "proof",
+          "certificateSha256",
+          "similarity",
+          "sourceDeclaration",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "ServerHealthzResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "const": "ok"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp"
+        ],
+        "type": "object"
+      },
+      "ServerReadyzResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "kimina": {
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "enum": [
+                  "real",
+                  "simulator",
+                  "auto"
+                ],
+                "type": "string"
+              },
+              "reachable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "mode",
+              "reachable"
+            ],
+            "type": "object"
+          },
+          "runner": {
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "enum": [
+                  "real",
+                  "simulator",
+                  "auto"
+                ],
+                "type": "string"
+              },
+              "reachable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "mode",
+              "reachable"
+            ],
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "not_ready"
+            ],
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "kimina",
+          "runner"
+        ],
+        "type": "object"
+      },
+      "SpeculativeProbeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "character": {
+            "type": "number"
+          },
+          "line": {
+            "type": "number"
+          },
+          "path": {
+            "type": "string"
+          },
+          "tactics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "text": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "number"
+          },
+          "toolchain": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "workspace": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TelemetrySpanPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "span": {
+            "additionalProperties": false,
+            "properties": {
+              "attributes": {
+                "default": {},
+                "type": "object"
+              },
+              "durationMs": {
+                "default": 0,
+                "type": "number"
+              },
+              "endTime": {
+                "type": "number"
+              },
+              "events": {
+                "default": [],
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attributes": {
+                      "type": "object"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "time": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "time"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "name": {
+                "default": "client_span",
+                "type": "string"
+              },
+              "parentSpanId": {
+                "type": "string"
+              },
+              "spanId": {
+                "type": "string"
+              },
+              "startTime": {
+                "type": "number"
+              },
+              "status": {
+                "additionalProperties": false,
+                "default": {
+                  "code": "OK"
+                },
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "OK",
+                      "ERROR",
+                      "UNSET"
+                    ],
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code"
+                ],
+                "type": "object"
+              },
+              "traceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "spanId",
+              "traceId"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "span"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "Canonical REST contracts generated directly from Zod schemas in src/contracts/index.ts with RFC 9457 Problem Details error envelopes.",
+    "title": "Polyglot Code Studio API",
+    "version": "2.3.0-rc"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/lean/consensus": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsensusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsensusAdjudicationResult"
+                }
+              }
+            },
+            "description": "Binding hybrid consensus adjudication result"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Validation error, digest mismatch, or forged evidence rejected"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized access"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Run dual-engine Kimina + Lake consensus verification (server provenance locked)"
+      }
+    },
+    "/api/v1/lean/execute": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeanExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeanExecuteResponse"
+                }
+              }
+            },
+            "description": "Lean snippet execution result"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized access"
+          },
+          "408": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Lean execution timeout"
+          },
+          "502": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Kimina upstream unavailable"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Execute Lean 4 snippet via Kimina proxy"
+      }
+    },
+    "/api/v1/proof/speculative": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeculativeProbeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Speculative probe result (non-certifying)"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid speculative request"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized access"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Toolchain mismatch"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Feature disabled or lean-beam server unavailable"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Non-certifying speculative tactic beam probe via lean-beam"
+      }
+    },
+    "/api/v1/telemetry/spans": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelemetrySpanPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Span recorded"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid telemetry payload"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized access"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Telemetry disabled by feature flag"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Ingest redacted client telemetry span (gated by ENABLE_OTEL_NODE)"
+      }
+    },
+    "/api/v1/translation/lp2": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lp2TranslationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Translated source"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid translation request"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized access"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Feature disabled or LP2 backend unavailable"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Bidirectional LP2 Python/Lean translation (non-certifying)"
+      }
+    },
+    "/healthz": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerHealthzResponse"
+                }
+              }
+            },
+            "description": "Process alive"
+          }
+        },
+        "summary": "Liveness probe"
+      }
+    },
+    "/readyz": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerReadyzResponse"
+                }
+              }
+            },
+            "description": "Kernel backends ready"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerReadyzResponse"
+                }
+              }
+            },
+            "description": "Backend kernel service unreachable or not ready"
+          }
+        },
+        "summary": "Readiness probe for Kimina and isolated Lake runner"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000"
+    }
+  ]
+}

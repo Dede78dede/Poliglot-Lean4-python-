@@ -1,0 +1,4 @@
+name = "consensus"
+defaultTargets = ["Consensus"]
+[[lean_lib]]
+name = "Consensus"

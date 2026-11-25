@@ -78,6 +78,8 @@ export function FileExplorer({ onImportZipClick }: FileExplorerProps): React.JSX
     rawBytes?: Uint8Array;
   } | null>(null);
   const [previewingFile, setPreviewingFile] = useState<{ path: string; content: string } | null>(null);
+  const [pendingDeleteTargets, setPendingDeleteTargets] = useState<string[] | null>(null);
+  const [explorerError, setExplorerError] = useState<string | null>(null);
 
   // Close context menu on outside click
   useEffect(() => {
@@ -129,17 +131,20 @@ export function FileExplorer({ onImportZipClick }: FileExplorerProps): React.JSX
     await deleteFile(path);
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     const targets = selectedPaths.size > 0 ? Array.from(selectedPaths) : (lastSelectedPath ? [lastSelectedPath] : []);
     if (targets.length === 0) return;
+    setPendingDeleteTargets(targets);
+  };
 
-    if (confirm(`Move ${targets.length} item${targets.length === 1 ? '' : 's'} to trash?`)) {
-      for (const p of targets) {
-        await handleSoftDelete(p);
-      }
-      setSelectedPaths(new Set());
-      setLastSelectedPath(null);
+  const handleConfirmDeleteSelected = async () => {
+    if (!pendingDeleteTargets) return;
+    for (const p of pendingDeleteTargets) {
+      await handleSoftDelete(p);
     }
+    setPendingDeleteTargets(null);
+    setSelectedPaths(new Set());
+    setLastSelectedPath(null);
   };
 
   // Rename commit
@@ -192,8 +197,9 @@ export function FileExplorer({ onImportZipClick }: FileExplorerProps): React.JSX
       a.download = `${currentProject.name || 'project'}_archive.zip`;
       a.click();
       URL.revokeObjectURL(url);
+      setExplorerError(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to create archive');
+      setExplorerError(err instanceof Error ? err.message : 'Failed to create archive');
     }
   };
 
@@ -437,6 +443,46 @@ export function FileExplorer({ onImportZipClick }: FileExplorerProps): React.JSX
         </div>
       </div>
 
+      {explorerError && (
+        <div
+          role="alert"
+          className="px-3 py-1.5 bg-rose-950/60 border-b border-rose-800 text-[11px] text-rose-200 flex items-center justify-between gap-2 shrink-0"
+        >
+          <span className="truncate">{explorerError}</span>
+          <button
+            type="button"
+            onClick={() => setExplorerError(null)}
+            className="text-rose-300 hover:text-white shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {pendingDeleteTargets && (
+        <div className="px-3 py-2 bg-amber-950/50 border-b border-amber-800 text-[11px] text-amber-100 flex items-center justify-between gap-2 shrink-0">
+          <span>
+            Move {pendingDeleteTargets.length} item{pendingDeleteTargets.length === 1 ? '' : 's'} to trash?
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => void handleConfirmDeleteSelected()}
+              className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-medium"
+            >
+              Confirm
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingDeleteTargets(null)}
+              className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-slate-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* New file input prompt */}
       {isCreatingFile && (
         <form
@@ -601,7 +647,7 @@ export function FileExplorer({ onImportZipClick }: FileExplorerProps): React.JSX
                 type="button"
                 role="menuitem"
                 onClick={() => {
-                  void handleDeleteSelected();
+                  handleDeleteSelected();
                   setContextMenu(null);
                 }}
                 className="flex items-center justify-between w-full px-2.5 py-1.5 rounded hover:bg-rose-950 text-rose-300 text-left transition-colors"

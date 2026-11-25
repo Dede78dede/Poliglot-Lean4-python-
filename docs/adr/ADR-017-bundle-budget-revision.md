@@ -59,4 +59,9 @@ The Architecture Review Board approves the following revised bundle budget and a
 ---
 
 ## 4. Verification & CI Tooling
-The updated budget limits are codified in `scripts/measure-bundle.ts` and validated via automated test suites.
+The bundle metrics and O3 chunk-sum consistency check are codified in `scripts/measure-bundle.ts` and validated via automated test suites.
+
+---
+
+## 5. Superseded KB Hard Failure Caps (Full Workspace Activation)
+With full end-to-end activation of the Editor, Pyodide runtime, FEMEV workspace, Monaco DiffViewer, Blueprint DAG, Yjs Collaboration, and RBAC Auth Shell, static KB failure caps (80/180/200/260/290 KB) are retired cleanly in favor of telemetry reporting (`advisoryWarnings`), mandatory lazy `React.lazy()` chunking (`>= 3` route/feature chunks), Vite 8 Rolldown `codeSplitting.groups`, and strict **O3 chunk-sum accounting consistency (`<= 0.50 KB`)**.

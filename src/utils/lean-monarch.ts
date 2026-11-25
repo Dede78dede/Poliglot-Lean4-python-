@@ -1,11 +1,21 @@
-import type { languages } from 'monaco-editor';
-
 /**
  * Monaco Monarch syntax highlighter for Lean 4.
  * Provides rich syntax highlighting for keywords, tactics, commands, and Unicode symbols
  * as a robust native fallback or primary tokenizer in browser environments.
  */
-export const LEAN4_MONARCH_LANGUAGE: languages.IMonarchLanguage = {
+export interface MonarchLanguageDefinition {
+  defaultToken: string;
+  tokenPostfix?: string;
+  keywords: string[];
+  tactics: string[];
+  commands: string[];
+  operators: string[];
+  symbols: RegExp;
+  tokenizer: Record<string, unknown[]>;
+  [key: string]: unknown;
+}
+
+export const LEAN4_MONARCH_LANGUAGE: MonarchLanguageDefinition = {
   defaultToken: '',
   tokenPostfix: '.lean',
 

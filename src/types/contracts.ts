@@ -169,3 +169,115 @@ export const ConfigProposalSchema = z.object({
   evidence: z.record(z.string(), z.unknown()),
   createdAt: z.string(),
 });
+
+/**
+ * Dual-Engine Consensus Verification Request Schema (polyglot.verification.v1)
+ */
+export const ConsensusProjectFileSchema = z.object({
+  path: z.string().min(1),
+  content: z.string(),
+}).strict();
+
+export const ConsensusEnvironmentSchema = z.object({
+  leanToolchain: z.string().min(1),
+  kiminaImageDigest: z.string().optional(),
+  lakeRunnerImageDigest: z.string().optional(),
+  manifestDigest: z.string().optional(),
+}).strict();
+
+export const ConsensusRequestSchema = z.object({
+  protocolVersion: z.literal('polyglot.verification.v1'),
+  requestId: z.string().min(1),
+  scope: z.enum(['snippet', 'project']),
+  sourceDigest: z.string().min(1),
+  contextDigest: z.string().optional(),
+  targetIds: z.array(z.string()).optional(),
+  code: z.string().optional(),
+  files: z.array(ConsensusProjectFileSchema).optional(),
+  sessionId: z.string().uuid().optional(),
+  timeoutMs: z.number().int().positive().max(300_000).optional(),
+  environment: ConsensusEnvironmentSchema,
+  axiomPolicyId: z.string().default('polyglot.axioms.standard.v1'),
+  requireConsensus: z.boolean().default(true),
+}).strict();
+
+export type ConsensusRequest = z.infer<typeof ConsensusRequestSchema>;
+
+export const ConsensusAdjudicationResultSchema = z.object({
+  protocolVersion: z.literal('polyglot.verification.v1'),
+  requestId: z.string(),
+  verdict: z.enum(['confirmed_valid', 'confirmed_invalid', 'unconfirmed']),
+  verified: z.boolean(),
+  seal: z.literal('SEAL_KERNEL_VERIFIED_TIER5').nullable(),
+  axiomPolicyCompliance: z.boolean(),
+  enginesConsulted: z.array(z.string()),
+  consensusAchieved: z.boolean(),
+  reason: z.string(),
+  diagnostics: z.array(z.unknown()),
+}).strict();
+
+export const ServerHealthzResponseSchema = z.object({
+  status: z.literal('ok'),
+  timestamp: z.string(),
+}).strict();
+
+export const ServerReadyzEngineStatusSchema = z.object({
+  mode: z.enum(['real', 'simulator', 'auto']),
+  reachable: z.boolean(),
+}).strict();
+
+export const ServerReadyzResponseSchema = z.object({
+  status: z.enum(['ready', 'not_ready']),
+  timestamp: z.string().optional(),
+  error: z.string().optional(),
+  kimina: ServerReadyzEngineStatusSchema,
+  runner: ServerReadyzEngineStatusSchema,
+}).strict();
+
+/**
+ * Telemetry ingestion and retrieval strict schemas.
+ */
+export const TelemetrySpanEventSchema = z.object({
+  name: z.string().min(1),
+  time: z.number(),
+  attributes: z.record(z.string(), z.unknown()).optional(),
+}).strict();
+
+export const TelemetrySpanPayloadSchema = z.object({
+  span: z.object({
+    spanId: z.string().min(1),
+    traceId: z.string().min(1),
+    parentSpanId: z.string().optional(),
+    name: z.string().min(1).default('client_span'),
+    startTime: z.number().optional(),
+    endTime: z.number().optional(),
+    durationMs: z.number().nonnegative().default(0),
+    attributes: z.record(z.string(), z.unknown()).default({}),
+    status: z.object({
+      code: z.enum(['OK', 'ERROR', 'UNSET']),
+      message: z.string().optional(),
+    }).strict().default({ code: 'OK' }),
+    events: z.array(TelemetrySpanEventSchema).default([]),
+  }).strict(),
+}).strict();
+
+/**
+ * Speculative Probe (LeanBeam) & LP2 Translation strict request schemas.
+ */
+export const SpeculativeProbeRequestSchema = z.object({
+  path: z.string().optional(),
+  version: z.number().int().optional(),
+  line: z.number().int().optional(),
+  character: z.number().int().optional(),
+  text: z.string().optional(),
+  tactics: z.array(z.string()).max(8).optional(),
+  workspace: z.string().optional(),
+  toolchain: z.string().optional(),
+  timeoutMs: z.number().int().min(50).max(5_000).optional(),
+}).strict();
+
+export const Lp2TranslationRequestSchema = z.object({
+  direction: z.enum(['py2lean', 'lean2py']),
+  source: z.string().min(1),
+}).strict();
+

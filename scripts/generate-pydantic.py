@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
 
 def generate_pydantic_models(contracts_json_path: Path, output_py_path: Path) -> None:
     """Read exported JSON schemas and emit Python 3.14 Pydantic v2 code."""
     with open(contracts_json_path, encoding="utf-8") as f:
-        schemas: dict[str, Any] = json.load(f)
+        json.load(f)
 
     lines: list[str] = [
         '"""Generated Pydantic v2 boundary contracts.',

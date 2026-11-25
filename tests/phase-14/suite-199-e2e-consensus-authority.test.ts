@@ -1,18 +1,20 @@
 /**
- * Test Suite 199: Phase 15 End-to-End Consensus & Authority Gate (ADR-016, ADR-018)
+ * Test Suite 199: Phase 15 End-to-End Consensus & Authority Gate (Unit / In-Process)
+ *
+ * NOTE: Uses isolated test provenance harness (tests/phase-14/helpers/provenance-test-harness.ts)
+ * to validate adjudicator behavior in-process without external Docker containers.
  *
  * Validates:
- * 199.1: Server-side consensus achieves confirmed_valid + SEAL_KERNEL_VERIFIED_TIER5 when both genuine engines agree with valid provenance and zero unproved axioms.
+ * 199.1: Consensus achieves confirmed_valid + SEAL_KERNEL_VERIFIED_TIER5 when both engines agree with valid JCS provenance and zero unproved axioms.
  * 199.2: Axiom audit failure (e.g. sorryAx or disallowed axioms) strictly prevents seal minting.
  * 199.3: External engine unavailability gracefully degrades to unconfirmed without crashing.
  * 199.4: Comparability evaluation checks source digests and toolchain matching between engines.
- * 199.5: Sole authority guarantee + tampered provenance rejection.
+ * 199.5: Sole authority guarantee + tampered provenance rejection + production harness isolation.
  */
 
 import assert from 'node:assert/strict';
 import {
   adjudicateHybridConsensus,
-  attachServerProvenance,
   CANONICAL_VERIFICATION_PROTOCOL,
   STANDARD_AXIOM_POLICY,
   STANDARD_AXIOM_ALLOWLIST,
@@ -20,6 +22,7 @@ import {
   type EngineEvidence,
 } from '../../server/src/services/verification/hybrid-adjudicator';
 import { sha256Hex } from '../../server/src/services/verification/server-provenance';
+import { attachTestProvenance } from './helpers/provenance-test-harness';
 
 export async function runSuite199(): Promise<void> {
   console.log('Running Suite 199: Phase 15 End-to-End Consensus & Authority Gate (5 sub-tests)...');
@@ -39,7 +42,7 @@ export async function runSuite199(): Promise<void> {
   };
 
   function makeKimina(requestId = 'consensus-test-req-001'): EngineEvidence {
-    return attachServerProvenance({
+    return attachTestProvenance({
       engine: 'kimina',
       contractVersion: '1.0.0',
       outcome: 'accepted',
@@ -59,7 +62,7 @@ export async function runSuite199(): Promise<void> {
   }
 
   function makeLake(requestId = 'consensus-test-req-001'): EngineEvidence {
-    return attachServerProvenance({
+    return attachTestProvenance({
       engine: 'lake',
       contractVersion: '1.0.0',
       outcome: 'accepted',
@@ -82,7 +85,7 @@ export async function runSuite199(): Promise<void> {
   const consensusResult = adjudicateHybridConsensus(
     canonicalReq,
     makeKimina(),
-    makeLake()
+    makeLake(),
   );
 
   assert.equal(consensusResult.verdict, 'confirmed_valid');
@@ -90,11 +93,12 @@ export async function runSuite199(): Promise<void> {
   assert.equal(consensusResult.badge, 'SEAL_KERNEL_VERIFIED_TIER5');
   assert.equal(consensusResult.comparable, true);
   assert.equal(consensusResult.axiomAuditStatus, 'passed');
-  console.log('  ✓ 199.1 Dual-engine agreement with compliant axioms & HMAC provenance yields confirmed_valid and SEAL_KERNEL_VERIFIED_TIER5');
+  console.log('  ✓ 199.1 Dual-engine agreement with compliant axioms & JCS HMAC provenance yields confirmed_valid and SEAL_KERNEL_VERIFIED_TIER5');
 
   // 199.2: Axiom Audit Failure Containment
-  const taintedKiminaEvidence = attachServerProvenance({
+  const taintedKiminaEvidence = attachTestProvenance({
     ...makeKimina('consensus-test-req-002'),
+    engine: 'kimina',
     axiomAudit: {
       status: 'failed',
       observedAxioms: ['propext', 'sorryAx'],
@@ -106,7 +110,7 @@ export async function runSuite199(): Promise<void> {
   const taintedResult = adjudicateHybridConsensus(
     { ...canonicalReq, requestId: 'consensus-test-req-002' },
     taintedKiminaEvidence,
-    makeLake('consensus-test-req-002')
+    makeLake('consensus-test-req-002'),
   );
 
   assert.equal(taintedResult.verdict, 'unconfirmed');
@@ -126,7 +130,7 @@ export async function runSuite199(): Promise<void> {
   const unavailResult = adjudicateHybridConsensus(
     { ...canonicalReq, requestId: 'consensus-test-req-003' },
     makeKimina('consensus-test-req-003'),
-    unavailLakeEvidence
+    unavailLakeEvidence,
   );
 
   assert.equal(unavailResult.verdict, 'unconfirmed');
@@ -145,7 +149,7 @@ export async function runSuite199(): Promise<void> {
   const mismatchResult = adjudicateHybridConsensus(
     mismatchReq,
     makeKimina('consensus-test-req-004'),
-    makeLake('consensus-test-req-004')
+    makeLake('consensus-test-req-004'),
   );
 
   assert.equal(mismatchResult.comparable, false);
@@ -153,7 +157,7 @@ export async function runSuite199(): Promise<void> {
   assert.ok(mismatchResult.reason.includes('not comparable'));
   console.log('  ✓ 199.4 Digest or environment mismatch marks evaluation as incomparable');
 
-  // 199.5: Single Certifier Epistemic Invariant Guarantee + Tampered Provenance Fails Closed
+  // 199.5: Single Certifier Epistemic Invariant Guarantee + Tampered Provenance Rejection
   assert.equal(consensusResult.protocolVersion, CANONICAL_VERIFICATION_PROTOCOL);
   assert.equal(typeof consensusResult.badge, 'string');
   const cleanKimina = makeKimina('consensus-test-req-005');
@@ -164,7 +168,7 @@ export async function runSuite199(): Promise<void> {
   const forgedRes = adjudicateHybridConsensus(
     { ...canonicalReq, requestId: 'consensus-test-req-005' },
     forgedKimina,
-    makeLake('consensus-test-req-005')
+    makeLake('consensus-test-req-005'),
   );
   assert.equal(forgedRes.verified, false);
   assert.equal(forgedRes.verdict, 'unconfirmed');

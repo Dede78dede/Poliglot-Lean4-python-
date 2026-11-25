@@ -23,7 +23,8 @@ Strict boundaries: extra='forbid', discriminated unions on 'ok' and 'kind'.
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal
+
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag
 `;
 
@@ -71,10 +72,8 @@ class ResultEnvelopeFailure(PolyglotBaseModel):
 
 # Discriminated union on 'ok'
 ResultEnvelope = Annotated[
-    Union[
-        Annotated[ResultEnvelopeSuccess, Tag(True)],
-        Annotated[ResultEnvelopeFailure, Tag(False)],
-    ],
+    Annotated[ResultEnvelopeSuccess, Tag(True)]
+    | Annotated[ResultEnvelopeFailure, Tag(False)],
     Discriminator('ok'),
 ]
 
@@ -168,14 +167,12 @@ class ProofOutcomeMetadata(PolyglotBaseModel):
 
 # Discriminated union on 'kind'
 ProofOutcome = Annotated[
-    Union[
-        Annotated[ProofOutcomeCertified, Tag('certified')],
-        Annotated[ProofOutcomeNumericCertificate, Tag('numeric-certificate')],
-        Annotated[ProofOutcomeTransport, Tag('transport')],
-        Annotated[ProofOutcomePreflight, Tag('preflight')],
-        Annotated[ProofOutcomeUnavailable, Tag('unavailable')],
-        Annotated[ProofOutcomeMetadata, Tag('metadata')],
-    ],
+    Annotated[ProofOutcomeCertified, Tag('certified')]
+    | Annotated[ProofOutcomeNumericCertificate, Tag('numeric-certificate')]
+    | Annotated[ProofOutcomeTransport, Tag('transport')]
+    | Annotated[ProofOutcomePreflight, Tag('preflight')]
+    | Annotated[ProofOutcomeUnavailable, Tag('unavailable')]
+    | Annotated[ProofOutcomeMetadata, Tag('metadata')],
     Discriminator('kind'),
 ]
 

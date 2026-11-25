@@ -71,7 +71,7 @@ export const DEFAULT_SETTINGS: Readonly<PolyglotSettings> = Object.freeze({
   mcp: {
     serverEnabled: true,
     httpTransportEnabled: false,
-    bearerToken: 'polyglot-mcp-token',
+    bearerToken: '',
     toolSearchEnabled: false,
     gateway: 'none' as const,
   },
@@ -95,6 +95,21 @@ export const DEFAULT_SETTINGS: Readonly<PolyglotSettings> = Object.freeze({
     enableCorrelationHeaders: true,
   },
 });
+
+let ephemeralVaultKey: string | null = null;
+function getEphemeralVaultPassphrase(): string {
+  if (ephemeralVaultKey) return ephemeralVaultKey;
+  const bytes = new Uint8Array(24);
+  if (typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.getRandomValues === 'function') {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  ephemeralVaultKey = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return ephemeralVaultKey;
+}
 
 export interface SettingsStoreSnapshot {
   readonly settings: PolyglotSettings;
@@ -125,6 +140,7 @@ export class SettingsStore extends ExternalStoreBase<SettingsStoreSnapshot> {
       persistToIndexedDb: false,
     });
     this.settings = this.loadInitialSettings();
+    applyThemeToDocument(this.settings.appearance.theme);
   }
 
   protected computeSnapshot(): SettingsStoreSnapshot {
@@ -155,6 +171,16 @@ export class SettingsStore extends ExternalStoreBase<SettingsStoreSnapshot> {
       }
     }
     return loaded;
+  }
+
+  public applyServerSettings(remoteSettings: PolyglotSettings): void {
+    const validated = PolyglotSettingsSchema.safeParse(remoteSettings);
+    if (!validated.success) return;
+    this.settings = validated.data;
+    syncFlagsToRegistry(this.settings.flags);
+    applyThemeToDocument(this.settings.appearance.theme);
+    this.persist();
+    this.notify();
   }
 
   public openModal(category: SettingsCategory = 'editor'): void {
@@ -198,24 +224,24 @@ export class SettingsStore extends ExternalStoreBase<SettingsStoreSnapshot> {
 
     // If flags updated, sync to FeatureFlagRegistry
     if (category === 'flags') {
-      for (const [k, v] of Object.entries(patch as Record<string, boolean>)) {
-        try {
-          featureFlagRegistry.set(k as any, v);
-        } catch {
-          // Ignore
-        }
-      }
+      syncFlagsToRegistry(patch as Record<string, boolean>);
+    }
+    if (category === 'appearance') {
+      applyThemeToDocument(this.settings.appearance.theme);
     }
 
     this.persist();
     this.notify();
   }
 
-  public updateProviderCredential(providerId: string, apiKey: string): void {
+  public updateProviderCredential(providerId: string, apiKey: string, passphrase?: string): void {
     this.snapshotForUndo(`Updated credentials for ${providerId}`);
-    void tokenVault.storeSecret(providerId, apiKey, 'polyglot-default-pass', {
-      label: `API key for ${providerId}`,
-    });
+    if (apiKey) {
+      const vaultKey = passphrase && passphrase.length >= 4 ? passphrase : getEphemeralVaultPassphrase();
+      void tokenVault.storeSecret(providerId, apiKey, vaultKey, {
+        label: `API key for ${providerId}`,
+      });
+    }
 
     if (this.settings.providers[providerId]) {
       this.settings.providers[providerId].apiKey = apiKey ? '••••••••' : undefined;
@@ -277,6 +303,9 @@ export class SettingsStore extends ExternalStoreBase<SettingsStoreSnapshot> {
       default:
         break;
     }
+    if (category === 'appearance') {
+      applyThemeToDocument(this.settings.appearance.theme);
+    }
     this.persist();
     this.notify();
   }
@@ -291,6 +320,8 @@ export class SettingsStore extends ExternalStoreBase<SettingsStoreSnapshot> {
       }
     }
     this.persist();
+    syncFlagsToRegistry(this.settings.flags);
+    applyThemeToDocument(this.settings.appearance.theme);
     this.notify();
   }
 
@@ -304,6 +335,8 @@ export class SettingsStore extends ExternalStoreBase<SettingsStoreSnapshot> {
       const validated = PolyglotSettingsSchema.parse(parsed); // Strict check: unknown keys rejected
       this.snapshotForUndo('Imported settings from JSON');
       this.settings = validated;
+      syncFlagsToRegistry(this.settings.flags);
+      applyThemeToDocument(this.settings.appearance.theme);
       this.persist();
       this.notify();
       return { success: true };
@@ -341,6 +374,38 @@ export class SettingsStore extends ExternalStoreBase<SettingsStoreSnapshot> {
       } catch {
         // Ignore in test environments
       }
+    }
+  }
+}
+
+export function applyThemeToDocument(theme: AppearanceSettings['theme']): void {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  let resolved: 'dark' | 'light' | 'high-contrast' = 'dark';
+  if (theme === 'system') {
+    const prefersDark =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+    resolved = prefersDark ? 'dark' : 'light';
+  } else {
+    resolved = theme;
+  }
+
+  root.dataset.theme = resolved;
+  if (resolved === 'light') {
+    root.classList.remove('dark');
+  } else {
+    root.classList.add('dark');
+  }
+}
+
+export function syncFlagsToRegistry(flags: Record<string, boolean>): void {
+  for (const [key, val] of Object.entries(flags)) {
+    try {
+      featureFlagRegistry.set(key as Parameters<typeof featureFlagRegistry.set>[0], val);
+    } catch {
+      // Ignore unknown flags safely
     }
   }
 }

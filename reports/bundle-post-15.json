@@ -1,6 +1,12 @@
 {
-  "timestamp": "2026-11-14T18:33:49.824Z",
+  "timestamp": "2026-11-24T19:49:29.176Z",
   "phase": "2.3.0-rc",
+  "provenance": {
+    "gitSha": "UNAVAILABLE_NO_GIT",
+    "nodeVersion": "v22.23.5",
+    "lockfileSha256": "9aac9e7109d730ab21714d523aa99361dd8ac0a5f329a1ef5b8e9eaff1db942f",
+    "command": "npm run build && npm run bundle:measure"
+  },
   "methodology": {
     "scope": "dist/assets",
     "compression": "zlib.gzipSync (default)",
@@ -9,6 +15,7 @@
     "initialLoadSource": "dist/index.html"
   },
   "budgetLimits": {
+    "enforcement": "retired-full-workspace",
     "mainBundleGzipMaxKb": 180,
     "totalJsGzipMaxKb": 290,
     "maxSingleChunkGzipKb": 100,
@@ -16,175 +23,500 @@
     "maxAccountingDiscrepancyKb": 0.5
   },
   "measured": {
-    "mainEntryGzipKb": 38.42,
-    "totalJsGzipKb": 234.37,
-    "totalJsRawKb": 785.6,
-    "cssGzipKb": 16.54,
-    "htmlGzipKb": 0.91,
-    "initialLoadGzipKb": 169.61,
-    "maxSingleChunkGzipKb": 55.67,
+    "mainEntryGzipKb": 58.66,
+    "totalJsGzipKb": 447.69,
+    "totalJsRawKb": 1616.97,
+    "cssGzipKb": 16.71,
+    "htmlGzipKb": 1.77,
+    "initialLoadGzipKb": 208.76,
+    "maxSingleChunkGzipKb": 58.66,
     "accountingDiscrepancyKb": 0.02
   },
   "initialLoadChunks": [
-    "index-CeJUZ7a0.js",
-    "rolldown-runtime-hePW80VL.js",
-    "react-vendor-DAUJOu26.js",
-    "aria-vendor-pgwtFOX1.js",
-    "icons-vendor-CZzsirrs.js",
-    "zod-vendor-wQCyJjKA.js"
+    "index-C-oUCOVA.js",
+    "rolldown-runtime-XKyaHtl9.js",
+    "react-vendor-WVuSS3nR.js",
+    "aria-vendor-wQ71rXuA.js",
+    "icons-vendor-BXC1ohAd.js",
+    "external-store-base-B9jvHKDF.js",
+    "api-client-DtciBHZg.js",
+    "provider-capabilities-BQkHbMJw.js",
+    "zod-vendor-CrPT3OgE.js",
+    "PyodideContext-B1x0hyGO.js",
+    "browser-C8cc1i9H.js",
+    "project-repository-26PkNEbI.js",
+    "preload-helper-7y9sWmk5.js"
   ],
   "chunks": [
     {
-      "name": "react-vendor-DAUJOu26.js",
+      "name": "index-C-oUCOVA.js",
+      "gzipKb": 58.66
+    },
+    {
+      "name": "react-vendor-WVuSS3nR.js",
       "gzipKb": 55.67
     },
     {
-      "name": "aria-vendor-pgwtFOX1.js",
-      "gzipKb": 47.67
+      "name": "aria-vendor-wQ71rXuA.js",
+      "gzipKb": 47.66
     },
     {
-      "name": "index-CeJUZ7a0.js",
-      "gzipKb": 38.42
+      "name": "yjs-runtime-C9uVI9y3.js",
+      "gzipKb": 25.15
     },
     {
-      "name": "yjs-runtime-BWtVk4IZ.js",
-      "gzipKb": 24.99
+      "name": "zod-vendor-CrPT3OgE.js",
+      "gzipKb": 24.71
     },
     {
-      "name": "zod-vendor-wQCyJjKA.js",
-      "gzipKb": 24.73
-    },
-    {
-      "name": "CommandPalette-DUIt3zHS.js",
+      "name": "CommandPalette-tnGGvnOj.js",
       "gzipKb": 19.55
     },
     {
-      "name": "RecommendationsPanel-CWueqRN3.js",
+      "name": "FemevDrawer-CTmMsIUL.js",
+      "gzipKb": 18.21
+    },
+    {
+      "name": "ProjectDiscoveryModal-CVaN9WGN.js",
+      "gzipKb": 17.88
+    },
+    {
+      "name": "PaperproofPanel-bZJpPWFq.js",
+      "gzipKb": 10.98
+    },
+    {
+      "name": "ChatPanel-jYkS9V3m.js",
+      "gzipKb": 10.07
+    },
+    {
+      "name": "FileExplorer-rUrwoVzr.js",
+      "gzipKb": 8.86
+    },
+    {
+      "name": "ProofAutomationPanel-DmCSPbok.js",
+      "gzipKb": 8.83
+    },
+    {
+      "name": "BlueprintWorkspaceModal-CGQeYosr.js",
+      "gzipKb": 8.55
+    },
+    {
+      "name": "FEMEVView-9GHJqo0v.js",
+      "gzipKb": 7.91
+    },
+    {
+      "name": "icons-vendor-BXC1ohAd.js",
+      "gzipKb": 7.86
+    },
+    {
+      "name": "AutoCorrectionPanel-bSP_11IO.js",
+      "gzipKb": 7.81
+    },
+    {
+      "name": "SecretsManager-Bk9MkKV1.js",
+      "gzipKb": 7.67
+    },
+    {
+      "name": "McpToolsDrawer-CCm6lfid.js",
+      "gzipKb": 6.64
+    },
+    {
+      "name": "FiveTierMemoryDrawer-eaXONr9q.js",
+      "gzipKb": 6.58
+    },
+    {
+      "name": "browser-C8cc1i9H.js",
+      "gzipKb": 5.94
+    },
+    {
+      "name": "StorageModal-R4fUUwoI.js",
+      "gzipKb": 5.77
+    },
+    {
+      "name": "InteractionPanel-D5IfEEki.js",
+      "gzipKb": 5.68
+    },
+    {
+      "name": "SettingsModal-BENqKuUD.js",
+      "gzipKb": 5.62
+    },
+    {
+      "name": "EditorPane-VKxGx84Z.js",
+      "gzipKb": 5.17
+    },
+    {
+      "name": "BlueprintCanvas-BM3R7g96.js",
+      "gzipKb": 4.92
+    },
+    {
+      "name": "monaco-vendor-BSstJ1EZ.js",
+      "gzipKb": 4.64
+    },
+    {
+      "name": "AuthModal-Cfi8GpTS.js",
+      "gzipKb": 4.56
+    },
+    {
+      "name": "RecommendationsPanel-CNJr8a6l.js",
       "gzipKb": 4.2
     },
     {
-      "name": "NotebookPanel-DMF-8Ti-.js",
-      "gzipKb": 3.79
+      "name": "NotebookPanel-B6fWuev1.js",
+      "gzipKb": 4.04
     },
     {
-      "name": "showcase-C7bdbdkx.js",
-      "gzipKb": 3.63
+      "name": "LSpecPanel-CycWNjGd.js",
+      "gzipKb": 3.85
     },
     {
-      "name": "FEMEVView-jMmvz5JN.js",
-      "gzipKb": 3.61
+      "name": "NewProjectModal-DVjuEDKj.js",
+      "gzipKb": 3.82
     },
     {
-      "name": "CollaborationPanel-BD67GYlO.js",
-      "gzipKb": 2.87
+      "name": "showcase-DB8LGiIJ.js",
+      "gzipKb": 3.62
     },
     {
-      "name": "icons-vendor-CZzsirrs.js",
-      "gzipKb": 2.7
+      "name": "lean-beam-client-BKf0EYWo.js",
+      "gzipKb": 3.42
     },
     {
-      "name": "y-monaco-CGyk9QaK.js",
+      "name": "project-repository-26PkNEbI.js",
+      "gzipKb": 3.29
+    },
+    {
+      "name": "CollaborationPanel-DHSkXI2V.js",
+      "gzipKb": 3.06
+    },
+    {
+      "name": "ProjectDrawer-Bi6JVtTD.js",
+      "gzipKb": 2.97
+    },
+    {
+      "name": "DiffViewer-Dqx6lm2_.js",
+      "gzipKb": 1.68
+    },
+    {
+      "name": "pyodide.worker-B2nCyk7a.js",
+      "gzipKb": 1.68
+    },
+    {
+      "name": "ArchonPanel-q8g4LSDW.js",
+      "gzipKb": 1.56
+    },
+    {
+      "name": "y-monaco-BIxA6V-4.js",
       "gzipKb": 1.48
     },
     {
-      "name": "tabs-CvKYdVyV.js",
+      "name": "PyodideContext-B1x0hyGO.js",
+      "gzipKb": 1.42
+    },
+    {
+      "name": "provider-capabilities-BQkHbMJw.js",
+      "gzipKb": 1.07
+    },
+    {
+      "name": "ai-provider-registry-CvguTio0.js",
+      "gzipKb": 0.98
+    },
+    {
+      "name": "api-client-DtciBHZg.js",
+      "gzipKb": 0.85
+    },
+    {
+      "name": "preload-helper-7y9sWmk5.js",
+      "gzipKb": 0.81
+    },
+    {
+      "name": "tabs-Bhh7i8dc.js",
       "gzipKb": 0.66
     },
     {
-      "name": "rolldown-runtime-hePW80VL.js",
+      "name": "proof-search-validator-Bhy0sURA.js",
+      "gzipKb": 0.55
+    },
+    {
+      "name": "rolldown-runtime-XKyaHtl9.js",
       "gzipKb": 0.42
+    },
+    {
+      "name": "external-store-base-B9jvHKDF.js",
+      "gzipKb": 0.4
+    },
+    {
+      "name": "__vite-browser-external_node_crypto-bVB6h38M.js",
+      "gzipKb": 0.33
     }
   ],
   "files": {
-    "CollaborationPanel-BD67GYlO.js": {
-      "rawBytes": 11044,
-      "gzipBytes": 2940,
-      "gzipKb": 2.87
+    "ArchonPanel-q8g4LSDW.js": {
+      "rawBytes": 4692,
+      "gzipBytes": 1598,
+      "gzipKb": 1.56
     },
-    "CommandPalette-DUIt3zHS.js": {
-      "rawBytes": 61249,
-      "gzipBytes": 20018,
+    "AuthModal-Cfi8GpTS.js": {
+      "rawBytes": 24647,
+      "gzipBytes": 4668,
+      "gzipKb": 4.56
+    },
+    "AutoCorrectionPanel-bSP_11IO.js": {
+      "rawBytes": 33663,
+      "gzipBytes": 7995,
+      "gzipKb": 7.81
+    },
+    "BlueprintCanvas-BM3R7g96.js": {
+      "rawBytes": 19553,
+      "gzipBytes": 5042,
+      "gzipKb": 4.92
+    },
+    "BlueprintWorkspaceModal-CGQeYosr.js": {
+      "rawBytes": 42570,
+      "gzipBytes": 8755,
+      "gzipKb": 8.55
+    },
+    "ChatPanel-jYkS9V3m.js": {
+      "rawBytes": 38097,
+      "gzipBytes": 10313,
+      "gzipKb": 10.07
+    },
+    "CollaborationPanel-DHSkXI2V.js": {
+      "rawBytes": 11446,
+      "gzipBytes": 3134,
+      "gzipKb": 3.06
+    },
+    "CommandPalette-tnGGvnOj.js": {
+      "rawBytes": 61247,
+      "gzipBytes": 20021,
       "gzipKb": 19.55
     },
-    "FEMEVView-jMmvz5JN.js": {
-      "rawBytes": 17636,
-      "gzipBytes": 3692,
-      "gzipKb": 3.61
+    "DiffViewer-Dqx6lm2_.js": {
+      "rawBytes": 5230,
+      "gzipBytes": 1718,
+      "gzipKb": 1.68
     },
-    "NotebookPanel-DMF-8Ti-.js": {
-      "rawBytes": 13641,
-      "gzipBytes": 3877,
-      "gzipKb": 3.79
+    "EditorPane-VKxGx84Z.js": {
+      "rawBytes": 13153,
+      "gzipBytes": 5296,
+      "gzipKb": 5.17
     },
-    "RecommendationsPanel-CWueqRN3.js": {
+    "FEMEVView-9GHJqo0v.js": {
+      "rawBytes": 35212,
+      "gzipBytes": 8096,
+      "gzipKb": 7.91
+    },
+    "FemevDrawer-CTmMsIUL.js": {
+      "rawBytes": 88620,
+      "gzipBytes": 18648,
+      "gzipKb": 18.21
+    },
+    "FileExplorer-rUrwoVzr.js": {
+      "rawBytes": 40577,
+      "gzipBytes": 9072,
+      "gzipKb": 8.86
+    },
+    "FiveTierMemoryDrawer-eaXONr9q.js": {
+      "rawBytes": 29888,
+      "gzipBytes": 6736,
+      "gzipKb": 6.58
+    },
+    "InteractionPanel-D5IfEEki.js": {
+      "rawBytes": 22122,
+      "gzipBytes": 5817,
+      "gzipKb": 5.68
+    },
+    "LSpecPanel-CycWNjGd.js": {
+      "rawBytes": 13603,
+      "gzipBytes": 3943,
+      "gzipKb": 3.85
+    },
+    "McpToolsDrawer-CCm6lfid.js": {
+      "rawBytes": 28589,
+      "gzipBytes": 6798,
+      "gzipKb": 6.64
+    },
+    "NewProjectModal-DVjuEDKj.js": {
+      "rawBytes": 13738,
+      "gzipBytes": 3914,
+      "gzipKb": 3.82
+    },
+    "NotebookPanel-B6fWuev1.js": {
+      "rawBytes": 14720,
+      "gzipBytes": 4135,
+      "gzipKb": 4.04
+    },
+    "PaperproofPanel-bZJpPWFq.js": {
+      "rawBytes": 40066,
+      "gzipBytes": 11240,
+      "gzipKb": 10.98
+    },
+    "ProjectDiscoveryModal-CVaN9WGN.js": {
+      "rawBytes": 66662,
+      "gzipBytes": 18311,
+      "gzipKb": 17.88
+    },
+    "ProjectDrawer-Bi6JVtTD.js": {
+      "rawBytes": 12414,
+      "gzipBytes": 3040,
+      "gzipKb": 2.97
+    },
+    "ProofAutomationPanel-DmCSPbok.js": {
+      "rawBytes": 42813,
+      "gzipBytes": 9041,
+      "gzipKb": 8.83
+    },
+    "PyodideContext-B1x0hyGO.js": {
+      "rawBytes": 3650,
+      "gzipBytes": 1451,
+      "gzipKb": 1.42
+    },
+    "RecommendationsPanel-CNJr8a6l.js": {
       "rawBytes": 15293,
-      "gzipBytes": 4296,
+      "gzipBytes": 4299,
       "gzipKb": 4.2
     },
-    "aria-vendor-pgwtFOX1.js": {
-      "rawBytes": 158429,
-      "gzipBytes": 48818,
-      "gzipKb": 47.67
+    "SecretsManager-Bk9MkKV1.js": {
+      "rawBytes": 33696,
+      "gzipBytes": 7849,
+      "gzipKb": 7.67
     },
-    "icons-vendor-CZzsirrs.js": {
-      "rawBytes": 7223,
-      "gzipBytes": 2760,
-      "gzipKb": 2.7
+    "SettingsModal-BENqKuUD.js": {
+      "rawBytes": 26511,
+      "gzipBytes": 5750,
+      "gzipKb": 5.62
     },
-    "index-C7qEB0OR.css": {
-      "rawBytes": 110724,
-      "gzipBytes": 16934,
-      "gzipKb": 16.54
+    "StorageModal-R4fUUwoI.js": {
+      "rawBytes": 30612,
+      "gzipBytes": 5908,
+      "gzipKb": 5.77
     },
-    "index-CeJUZ7a0.js": {
-      "rawBytes": 142499,
-      "gzipBytes": 39343,
-      "gzipKb": 38.42
+    "__vite-browser-external_node_crypto-bVB6h38M.js": {
+      "rawBytes": 466,
+      "gzipBytes": 337,
+      "gzipKb": 0.33
     },
-    "react-vendor-DAUJOu26.js": {
-      "rawBytes": 181287,
-      "gzipBytes": 57010,
+    "ai-provider-registry-CvguTio0.js": {
+      "rawBytes": 2290,
+      "gzipBytes": 1003,
+      "gzipKb": 0.98
+    },
+    "api-client-DtciBHZg.js": {
+      "rawBytes": 2715,
+      "gzipBytes": 875,
+      "gzipKb": 0.85
+    },
+    "aria-vendor-wQ71rXuA.js": {
+      "rawBytes": 158408,
+      "gzipBytes": 48807,
+      "gzipKb": 47.66
+    },
+    "browser-C8cc1i9H.js": {
+      "rawBytes": 12377,
+      "gzipBytes": 6086,
+      "gzipKb": 5.94
+    },
+    "external-store-base-B9jvHKDF.js": {
+      "rawBytes": 922,
+      "gzipBytes": 409,
+      "gzipKb": 0.4
+    },
+    "icons-vendor-BXC1ohAd.js": {
+      "rawBytes": 25150,
+      "gzipBytes": 8052,
+      "gzipKb": 7.86
+    },
+    "index-B1_AJkWQ.css": {
+      "rawBytes": 112397,
+      "gzipBytes": 17112,
+      "gzipKb": 16.71
+    },
+    "index-C-oUCOVA.js": {
+      "rawBytes": 214873,
+      "gzipBytes": 60064,
+      "gzipKb": 58.66
+    },
+    "lean-beam-client-BKf0EYWo.js": {
+      "rawBytes": 13850,
+      "gzipBytes": 3502,
+      "gzipKb": 3.42
+    },
+    "monaco-vendor-BSstJ1EZ.js": {
+      "rawBytes": 13996,
+      "gzipBytes": 4753,
+      "gzipKb": 4.64
+    },
+    "preload-helper-7y9sWmk5.js": {
+      "rawBytes": 1615,
+      "gzipBytes": 828,
+      "gzipKb": 0.81
+    },
+    "project-repository-26PkNEbI.js": {
+      "rawBytes": 8874,
+      "gzipBytes": 3364,
+      "gzipKb": 3.29
+    },
+    "proof-search-validator-Bhy0sURA.js": {
+      "rawBytes": 1019,
+      "gzipBytes": 563,
+      "gzipKb": 0.55
+    },
+    "provider-capabilities-BQkHbMJw.js": {
+      "rawBytes": 4039,
+      "gzipBytes": 1096,
+      "gzipKb": 1.07
+    },
+    "pyodide.worker-B2nCyk7a.js": {
+      "rawBytes": 4378,
+      "gzipBytes": 1719,
+      "gzipKb": 1.68
+    },
+    "react-vendor-WVuSS3nR.js": {
+      "rawBytes": 181282,
+      "gzipBytes": 57007,
       "gzipKb": 55.67
     },
-    "rolldown-runtime-hePW80VL.js": {
-      "rawBytes": 716,
-      "gzipBytes": 428,
+    "rolldown-runtime-XKyaHtl9.js": {
+      "rawBytes": 726,
+      "gzipBytes": 429,
       "gzipKb": 0.42
     },
-    "showcase-C7bdbdkx.js": {
-      "rawBytes": 14680,
-      "gzipBytes": 3712,
-      "gzipKb": 3.63
+    "showcase-DB8LGiIJ.js": {
+      "rawBytes": 14675,
+      "gzipBytes": 3708,
+      "gzipKb": 3.62
     },
-    "tabs-CvKYdVyV.js": {
-      "rawBytes": 1415,
+    "tabs-Bhh7i8dc.js": {
+      "rawBytes": 1410,
       "gzipBytes": 678,
       "gzipKb": 0.66
     },
-    "y-monaco-CGyk9QaK.js": {
+    "y-monaco-BIxA6V-4.js": {
       "rawBytes": 4488,
-      "gzipBytes": 1516,
+      "gzipBytes": 1515,
       "gzipKb": 1.48
     },
-    "yjs-runtime-BWtVk4IZ.js": {
-      "rawBytes": 84750,
-      "gzipBytes": 25586,
-      "gzipKb": 24.99
+    "yjs-runtime-C9uVI9y3.js": {
+      "rawBytes": 85079,
+      "gzipBytes": 25752,
+      "gzipKb": 25.15
     },
-    "zod-vendor-wQCyJjKA.js": {
-      "rawBytes": 90104,
-      "gzipBytes": 25325,
-      "gzipKb": 24.73
+    "zod-vendor-CrPT3OgE.js": {
+      "rawBytes": 90064,
+      "gzipBytes": 25304,
+      "gzipKb": 24.71
     },
     "index.html": {
-      "rawBytes": 2147,
-      "gzipBytes": 929,
-      "gzipKb": 0.91
+      "rawBytes": 5609,
+      "gzipBytes": 1813,
+      "gzipKb": 1.77
     }
   },
   "status": "PASS",
   "verdict": "PASS",
   "failureReasons": [],
-  "marginMainKb": 141.58,
-  "marginTotalKb": 55.63
+  "advisoryWarnings": [
+    "Total JS 447.69 KB > 290 KB (ADR-017 legacy target)"
+  ],
+  "marginMainKb": 121.34,
+  "marginTotalKb": -157.69
 }

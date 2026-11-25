@@ -49,7 +49,8 @@ export interface TreeSearchRequest {
 }
 
 export interface TreeSearchResult {
-  readonly proved: boolean;
+  readonly certified: false;
+  readonly candidateClosed: boolean;
   readonly status: 'candidate_found' | 'search_exhausted';
   readonly proof?: string;
   readonly method: 'mcts' | 'bfts' | 'beam';
@@ -250,7 +251,8 @@ export class TreeThinkProvider {
           if (cand.closed || (cand.subgoals && cand.subgoals.length === 0)) {
             maxDepthReached = Math.max(maxDepthReached, current.depth + 1);
             return {
-              proved: true,
+              certified: false,
+              candidateClosed: true,
               status: 'candidate_found',
               proof: cand.proofSoFar ?? `by\n  ${nextHistory.join('\n  ')}`,
               method,
@@ -279,7 +281,8 @@ export class TreeThinkProvider {
       }
 
       return {
-        proved: false,
+        certified: false,
+        candidateClosed: false,
         status: 'search_exhausted',
         method,
         nodesExplored,

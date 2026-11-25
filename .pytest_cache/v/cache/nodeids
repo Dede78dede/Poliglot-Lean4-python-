@@ -1,0 +1,15 @@
+[
+  "tests/phase-14/python/test_generated_contracts.py::test_extra_forbidden_raises_validation_error",
+  "tests/phase-14/python/test_generated_contracts.py::test_frozen_semantics_prevent_mutation",
+  "tests/phase-14/python/test_generated_contracts.py::test_leancert_wrapper_cli_main",
+  "tests/phase-14/python/test_generated_contracts.py::test_property_lean_execute_request_roundtrip",
+  "tests/phase-14/python/test_generated_contracts.py::test_property_numeric_bounds_and_scalar_check",
+  "tests/phase-14/python/test_generated_contracts.py::test_property_problem_details_and_proof_outcome_discrimination",
+  "tests/phase-14/python/test_generated_contracts.py::test_result_envelope_failure_branch",
+  "tests/phase-14/python/test_generated_contracts.py::test_result_envelope_success_branch",
+  "tests/phase-14/python/test_parity.py::TestContractParityGolden::test_golden_failure_roundtrip",
+  "tests/phase-14/python/test_parity.py::TestContractParityGolden::test_golden_success_roundtrip",
+  "tests/phase-14/python/test_parity.py::TestContractParityGolden::test_lean_execute_parity",
+  "tests/phase-14/python/test_parity.py::TestContractParityGolden::test_proof_reuse_parity",
+  "tests/phase-14/python/test_parity.py::TestContractParityGolden::test_strict_boundary_extra_forbidden"
+]

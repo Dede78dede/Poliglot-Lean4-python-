@@ -187,8 +187,7 @@
     },
     "additionalProperties": false,
     "required": [
-      "code",
-      "timeoutMs"
+      "code"
     ]
   },
   "LeanExecuteResponse": {

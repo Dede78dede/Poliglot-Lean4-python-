@@ -14,7 +14,6 @@ import json
 import sys
 from typing import Literal, TypeAlias, TypeVar
 
-
 MethodKind: TypeAlias = Literal["interval", "taylor-model", "solver"]
 
 
@@ -112,7 +111,8 @@ def evaluate_claim(
         upper=0.9093,
         method=method,
     )
-    return cert.to_dict()
+    payload: dict[str, str | float | bool | None] = {**cert.to_dict()}
+    return payload
 
 
 def main() -> None:

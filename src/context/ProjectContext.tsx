@@ -5,6 +5,7 @@ import { vfs } from '../services/vfs';
 import { validateZipEntries, type ZipValidationEntry } from '../services/zip-validator';
 import { ProjectRepository } from '../services/project-repository';
 import { usePyodideContext } from './PyodideContext';
+import { authorizedFetch } from '../services/auth/api-client';
 
 export interface ProjectContextValue {
   readonly currentProject: Project | null;
@@ -167,7 +168,7 @@ export function ProjectProvider({ children }: { readonly children: React.ReactNo
       const hasLean = proj.files.some((f) => f.language === 'lean4' || f.path === 'lakefile.lean');
       if (hasLean) {
         try {
-          await fetch(`/api/v1/projects/lean/session/${projectId}/pin`, {
+          await authorizedFetch(`/api/v1/projects/lean/session/${projectId}/pin`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pinned: nextPinned }),
@@ -264,7 +265,7 @@ export function ProjectProvider({ children }: { readonly children: React.ReactNo
         // 6. If Lean project, sync to server session directory
         if (hasLean) {
           try {
-            await fetch('/api/v1/projects/lean/upload', {
+            await authorizedFetch('/api/v1/projects/lean/upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

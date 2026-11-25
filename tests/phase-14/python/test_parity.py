@@ -1,6 +1,6 @@
 """Contract Parity Golden Fixtures Test (Phase 14.9.3 M3).
 
-Validates bi-directional contract parity between TypeScript Zod schemas and Python Pydantic v2:
+Validates bi-directional contract parity between TypeScript Zod and Pydantic v2:
 1. Golden fixture roundtrip for ResultEnvelope (success & failure branches)
 2. LeanExecuteRequest and LeanExecuteResponse parity
 3. ProofReuseQuery and ProofReuseResult parity
@@ -10,22 +10,15 @@ Validates bi-directional contract parity between TypeScript Zod schemas and Pyth
 import unittest
 from typing import Any
 
-try:
-    from pydantic import TypeAdapter, ValidationError
-    from schemas.generated_contracts import (
-        LeanExecuteRequest,
-        LeanExecuteResponse,
-        ProofReuseQuery,
-        ProofReuseResult,
-        ResultEnvelope,
-        ResultEnvelopeFailure,
-        ResultEnvelopeSuccess,
-        SerializedBridgeError,
-    )
-    PYDANTIC_AVAILABLE = True
-except ImportError:
-    PYDANTIC_AVAILABLE = False
+from pydantic import TypeAdapter, ValidationError
 
+from schemas.generated_contracts import (
+    LeanExecuteRequest,
+    LeanExecuteResponse,
+    ProofReuseQuery,
+    ProofReuseResult,
+    ResultEnvelope,
+)
 
 GOLDEN_SUCCESS_FIXTURE = {
     "ok": True,
@@ -53,8 +46,6 @@ class TestContractParityGolden(unittest.TestCase):
 
     def test_golden_success_roundtrip(self) -> None:
         """Verifies that Pydantic v2 accepts the golden success envelope."""
-        if not PYDANTIC_AVAILABLE:
-            self.skipTest("Pydantic v2 unavailable in host environment")
         adapter: TypeAdapter[Any] = TypeAdapter(ResultEnvelope)
         model = adapter.validate_python(GOLDEN_SUCCESS_FIXTURE)
         self.assertTrue(model.ok)
@@ -62,8 +53,6 @@ class TestContractParityGolden(unittest.TestCase):
 
     def test_golden_failure_roundtrip(self) -> None:
         """Verifies that Pydantic v2 accepts the golden failure envelope."""
-        if not PYDANTIC_AVAILABLE:
-            self.skipTest("Pydantic v2 unavailable in host environment")
         adapter: TypeAdapter[Any] = TypeAdapter(ResultEnvelope)
         model = adapter.validate_python(GOLDEN_FAILURE_FIXTURE)
         self.assertFalse(model.ok)
@@ -72,8 +61,6 @@ class TestContractParityGolden(unittest.TestCase):
 
     def test_lean_execute_parity(self) -> None:
         """Verifies Lean execution request and response parity."""
-        if not PYDANTIC_AVAILABLE:
-            self.skipTest("Pydantic v2 unavailable in host environment")
         req = LeanExecuteRequest(code="def x := 1", timeoutMs=5000)
         self.assertEqual(req.code, "def x := 1")
         self.assertEqual(req.timeoutMs, 5000)
@@ -88,10 +75,22 @@ class TestContractParityGolden(unittest.TestCase):
         self.assertEqual(resp.exitCode, 0)
         self.assertTrue(resp.verified)
 
+    def test_proof_reuse_parity(self) -> None:
+        """Verifies ProofReuseQuery and ProofReuseResult strict validation."""
+        query = ProofReuseQuery(goal="a + b = b + a", leanToolchain="v4.34.0")
+        self.assertEqual(query.leanToolchain, "v4.34.0")
+        res = ProofReuseResult(
+            goalHash="abc123",
+            proof="by omega",
+            certificateSha256="deadbeef",
+            similarity=0.95,
+            sourceDeclaration="Nat.add_comm",
+            createdAt="2026-11-07T12:00:00Z",
+        )
+        self.assertEqual(res.similarity, 0.95)
+
     def test_strict_boundary_extra_forbidden(self) -> None:
         """Asserts that unknown fields are strictly forbidden."""
-        if not PYDANTIC_AVAILABLE:
-            self.skipTest("Pydantic v2 unavailable in host environment")
         adapter: TypeAdapter[Any] = TypeAdapter(ResultEnvelope)
         payload_with_extra = {
             **GOLDEN_SUCCESS_FIXTURE,

@@ -7,36 +7,10 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { z } from 'zod';
 import { backendOtelEngine } from '../../../src/services/telemetry/otel-backend';
 import { ERROR_REGISTRY, createProblemDetails } from '../../../src/services/errors/error-registry';
 import { redactSensitiveData } from '../../../src/services/logging/logger';
-
-const SpanEventSchema = z.object({
-  name: z.string().min(1),
-  time: z.number(),
-  attributes: z.record(z.string(), z.unknown()).optional(),
-});
-
-const SpanPayloadSchema = z.object({
-  span: z.object({
-    spanId: z.string().min(1),
-    traceId: z.string().min(1),
-    parentSpanId: z.string().optional(),
-    name: z.string().min(1).default('client_span'),
-    startTime: z.number().default(() => Date.now()),
-    endTime: z.number().default(() => Date.now()),
-    durationMs: z.number().nonnegative().default(0),
-    attributes: z.record(z.string(), z.unknown()).default({}),
-    status: z
-      .object({
-        code: z.enum(['OK', 'ERROR', 'UNSET']),
-        message: z.string().optional(),
-      })
-      .default({ code: 'OK' }),
-    events: z.array(SpanEventSchema).default([]),
-  }),
-});
+import { TelemetrySpanPayloadSchema } from '../../../src/types/contracts';
 
 export function createTelemetryRouter(): Router {
   const router = Router();
@@ -91,7 +65,7 @@ export function createTelemetryRouter(): Router {
     }
 
     try {
-      const parsed = SpanPayloadSchema.safeParse(req.body);
+      const parsed = TelemetrySpanPayloadSchema.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({
           error: 'VALIDATION_FAILED',
@@ -100,8 +74,11 @@ export function createTelemetryRouter(): Router {
         return;
       }
 
+      const now = Date.now();
       const sanitized = {
         ...parsed.data.span,
+        startTime: parsed.data.span.startTime ?? now,
+        endTime: parsed.data.span.endTime ?? now,
         attributes: (redactSensitiveData(parsed.data.span.attributes) as Record<string, unknown>) || {},
       };
 

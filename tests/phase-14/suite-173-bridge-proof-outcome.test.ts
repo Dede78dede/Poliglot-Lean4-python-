@@ -107,12 +107,13 @@ if (process.env.VITEST) {
       }
     });
 
-    it('173.2: none contains verified: false', async () => {
+    it('173.2: none declares top-level verified property on interfaces', async () => {
       const rootDir = process.cwd();
       for (const relPath of BRIDGE_FILES) {
         const fullPath = path.join(rootDir, relPath);
         const content = fs.readFileSync(fullPath, 'utf-8');
-        expect(/verified:\s*false/.test(content)).toBe(false);
+        expect(/readonly\s+verified:\s*boolean/.test(content)).toBe(false);
+        expect(/readonly\s+verified:\s*false/.test(content)).toBe(false);
       }
     });
 

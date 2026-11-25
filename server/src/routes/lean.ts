@@ -1,75 +1,19 @@
 import { Router, type Request, type Response } from 'express';
 import crypto from 'node:crypto';
 import { z } from 'zod';
-import { LeanExecuteRequestSchema } from '../../../src/types/contracts';
+import {
+  ConsensusRequestSchema,
+  LeanExecuteRequestSchema,
+} from '../../../src/types/contracts';
 import { KiminaClientProxy, KiminaTimeoutError } from '../services/kimina-client-proxy';
 import { type LeanProjectFile, type LeanProjectRunner } from '../services/lean-project-runner';
 import {
   CANONICAL_VERIFICATION_PROTOCOL,
-  STANDARD_AXIOM_ALLOWLIST,
-  STANDARD_AXIOM_POLICY,
-  adjudicateHybridConsensus,
-  toAdjudicationResultV1,
   type AdjudicationResultV1,
-  type EngineEvidence,
   type VerificationRequestV1,
 } from '../services/verification/hybrid-adjudicator';
+import { ConsensusExecutionOrchestrator } from '../services/verification/consensus-orchestrator';
 import { isValidSha256Digest, normalizeSha256, sha256Hex } from '../services/verification/server-provenance';
-
-const ProjectFileSchema = z.object({
-  path: z.string().min(1),
-  content: z.string(),
-});
-
-const ConsensusRequestSchema = z.object({
-  protocolVersion: z.literal(CANONICAL_VERIFICATION_PROTOCOL),
-  requestId: z.string().min(1),
-  scope: z.enum(['snippet', 'project']),
-  sourceDigest: z.string().min(1),
-  contextDigest: z.string().optional(),
-  targetIds: z.array(z.string()).optional(),
-  code: z.string().optional(),
-  files: z.array(ProjectFileSchema).optional(),
-  sessionId: z.string().uuid().optional(),
-  timeoutMs: z.number().int().positive().max(300_000).optional(),
-  environment: z.object({
-    leanToolchain: z.string(),
-    kiminaImageDigest: z.string().optional(),
-    lakeRunnerImageDigest: z.string().optional(),
-    manifestDigest: z.string().optional(),
-  }),
-  axiomPolicyId: z.string().default(STANDARD_AXIOM_POLICY),
-  requireConsensus: z.boolean().default(true),
-  kiminaEvidence: z.never().optional(),
-  lakeEvidence: z.never().optional(),
-});
-
-function buildUnavailableEvidence(
-  engine: 'kimina' | 'lake',
-  req: VerificationRequestV1,
-  errorMessage: string,
-): EngineEvidence {
-  return {
-    engine,
-    contractVersion: CANONICAL_VERIFICATION_PROTOCOL,
-    outcome: 'unavailable',
-    requestId: req.requestId,
-    sourceDigest: req.sourceDigest,
-    contextDigest: req.contextDigest,
-    manifestDigest: req.environment.manifestDigest,
-    targetIds: req.targetIds,
-    toolchain: req.environment.leanToolchain,
-    durationMs: null,
-    exitCode: null,
-    diagnostics: [],
-    axiomAudit: {
-      status: 'not_run',
-      observedAxioms: [],
-      allowedAxioms: [...STANDARD_AXIOM_ALLOWLIST],
-    },
-    error: errorMessage,
-  };
-}
 
 function buildCanonicalProjectPayload(files: readonly LeanProjectFile[]): string {
   return JSON.stringify(
@@ -81,6 +25,7 @@ function buildCanonicalProjectPayload(files: readonly LeanProjectFile[]): string
 
 export function createLeanRouter(proxy: KiminaClientProxy, runner?: LeanProjectRunner): Router {
   const router = Router();
+  const orchestrator = new ConsensusExecutionOrchestrator(proxy, runner);
 
   // POST /api/v1/lean/execute
   router.post('/execute', async (req: Request, res: Response): Promise<void> => {
@@ -223,14 +168,6 @@ export function createLeanRouter(proxy: KiminaClientProxy, runner?: LeanProjectR
       return;
     }
 
-    if (!runner) {
-      const kiminaUnavail = buildUnavailableEvidence('kimina', verificationReq, 'Dual-engine runner unavailable.');
-      const lakeUnavail = buildUnavailableEvidence('lake', verificationReq, 'LeanProjectRunner is not mounted.');
-      const fallbackResult = adjudicateHybridConsensus(verificationReq, kiminaUnavail, lakeUnavail);
-      res.status(200).json(toAdjudicationResultV1(fallbackResult));
-      return;
-    }
-
     const effectiveSessionId = requestData.sessionId ?? crypto.randomUUID();
     const timeoutMs = requestData.timeoutMs ?? proxy.getConfig().timeoutMs;
 
@@ -245,31 +182,14 @@ export function createLeanRouter(proxy: KiminaClientProxy, runner?: LeanProjectR
           { path: 'Consensus.lean', content: requestData.code! },
         ];
 
-    const [kiminaOutcome, lakeOutcome] = await Promise.allSettled([
-      proxy.verify(kiminaSource, timeoutMs),
-      runner.build(effectiveSessionId, lakeFiles),
-    ]);
-
-    const kiminaEvidence: EngineEvidence =
-      kiminaOutcome.status === 'fulfilled'
-        ? proxy.toEngineEvidence(verificationReq, kiminaOutcome.value)
-        : buildUnavailableEvidence(
-            'kimina',
-            verificationReq,
-            kiminaOutcome.reason instanceof Error ? kiminaOutcome.reason.message : String(kiminaOutcome.reason),
-          );
-
-    const lakeEvidence: EngineEvidence =
-      lakeOutcome.status === 'fulfilled'
-        ? runner.toEngineEvidence(verificationReq, lakeOutcome.value)
-        : buildUnavailableEvidence(
-            'lake',
-            verificationReq,
-            lakeOutcome.reason instanceof Error ? lakeOutcome.reason.message : String(lakeOutcome.reason),
-          );
-
-    const adjudication = adjudicateHybridConsensus(verificationReq, kiminaEvidence, lakeEvidence);
-    res.status(200).json(toAdjudicationResultV1(adjudication));
+    const adjudication = await orchestrator.executeConsensus({
+      verificationReq,
+      kiminaSource,
+      lakeFiles,
+      sessionId: effectiveSessionId,
+      timeoutMs,
+    });
+    res.status(200).json(adjudication);
   });
 
   return router;

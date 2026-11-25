@@ -85,11 +85,13 @@ export async function runSuite147(): Promise<void> {
       endpointOverride: treeMock.url,
     });
 
-    assert.equal(treeResult.proved, true);
+    assert.equal(treeResult.candidateClosed, true);
+    assert.equal(treeResult.certified, false);
+    assert.equal('proved' in treeResult, false);
     assert.equal(treeResult.requiresKernelVerification, true);
     assert.ok(treeResult.proof !== undefined);
     assert.ok(treeMock.requestCount() >= 2);
-    console.log('  ✓ 147.4 TreeThink bounded search result carries requiresKernelVerification: true');
+    console.log('  ✓ 147.4 TreeThink bounded search result carries requiresKernelVerification: true and certified: false');
   } finally {
     await treeMock.close();
     featureFlagRegistry.reset('ENABLE_TREETHINK');

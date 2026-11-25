@@ -23,6 +23,7 @@ import { WebSocketServer, type WebSocket, type RawData } from 'ws';
 import { featureFlagRegistry } from '../flags/feature-flag-registry';
 import { BridgeError } from '../errors/bridge-error';
 import { createLogger } from '../logging/logger';
+import { WS_CLOSE_CODES } from '../../types/verification-ui';
 
 const logger = createLogger('hocuspocus-server');
 
@@ -452,13 +453,13 @@ export class HocuspocusServer {
       }
       msgCount += 1;
       if (msgCount > rateLimit) {
-        ws.close(1008, 'Rate limit exceeded');
+        ws.close(WS_CLOSE_CODES.POLICY_VIOLATION, 'Rate limit exceeded');
         return;
       }
 
       const buf = rawDataToUint8Array(data);
       if (buf.byteLength > MAX_FRAME_BYTES) {
-        ws.close(1009, 'Frame exceeds 64 KB cap');
+        ws.close(WS_CLOSE_CODES.MESSAGE_TOO_BIG, 'Frame exceeds 64 KB cap');
         return;
       }
 
@@ -476,10 +477,12 @@ export class HocuspocusServer {
         } else if (messageType === MESSAGE_AWARENESS) {
           const update = decoding.readVarUint8Array(decoder);
           awarenessProtocol.applyAwarenessUpdate(room.awareness, update, ws);
+        } else {
+          ws.close(WS_CLOSE_CODES.UNSUPPORTED_DATA, `Unsupported Yjs message type: ${messageType}`);
         }
       } catch (err) {
         logger.warn(`Invalid Yjs frame received for ${options.docId}`);
-        ws.close(1003, err instanceof Error ? err.message : 'Malformed Yjs frame');
+        ws.close(WS_CLOSE_CODES.UNSUPPORTED_DATA, err instanceof Error ? err.message : 'Malformed Yjs frame');
       }
     });
 

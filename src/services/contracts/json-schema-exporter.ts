@@ -67,6 +67,14 @@ export function convertZodToJsonSchema(schema: any, options: ExportOptions = { e
     case 'optional':
     case 'ZodOptional':
       return convertZodToJsonSchema(def.innerType, options);
+    case 'nullable':
+    case 'ZodNullable': {
+      const inner = convertZodToJsonSchema(def.innerType, options);
+      if (typeof inner.type === 'string') {
+        return { ...inner, type: [inner.type, 'null'] };
+      }
+      return { anyOf: [inner, { type: 'null' }] };
+    }
     case 'default':
     case 'ZodDefault': {
       const inner = convertZodToJsonSchema(def.innerType, options);
@@ -83,7 +91,7 @@ export function convertZodToJsonSchema(schema: any, options: ExportOptions = { e
         properties[key] = convertZodToJsonSchema(propSchema, options);
         const pDef = (propSchema as any)?.def ?? (propSchema as any)?._def;
         const pType = pDef?.type ?? pDef?.typeName;
-        if (pType !== 'optional' && pType !== 'ZodOptional') {
+        if (pType !== 'optional' && pType !== 'ZodOptional' && pType !== 'default' && pType !== 'ZodDefault') {
           required.push(key);
         }
       }
@@ -115,8 +123,10 @@ export function convertZodToJsonSchema(schema: any, options: ExportOptions = { e
     }
     case 'record':
     case 'any':
+    case 'unknown':
     case 'ZodRecord':
     case 'ZodAny':
+    case 'ZodUnknown':
       return { type: 'object' };
     default:
       return { type: 'object' };

@@ -10,19 +10,83 @@
  */
 
 import { Router, type Request, type Response } from 'express';
+import { z } from 'zod';
 import { SCAFFOLD_TEMPLATES } from '../../../src/services/automation/scaffold-templates';
 import { createProjectExportBundle } from '../../../src/services/automation/project-export-bundle';
+
+const ArchiveBodySchema = z.object({
+  files: z.record(z.string(), z.string()).optional().default({}),
+});
+
+const ScaffoldBodySchema = z.object({
+  templateId: z.string().trim().min(1).max(128),
+  projectName: z.string().trim().min(1).max(128).optional().default('scaffolded-project'),
+});
+
+const ExportBundleBodySchema = z.object({
+  files: z.record(z.string(), z.string()).optional().default({}),
+  name: z.string().trim().min(1).max(128).optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
+  flags: z.record(z.string(), z.boolean()).optional(),
+  auditLog: z.array(z.unknown()).optional(),
+  bibliography: z.array(z.unknown()).optional(),
+  blueprintDag: z.record(z.string(), z.unknown()).optional(),
+});
+
+// Shared handler for POST /api/v1/projects/:id/export-bundle & /api/v1/automation/projects/:id/export-bundle
+export async function exportProjectBundleHandler(req: Request, res: Response): Promise<void> {
+  const id = String(req.params.id || 'project').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const parsed = ExportBundleBodySchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({ error: 'VALIDATION_FAILED', message: 'Invalid export-bundle payload.' });
+    return;
+  }
+
+  const { files, name, settings, flags, auditLog, bibliography, blueprintDag } = parsed.data;
+  const safeFilename = (name || `project-${id}`).replace(/[^a-zA-Z0-9._-]/g, '_') || 'project-bundle';
+
+  try {
+    const bundle = await createProjectExportBundle({
+      projectId: id,
+      projectName: name || `project-${id}`,
+      vfsFiles: files,
+      settings,
+      flags,
+      auditLog,
+      bibliography,
+      blueprintDag,
+    });
+
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('X-Bundle-Sha256', bundle.sha256);
+    res.setHeader('X-Bundle-Size', String(bundle.sizeBytes));
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}.polyglot"`);
+    res.status(200).send(Buffer.from(bundle.zipBytes));
+  } catch (err: unknown) {
+    res.status(500).json({
+      type: 'https://polyglot.dev/errors/bundle-export-failed',
+      title: 'BUNDLE_EXPORT_FAILED',
+      status: 500,
+      detail: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
 
 export function createAutomationRouter(): Router {
   const router = Router();
 
   // POST /api/v1/automation/archive
   router.post('/archive', async (req: Request, res: Response): Promise<void> => {
-    const { files = {} } = req.body || {};
+    const parsed = ArchiveBodySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'VALIDATION_FAILED', message: 'files must be a string-to-string record.' });
+      return;
+    }
+
     const bundle = await createProjectExportBundle({
       projectId: 'auto-archive-workspace',
       projectName: 'Workspace Auto-Archive',
-      vfsFiles: files,
+      vfsFiles: parsed.data.files,
     });
 
     res.status(200).json({
@@ -35,7 +99,13 @@ export function createAutomationRouter(): Router {
 
   // POST /api/v1/automation/scaffold
   router.post('/scaffold', (req: Request, res: Response): void => {
-    const { templateId, projectName = 'scaffolded-project' } = req.body || {};
+    const parsed = ScaffoldBodySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'VALIDATION_FAILED', message: 'templateId string is required.' });
+      return;
+    }
+
+    const { templateId, projectName } = parsed.data;
     const template = SCAFFOLD_TEMPLATES.find((t) => t.id === templateId);
 
     if (!template) {
@@ -104,37 +174,8 @@ export function createAutomationRouter(): Router {
     });
   });
 
-  // POST /api/v1/projects/:id/export-bundle
-  router.post('/projects/:id/export-bundle', async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
-    const { files = {}, name = `project-${id}`, settings, flags, auditLog, bibliography, blueprintDag } = req.body || {};
-
-    try {
-      const bundle = await createProjectExportBundle({
-        projectId: id,
-        projectName: name,
-        vfsFiles: files,
-        settings,
-        flags,
-        auditLog,
-        bibliography,
-        blueprintDag,
-      });
-
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('X-Bundle-Sha256', bundle.sha256);
-      res.setHeader('X-Bundle-Size', String(bundle.sizeBytes));
-      res.setHeader('Content-Disposition', `attachment; filename="${name}.polyglot"`);
-      res.status(200).send(Buffer.from(bundle.zipBytes));
-    } catch (err: unknown) {
-      res.status(500).json({
-        type: 'https://polyglot.dev/errors/bundle-export-failed',
-        title: 'BUNDLE_EXPORT_FAILED',
-        status: 500,
-        detail: err instanceof Error ? err.message : String(err),
-      });
-    }
-  });
+  router.post('/projects/:id/export-bundle', exportProjectBundleHandler);
+  router.post('/export-bundle/:id', exportProjectBundleHandler);
 
   return router;
 }

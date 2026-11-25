@@ -10,6 +10,7 @@ import * as syncProtocol from 'y-protocols/sync';
 import * as awarenessProtocol from 'y-protocols/awareness';
 import * as encoding from 'lib0/encoding';
 import * as decoding from 'lib0/decoding';
+import { WS_CLOSE_CODES } from '../../types/verification-ui';
 
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
@@ -19,7 +20,8 @@ export type CollabConnectionStatus =
   | 'connecting'
   | 'connected'
   | 'offline_queue'
-  | 'auth_error';
+  | 'auth_error'
+  | 'protocol_error';
 
 export interface LiveCollabPeer {
   readonly clientId: number;
@@ -34,7 +36,7 @@ export interface LiveCollabSessionOptions {
   readonly userName: string;
   readonly userColor?: string;
   readonly initialText?: string;
-  readonly monacoEditor?: { getModel?: () => unknown };
+  readonly monacoEditor?: { getModel?: () => unknown } | null;
   readonly onRemoteText?: (nextText: string) => void;
   readonly onStatusChange?: (status: CollabConnectionStatus, detail?: string) => void;
   readonly onPeersChange?: (peers: readonly LiveCollabPeer[]) => void;
@@ -121,7 +123,10 @@ export async function startLiveYjsSession(
       syncProtocol.writeUpdate(enc, update);
       ws.send(encoding.toUint8Array(enc));
     } else if (!destroyed) {
-      updateStatus('offline_queue', 'Local edits buffered in Yjs CRDT pending reconnect.');
+      updateStatus(
+        'offline_queue',
+        'Local edits buffered in open-tab Y.Doc memory only (not persisted across reloads).'
+      );
     }
   });
 
@@ -206,11 +211,21 @@ export async function startLiveYjsSession(
     socket.onclose = (ev) => {
       ws = null;
       if (destroyed) return;
-      if (ev.code === 1008 || ev.code === 1003) {
-        updateStatus('auth_error', ev.reason || 'Collaboration session closed.');
+      if (ev.code === WS_CLOSE_CODES.POLICY_VIOLATION) {
+        updateStatus('auth_error', ev.reason || 'Collaboration session closed due to policy or auth violation.');
         return;
       }
-      updateStatus('offline_queue', 'Connection closed; buffering CRDT updates locally.');
+      if (ev.code === WS_CLOSE_CODES.UNSUPPORTED_DATA || ev.code === WS_CLOSE_CODES.MESSAGE_TOO_BIG) {
+        updateStatus(
+          'protocol_error',
+          ev.reason || 'Unsupported or oversized Yjs WebSocket frame closed connection.'
+        );
+        return;
+      }
+      updateStatus(
+        'offline_queue',
+        'Connection closed; open-tab edits buffered in memory only (not persisted across reloads).'
+      );
       reconnectTimer = setTimeout(() => {
         if (!destroyed) connectSocket();
       }, 1500);
@@ -234,7 +249,10 @@ export async function startLiveYjsSession(
       if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
       ws = null;
-      updateStatus('offline_queue', 'Paused by user; edits preserved in local Y.Doc.');
+      updateStatus(
+        'offline_queue',
+        'Paused by user; open-tab edits remain in Y.Doc memory until reload.'
+      );
     },
     destroy: () => {
       destroyed = true;

@@ -139,9 +139,11 @@ export async function runSuite158(): Promise<void> {
       method: 'mcts',
       endpointOverride: treeMock.url,
     });
-    assert.equal(res8.proved, true);
+    assert.equal(res8.candidateClosed, true);
+    assert.equal(res8.certified, false);
+    assert.equal('proved' in res8, false);
     assert.equal(res8.method, 'mcts');
-    console.log('  ✓ 158.8 [treethink:on] executes tree exploration over HTTP');
+    console.log('  ✓ 158.8 [treethink:on] executes tree exploration over HTTP (non-certifying candidate)');
   } finally {
     await treeMock.close();
   }

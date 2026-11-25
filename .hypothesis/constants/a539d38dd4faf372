@@ -1,0 +1,4 @@
+# file: /app/applet/schemas/generated_contracts.py
+# hypothesis_version: 6.170.17
+
+[1000, 10000, 30000, 100000, 'UNAVAILABLE', 'benchmark', 'bridge_fallback', 'certified', 'client_stub', 'feature_disabled', 'forbid', 'from', 'hardware', 'high', 'hybrid-adjudicator', 'interval', 'kind', 'low', 'medium', 'metadata', 'numeric-certificate', 'ok', 'preflight', 'solver', 'taylor-model', 'transport', 'unavailable', 'usage', 'v4.34.0']

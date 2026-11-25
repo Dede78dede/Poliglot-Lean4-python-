@@ -15,3 +15,5 @@ reports/*.tmp
 .collab/
 .collab-workspace/
 data/tokens.json
+data/users.json
+data/settings.json

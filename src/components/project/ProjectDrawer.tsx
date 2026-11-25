@@ -33,6 +33,7 @@ export function ProjectDrawer({
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectType, setNewProjectType] = useState<ProjectType>('lean4');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const refreshList = async () => {
     const list = await projectRepository.listProjects();
@@ -99,11 +100,10 @@ export function ProjectDrawer({
     projectRepository.triggerDownload(blob, `${proj.name.toLowerCase().replace(/\s+/g, '_')}.zip`);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete project "${name}"?`)) {
-      await projectRepository.deleteProject(id);
-      void refreshList();
-    }
+  const handleDeleteConfirm = async (id: string) => {
+    await projectRepository.deleteProject(id);
+    setPendingDeleteId(null);
+    void refreshList();
   };
 
   return (
@@ -299,14 +299,33 @@ export function ProjectDrawer({
                         <Download className="w-4 h-4" />
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(proj.id, proj.name)}
-                        title="Delete project"
-                        className="p-1.5 rounded hover:bg-neutral-800 text-slate-400 hover:text-rose-400 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {pendingDeleteId === proj.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteConfirm(proj.id)}
+                            className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-medium"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPendingDeleteId(null)}
+                            className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-slate-300 text-[11px]"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setPendingDeleteId(proj.id)}
+                          title={`Delete project "${proj.name}"`}
+                          className="p-1.5 rounded hover:bg-neutral-800 text-slate-400 hover:text-rose-400 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
 
                       {!isActive && (
                         <button

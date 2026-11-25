@@ -119,7 +119,9 @@ export async function runSuite197(): Promise<void> {
       });
 
       assert.equal(treeResult.method, 'mcts');
-      assert.equal(treeResult.proved, true);
+      assert.equal(treeResult.candidateClosed, true);
+      assert.equal(treeResult.certified, false);
+      assert.equal('proved' in treeResult, false);
       assert.equal(treeResult.status, 'candidate_found');
       assert.equal(treeResult.requiresKernelVerification, true);
       assert.ok(treeResult.nodesExplored >= 3);
@@ -132,7 +134,9 @@ export async function runSuite197(): Promise<void> {
         maxNodes: 3,
         endpointOverride: treeExhaustMock.url,
       });
-      assert.equal(exhausted.proved, false);
+      assert.equal(exhausted.candidateClosed, false);
+      assert.equal(exhausted.certified, false);
+      assert.equal('proved' in exhausted, false);
       assert.equal(exhausted.status, 'search_exhausted');
       assert.equal(exhausted.nodesExplored, 3);
       assert.equal(exhausted.proof, undefined);

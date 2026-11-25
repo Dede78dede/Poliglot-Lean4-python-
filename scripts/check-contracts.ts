@@ -1,17 +1,19 @@
 /**
- * Contracts Parity Check Script (Phase 14.9.9.1, D1.2)
+ * Contracts Parity Check Script (Phase 14.9.9.1 + Phase 15 Stabilization)
  *
- * Validates that schemas/generated_contracts.py is in sync with src/contracts/index.ts
- * and that both layers define NUMERIC_CERTIFICATE_UNVERIFIED and ProofOutcome variants.
+ * Validates that BOTH generated contract artifacts stay in strict sync with canonical Zod schemas:
+ * 1. schemas/generated_contracts.py (Pydantic v2 strict models)
+ * 2. schemas/openapi.json (OpenAPI 3.1.0 REST specification + RFC 9457 ProblemDetails)
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { generatePythonContracts } from './generate-contracts';
+import { generateOpenApiSpec } from './generate-openapi';
 import { CertificationTierSchema, ProofOutcomeSchema } from '../src/contracts';
 
 function main(): void {
-  console.log('Running contract parity check...');
+  console.log('Running contract parity check (Zod -> Pydantic + OpenAPI 3.1)...');
 
   // 1. Verify Zod schemas
   const tiers = CertificationTierSchema.options;
@@ -19,8 +21,12 @@ function main(): void {
     console.error('❌ Zod CertificationTierSchema missing NUMERIC_CERTIFICATE_UNVERIFIED');
     process.exit(1);
   }
+  if (typeof ProofOutcomeSchema.safeParse !== 'function') {
+    console.error('❌ Zod ProofOutcomeSchema invalid');
+    process.exit(1);
+  }
 
-  // 2. Generate expected python code and compare with existing on disk
+  // 2. Verify Pydantic sync
   const expectedPython = generatePythonContracts();
   const targetPath = path.resolve(process.cwd(), 'schemas/generated_contracts.py');
 
@@ -31,7 +37,6 @@ function main(): void {
 
   const diskPython = fs.readFileSync(targetPath, 'utf-8');
 
-  // Verify key invariants in disk python
   if (!diskPython.includes("'NUMERIC_CERTIFICATE_UNVERIFIED'")) {
     console.error('❌ schemas/generated_contracts.py missing NUMERIC_CERTIFICATE_UNVERIFIED');
     process.exit(1);
@@ -48,7 +53,23 @@ function main(): void {
     process.exit(1);
   }
 
-  console.log('✓ Contract parity check passed: Zod and Pydantic schemas are in full sync.');
+  // 3. Verify OpenAPI 3.1 sync
+  const openApiPath = path.resolve(process.cwd(), 'schemas/openapi.json');
+  if (!fs.existsSync(openApiPath)) {
+    console.error(`❌ ${openApiPath} does not exist. Run "npm run contracts:generate".`);
+    process.exit(1);
+  }
+
+  const expectedOpenApi = `${JSON.stringify(generateOpenApiSpec(), null, 2)}\n`;
+  const diskOpenApi = fs.readFileSync(openApiPath, 'utf-8');
+
+  if (diskOpenApi !== expectedOpenApi) {
+    console.error('❌ schemas/openapi.json is out of sync with canonical Zod contracts.');
+    console.error('Run "npm run contracts:generate" to synchronize.');
+    process.exit(1);
+  }
+
+  console.log('✓ Contract parity check passed: Zod, Pydantic v2, and OpenAPI 3.1.0 schemas are in full sync.');
   process.exit(0);
 }
 

@@ -10,6 +10,8 @@ export function TrashView(): React.JSX.Element {
   );
   const { createFile } = useProjectContext();
 
+  const [confirmEmptyOpen, setConfirmEmptyOpen] = React.useState(false);
+
   const handleRestore = (item: TrashItem) => {
     try {
       const restored = trashService.restoreFromTrash(item.id);
@@ -21,9 +23,8 @@ export function TrashView(): React.JSX.Element {
 
   const handleEmpty = () => {
     if (items.length === 0) return;
-    if (confirm(`Empty trash? This will permanently delete ${items.length} items.`)) {
-      trashService.emptyTrash();
-    }
+    trashService.emptyTrash();
+    setConfirmEmptyOpen(false);
   };
 
   const formatSize = (bytes: number): string => {
@@ -54,13 +55,32 @@ export function TrashView(): React.JSX.Element {
         </div>
 
         {items.length > 0 && (
-          <button
-            type="button"
-            onClick={handleEmpty}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-950/80 hover:bg-rose-900 text-rose-300 text-[11px] font-medium transition-colors border border-rose-800"
-          >
-            <span>Empty Trash</span>
-          </button>
+          confirmEmptyOpen ? (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleEmpty}
+                className="px-2 py-0.5 rounded bg-rose-700 hover:bg-rose-600 text-white text-[11px] font-medium"
+              >
+                Confirm Empty
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmEmptyOpen(false)}
+                className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-slate-300 text-[11px]"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmEmptyOpen(true)}
+              className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-950/80 hover:bg-rose-900 text-rose-300 text-[11px] font-medium transition-colors border border-rose-800"
+            >
+              <span>Empty Trash</span>
+            </button>
+          )
         )}
       </div>
 

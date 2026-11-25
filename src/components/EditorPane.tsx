@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import type { SupportedLanguage } from '../types/language';
 import { LEAN4_MONARCH_LANGUAGE } from '../utils/lean-monarch';
@@ -13,6 +13,7 @@ export interface EditorPaneProps {
   readonly onRunRequested?: () => void;
   readonly isDegradedMonarch?: boolean;
   readonly onMonacoInitState?: (degraded: boolean) => void;
+  readonly onEditorMounted?: (editor: { getModel?: () => unknown } | null) => void;
 }
 
 export function EditorPane({
@@ -22,12 +23,54 @@ export function EditorPane({
   onCursorChange,
   onRunRequested,
   onMonacoInitState,
+  onEditorMounted,
 }: EditorPaneProps): React.JSX.Element {
   const isRegisteredRef = useRef(false);
   const providersRegisteredRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const editorInstanceRef = useRef<{ layout?: () => void } | null>(null);
+  const onEditorMountedRef = useRef(onEditorMounted);
+  onEditorMountedRef.current = onEditorMounted;
+  const onRunRequestedRef = useRef(onRunRequested);
+  onRunRequestedRef.current = onRunRequested;
+  const onCursorChangeRef = useRef(onCursorChange);
+  onCursorChangeRef.current = onCursorChange;
+  const onMonacoInitStateRef = useRef(onMonacoInitState);
+  onMonacoInitStateRef.current = onMonacoInitState;
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (el && typeof ResizeObserver !== 'undefined') {
+      let rafId: number | null = null;
+      const observer = new ResizeObserver(() => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+        }
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          editorInstanceRef.current?.layout?.();
+        });
+      });
+      observer.observe(el);
+      return () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+        }
+        observer.disconnect();
+        editorInstanceRef.current = null;
+        onEditorMountedRef.current?.(null);
+      };
+    }
+
+    return () => {
+      editorInstanceRef.current = null;
+      onEditorMountedRef.current?.(null);
+    };
+  }, []);
 
   const handleEditorMount: OnMount = useCallback(
     async (editor, monaco) => {
+      editorInstanceRef.current = editor as unknown as { layout?: () => void };
       if (typeof globalThis !== 'undefined' && !(globalThis as { monaco?: unknown }).monaco) {
         (globalThis as { monaco?: unknown }).monaco = monaco;
       }
@@ -170,38 +213,42 @@ export function EditorPane({
           const modulePath = 'lean4monaco';
           const leanModule = await import(/* @vite-ignore */ modulePath).catch(() => null);
           if (leanModule && 'LeanMonaco' in leanModule) {
-            onMonacoInitState?.(false);
+            onMonacoInitStateRef.current?.(false);
           } else {
-            onMonacoInitState?.(true);
+            onMonacoInitStateRef.current?.(true);
           }
         } catch {
-          onMonacoInitState?.(true);
+          onMonacoInitStateRef.current?.(true);
         }
       }
 
       // Track cursor position
-      editor.onDidChangeCursorPosition((e) => {
-        onCursorChange?.(e.position.lineNumber, e.position.column);
+      editor.onDidChangeCursorPosition((e: { position: { lineNumber: number; column: number } }) => {
+        onCursorChangeRef.current?.(e.position.lineNumber, e.position.column);
       });
 
       // Keyboard shortcut: Ctrl+Enter / Cmd+Enter runs code
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-        onRunRequested?.();
+        onRunRequestedRef.current?.();
       });
 
       // Only auto-focus on desktop viewports
       if (typeof window !== 'undefined' && window.innerWidth >= 768) {
         editor.focus();
       }
+
+      onEditorMountedRef.current?.(editor as unknown as { getModel?: () => unknown });
     },
-    [language, onCursorChange, onMonacoInitState, onRunRequested],
+    [language],
   );
 
   return (
-    <div className="relative w-full h-full bg-[#0d1117] overflow-hidden">
+    <div ref={containerRef} className="relative w-full h-full min-w-0 min-h-0 bg-[#0d1117] overflow-hidden">
       <Editor
         height="100%"
         width="100%"
+        className="h-full w-full min-w-0 min-h-0 overflow-hidden"
+        wrapperProps={{ className: 'min-w-0 min-h-0 overflow-hidden' }}
         language={language === 'lean4' ? 'lean4' : 'python'}
         value={value}
         onChange={(val) => onChange(val ?? '')}
@@ -214,7 +261,7 @@ export function EditorPane({
           lineNumbers: 'on',
           renderLineHighlight: 'all',
           scrollBeyondLastLine: false,
-          automaticLayout: true,
+          automaticLayout: false,
           tabSize: language === 'python' ? 4 : 2,
           insertSpaces: true,
           wordWrap: 'on',

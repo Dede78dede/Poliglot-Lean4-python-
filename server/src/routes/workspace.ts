@@ -15,6 +15,18 @@ import { workspaceArchiveService } from '../../../src/services/workspace/workspa
 import { featureFlagRegistry } from '../../../src/services/flags/feature-flag-registry';
 import { BridgeError } from '../../../src/services/errors/bridge-error';
 
+const ARCHIVE_BASE_DIR = path.resolve('/tmp/polyglot-archives');
+
+function resolveContainedArchivePath(rawPath: string, correlationId: string): string {
+  const resolved = path.resolve(rawPath);
+  if (resolved !== ARCHIVE_BASE_DIR && !resolved.startsWith(ARCHIVE_BASE_DIR + path.sep)) {
+    throw new BridgeError('SANDBOX_POLICY_VIOLATION', correlationId, {
+      detail: 'Archive path must reside strictly inside /tmp/polyglot-archives.',
+    });
+  }
+  return resolved;
+}
+
 export function createWorkspaceArchiveRouter(): Router {
   const router = Router();
 
@@ -36,33 +48,36 @@ export function createWorkspaceArchiveRouter(): Router {
         return;
       }
 
-      // Collect files: from body or from disk
+      const safeWorkspaceId = workspaceId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64) || 'workspace';
+
+      // Collect files: from body or from default template
       let vfsFiles: Record<string, string | Uint8Array> = {};
-      if (files && typeof files === 'object') {
+      if (files && typeof files === 'object' && !Array.isArray(files)) {
         vfsFiles = files as Record<string, string | Uint8Array>;
       } else {
-        // Read sample workspace files from disk or default template
         vfsFiles = {
           'Main.lean': 'def hello : String := "world"',
           'lakefile.lean': 'import Lake\nopen Lake DSL\npackage test',
           'lean-toolchain': 'leanprover/lean4:v4.34.0-rc1',
-          'README.md': `# Workspace ${workspaceId}\nExported by Polyglot Code Studio`,
+          'README.md': `# Workspace ${safeWorkspaceId}\nExported by Polyglot Code Studio`,
         };
       }
 
       const result = workspaceArchiveService.exportWorkspace(
-        { workspaceId, includeCollaboration: Boolean(includeCollaboration) },
+        { workspaceId: safeWorkspaceId, includeCollaboration: Boolean(includeCollaboration) },
         vfsFiles,
         {},
         correlationId
       );
 
-      // Save archive to /tmp for retrieval
-      const tmpDir = '/tmp/polyglot-archives';
-      if (!fs.existsSync(tmpDir)) {
-        fs.mkdirSync(tmpDir, { recursive: true });
+      // Save archive inside sandboxed tmp directory
+      if (!fs.existsSync(ARCHIVE_BASE_DIR)) {
+        fs.mkdirSync(ARCHIVE_BASE_DIR, { recursive: true });
       }
-      const archiveFile = path.resolve(tmpDir, `${workspaceId}-${result.sha256.slice(0, 8)}.polyglot`);
+      const archiveFile = resolveContainedArchivePath(
+        path.join(ARCHIVE_BASE_DIR, `${safeWorkspaceId}-${result.sha256.slice(0, 8)}.polyglot`),
+        correlationId
+      );
       fs.writeFileSync(archiveFile, result.archiveData);
 
       res.status(200).json({
@@ -100,11 +115,12 @@ export function createWorkspaceArchiveRouter(): Router {
       if (archiveBase64 && typeof archiveBase64 === 'string') {
         archiveData = Buffer.from(archiveBase64, 'base64');
       } else if (archivePath && typeof archivePath === 'string') {
-        if (!fs.existsSync(archivePath)) {
-          res.status(404).json({ error: 'FILE_NOT_FOUND', message: `Archive file not found: ${archivePath}` });
+        const safePath = resolveContainedArchivePath(archivePath, correlationId);
+        if (!fs.existsSync(safePath)) {
+          res.status(404).json({ error: 'FILE_NOT_FOUND', message: 'Archive file not found' });
           return;
         }
-        archiveData = fs.readFileSync(archivePath);
+        archiveData = fs.readFileSync(safePath);
       } else {
         res.status(400).json({ error: 'VALIDATION_FAILED', message: 'archivePath or archiveBase64 is required' });
         return;
@@ -152,26 +168,34 @@ export function createWorkspaceArchiveRouter(): Router {
 
       const { archivePath, archiveBase64, dryRun, conflictPolicy, targetWorkspaceId } = req.body || {};
       let archiveData: Uint8Array;
+      let resolvedPath = 'memory';
 
       if (archiveBase64 && typeof archiveBase64 === 'string') {
         archiveData = Buffer.from(archiveBase64, 'base64');
       } else if (archivePath && typeof archivePath === 'string') {
-        if (!fs.existsSync(archivePath)) {
-          res.status(404).json({ error: 'FILE_NOT_FOUND', message: `Archive file not found: ${archivePath}` });
+        const safePath = resolveContainedArchivePath(archivePath, correlationId);
+        if (!fs.existsSync(safePath)) {
+          res.status(404).json({ error: 'FILE_NOT_FOUND', message: 'Archive file not found' });
           return;
         }
-        archiveData = fs.readFileSync(archivePath);
+        resolvedPath = safePath;
+        archiveData = fs.readFileSync(safePath);
       } else {
         res.status(400).json({ error: 'VALIDATION_FAILED', message: 'archivePath or archiveBase64 is required' });
         return;
       }
 
+      const safeTargetId =
+        typeof targetWorkspaceId === 'string' && targetWorkspaceId.trim()
+          ? targetWorkspaceId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64)
+          : undefined;
+
       const result = workspaceArchiveService.restoreWorkspace(
         {
-          archivePath: archivePath || 'memory',
-          targetWorkspaceId,
+          archivePath: resolvedPath,
+          targetWorkspaceId: safeTargetId,
           dryRun: dryRun !== false, // defaults to true!
-          conflictPolicy: conflictPolicy || 'fail',
+          conflictPolicy: conflictPolicy === 'overwrite' || conflictPolicy === 'skip' ? conflictPolicy : 'fail',
         },
         archiveData,
         '/tmp/polyglot-workspaces',

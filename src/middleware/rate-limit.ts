@@ -15,19 +15,23 @@ export interface RateLimitOptions {
   readonly windowMs?: number;     // Window duration in ms (default: 60,000)
   readonly maxRequests?: number;  // Max requests per window (default: 100)
   readonly keyPrefix?: string;
+  readonly envMaxVar?: string;
   readonly getNow?: () => number;
 }
 
 export function createRateLimitMiddleware(options: RateLimitOptions = {}) {
   const windowMs = options.windowMs ?? 60_000;
-  const maxRequests = options.maxRequests ?? 100;
+  const baseMaxRequests = options.maxRequests ?? 100;
   const keyPrefix = options.keyPrefix ?? 'global';
+  const envMaxVar = options.envMaxVar;
   const getNow = options.getNow ?? (() => Date.now());
 
   // Map of clientIdentifier -> array of request timestamps
   const clients = new Map<string, number[]>();
 
   return function rateLimitMiddleware(req: Request, res: Response, next: NextFunction): void {
+    const envOverride = envMaxVar ? Number(process.env[envMaxVar]) : NaN;
+    const maxRequests = Number.isFinite(envOverride) && envOverride > 0 ? envOverride : baseMaxRequests;
     const correlationId = (req.headers['x-correlation-id'] as string) || crypto.randomUUID();
     const tokenUser = (req as unknown as { userTokenId?: string }).userTokenId;
     const clientKey = `${keyPrefix}:${tokenUser || req.ip || '127.0.0.1'}`;
@@ -69,5 +73,6 @@ export function createRateLimitMiddleware(options: RateLimitOptions = {}) {
   };
 }
 
-export const standardRateLimiter = createRateLimitMiddleware({ windowMs: 60_000, maxRequests: 100 });
+export const standardRateLimiter = createRateLimitMiddleware({ windowMs: 60_000, maxRequests: 100, envMaxVar: 'RATE_LIMIT_MAX' });
 export const mcpRateLimiter = createRateLimitMiddleware({ windowMs: 60_000, maxRequests: 30, keyPrefix: 'mcp' });
+export const authRateLimiter = createRateLimitMiddleware({ windowMs: 60_000, maxRequests: 20, keyPrefix: 'auth' });

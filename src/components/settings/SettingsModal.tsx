@@ -10,14 +10,13 @@
  * - Token Vault credential management
  */
 
-import React, { useSyncExternalStore, useState, useMemo } from 'react';
+import React, { useSyncExternalStore, useState } from 'react';
 import {
   X,
   Search,
   RotateCcw,
   Download,
   Upload,
-  Check,
   Undo2,
   Sliders,
   Palette,
@@ -33,13 +32,16 @@ import {
   Cog,
   Eye,
   EyeOff,
-  AlertTriangle,
+  Lock,
+  UserCheck,
 } from 'lucide-react';
 import { settingsStore } from '../../services/settings/settings-store';
-import type { SettingsCategory } from '../../services/settings/settings-types';
+import type { AppearanceSettings, PolyglotSettings, SettingsCategory } from '../../services/settings/settings-types';
 import { FEATURE_FLAGS } from '../../services/flags/feature-flag-registry';
 import { AI_PROVIDERS } from '../../services/ai/ai-provider-registry';
 import { AVAILABLE_LEAN_TOOLCHAINS } from '../../../server/src/config/lean-runner-config';
+import { useOptionalAuthContext } from '../../context/AuthContext';
+import { saveServerSettings } from '../../services/auth/api-client';
 
 interface CategoryItem {
   id: SettingsCategory;
@@ -64,13 +66,39 @@ const CATEGORIES: readonly CategoryItem[] = [
 
 export function SettingsModal(): React.JSX.Element | null {
   const snapshot = useSyncExternalStore(settingsStore.subscribe, settingsStore.getSnapshot);
+  const auth = useOptionalAuthContext();
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<boolean>(false);
+  const [serverSyncMessage, setServerSyncMessage] = useState<string | null>(null);
   const [revealedKeys, setRevealedKeys] = useState<Record<string, boolean>>({});
 
   if (!snapshot.isModalOpen) return null;
 
   const { settings, activeCategory, searchQuery, undoAvailable, undoMessage } = snapshot;
+  const canPersistServer = Boolean(auth?.authenticated && auth.hasPermission('settings:write'));
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const persistToServer = (nextSettings?: PolyglotSettings) => {
+    if (!canPersistServer) return;
+    const payload = nextSettings ?? settingsStore.getSnapshot().settings;
+    void saveServerSettings(payload)
+      .then(() => {
+        setServerSyncMessage('Sincronizzato sul server');
+      })
+      .catch((err: unknown) => {
+        setServerSyncMessage(
+          `Salvataggio locale (sync server non riuscito: ${err instanceof Error ? err.message : String(err)})`
+        );
+      });
+  };
+
+  const applySettingPatch = <K extends keyof PolyglotSettings>(
+    category: K,
+    patch: Partial<PolyglotSettings[K]>
+  ) => {
+    settingsStore.updateSettings(category, patch);
+    persistToServer();
+  };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,6 +110,7 @@ export function SettingsModal(): React.JSX.Element | null {
       if (res.success) {
         setImportSuccess(true);
         setImportError(null);
+        persistToServer();
         setTimeout(() => setImportSuccess(false), 3000);
       } else {
         setImportError(res.error || 'Validation error');
@@ -110,11 +139,25 @@ export function SettingsModal(): React.JSX.Element | null {
     >
       <div className="bg-[#090d15] border border-neutral-800 rounded-xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-3.5 bg-[#06090e] border-b border-neutral-800 shrink-0">
+        <header className="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 bg-[#06090e] border-b border-neutral-800 shrink-0">
           <div className="flex items-center gap-3">
             <Cog className="w-5 h-5 text-blue-400" />
             <h1 className="text-base font-semibold text-slate-100">Settings</h1>
             <span className="text-[11px] font-mono text-slate-500">Ctrl+,</span>
+            {auth && (
+              <button
+                type="button"
+                onClick={() => auth.openAuthModal()}
+                className="min-h-[36px] px-2.5 py-1 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-[11px] font-mono text-slate-200 flex items-center gap-1.5"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-blue-400" />
+                <span>
+                  {auth.authenticated
+                    ? `${auth.user?.username ?? 'session'} · ${(auth.activeRole ?? 'viewer').toUpperCase()}`
+                    : 'Accedi / Ruolo'}
+                </span>
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -134,12 +177,36 @@ export function SettingsModal(): React.JSX.Element | null {
               type="button"
               onClick={() => settingsStore.closeModal()}
               title="Close Settings (Esc)"
-              className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-neutral-800 transition-colors"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-neutral-800 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </header>
+
+        {auth && !canPersistServer && (
+          <div className="px-6 py-2 bg-amber-950/30 border-b border-amber-900/50 text-[11px] text-amber-200 flex items-center justify-between gap-2 shrink-0">
+            <span className="flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              {auth.authenticated
+                ? `Ruolo attivo (${auth.activeRole}): sola lettura lato server. Le modifiche restano locali nella sessione browser.`
+                : 'Non autenticato: accedi come Admin per persistere la configurazione globale sul server.'}
+            </span>
+            <button
+              type="button"
+              onClick={() => auth.openAuthModal()}
+              className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium"
+            >
+              Cambia Utente / Ruolo
+            </button>
+          </div>
+        )}
+
+        {serverSyncMessage && (
+          <div className="px-6 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] font-mono text-emerald-300 shrink-0">
+            {serverSyncMessage}
+          </div>
+        )}
 
         {/* Body Container: Nav on Left, Content on Right */}
         <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -211,7 +278,10 @@ export function SettingsModal(): React.JSX.Element | null {
               </span>
               <button
                 type="button"
-                onClick={() => settingsStore.resetSectionToDefaults(activeCategory)}
+                onClick={() => {
+                  settingsStore.resetSectionToDefaults(activeCategory);
+                  persistToServer();
+                }}
                 className="flex items-center gap-1 px-2.5 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-slate-400 hover:text-slate-200 text-xs transition-colors"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -234,7 +304,7 @@ export function SettingsModal(): React.JSX.Element | null {
                       max={36}
                       value={settings.editor.fontSize}
                       onChange={(e) =>
-                        settingsStore.updateSettings('editor', { fontSize: Number(e.target.value) })
+                        applySettingPatch('editor', { fontSize: Number(e.target.value) })
                       }
                       className="w-20 px-2 py-1 bg-neutral-900 border border-neutral-700 rounded text-slate-200 font-mono text-center"
                     />
@@ -251,7 +321,7 @@ export function SettingsModal(): React.JSX.Element | null {
                       max={8}
                       value={settings.editor.tabSize}
                       onChange={(e) =>
-                        settingsStore.updateSettings('editor', { tabSize: Number(e.target.value) })
+                        applySettingPatch('editor', { tabSize: Number(e.target.value) })
                       }
                       className="w-20 px-2 py-1 bg-neutral-900 border border-neutral-700 rounded text-slate-200 font-mono text-center"
                     />
@@ -266,7 +336,7 @@ export function SettingsModal(): React.JSX.Element | null {
                       type="checkbox"
                       checked={settings.editor.stickyScroll}
                       onChange={(e) =>
-                        settingsStore.updateSettings('editor', { stickyScroll: e.target.checked })
+                        applySettingPatch('editor', { stickyScroll: e.target.checked })
                       }
                       className="w-4 h-4 rounded text-blue-600"
                     />
@@ -281,7 +351,7 @@ export function SettingsModal(): React.JSX.Element | null {
                       type="checkbox"
                       checked={settings.editor.bracketPairColorization}
                       onChange={(e) =>
-                        settingsStore.updateSettings('editor', { bracketPairColorization: e.target.checked })
+                        applySettingPatch('editor', { bracketPairColorization: e.target.checked })
                       }
                       className="w-4 h-4 rounded text-blue-600"
                     />
@@ -296,7 +366,7 @@ export function SettingsModal(): React.JSX.Element | null {
                       type="checkbox"
                       checked={settings.editor.minimap}
                       onChange={(e) =>
-                        settingsStore.updateSettings('editor', { minimap: e.target.checked })
+                        applySettingPatch('editor', { minimap: e.target.checked })
                       }
                       className="w-4 h-4 rounded text-blue-600"
                     />
@@ -314,8 +384,8 @@ export function SettingsModal(): React.JSX.Element | null {
                     <select
                       value={settings.appearance.theme}
                       onChange={(e) =>
-                        settingsStore.updateSettings('appearance', {
-                          theme: e.target.value as any,
+                        applySettingPatch('appearance', {
+                          theme: e.target.value as AppearanceSettings['theme'],
                         })
                       }
                       className="px-3 py-1 bg-neutral-900 border border-neutral-700 rounded text-slate-200"
@@ -335,8 +405,8 @@ export function SettingsModal(): React.JSX.Element | null {
                     <select
                       value={settings.appearance.activityBarSize}
                       onChange={(e) =>
-                        settingsStore.updateSettings('appearance', {
-                          activityBarSize: e.target.value as any,
+                        applySettingPatch('appearance', {
+                          activityBarSize: e.target.value as AppearanceSettings['activityBarSize'],
                         })
                       }
                       className="px-3 py-1 bg-neutral-900 border border-neutral-700 rounded text-slate-200"
@@ -410,43 +480,49 @@ export function SettingsModal(): React.JSX.Element | null {
                     45 feature flags. Toggling overrides .env configuration for this browser session.
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {Object.entries(FEATURE_FLAGS).map(([key, def]) => {
-                      const enabled =
-                        settings.flags[key] !== undefined
-                          ? settings.flags[key]
-                          : def.default;
-                      const isExp = def.category === 'experiment';
-                      return (
-                        <div
-                          key={key}
-                          className="flex items-center justify-between p-2.5 rounded bg-neutral-900/50 border border-neutral-800"
-                        >
-                          <div className="min-w-0 pr-2">
-                            <div className="font-mono text-[11px] font-semibold text-slate-200 truncate flex items-center gap-1.5">
-                              {key}
-                              {isExp && (
-                                <span className="px-1 py-0.2 rounded bg-amber-950 text-amber-400 text-[9px] font-mono border border-amber-800">
-                                  EXP
-                                </span>
-                              )}
+                    {Object.entries(FEATURE_FLAGS)
+                      .filter(([key, def]) =>
+                        !normalizedQuery ||
+                        key.toLowerCase().includes(normalizedQuery) ||
+                        def.description.toLowerCase().includes(normalizedQuery)
+                      )
+                      .map(([key, def]) => {
+                        const enabled =
+                          settings.flags[key] !== undefined
+                            ? settings.flags[key]
+                            : def.default;
+                        const isExp = def.category === 'experiment';
+                        return (
+                          <div
+                            key={key}
+                            className="flex items-center justify-between p-2.5 rounded bg-neutral-900/50 border border-neutral-800"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <div className="font-mono text-[11px] font-semibold text-slate-200 truncate flex items-center gap-1.5">
+                                {key}
+                                {isExp && (
+                                  <span className="px-1 py-0.2 rounded bg-amber-950 text-amber-400 text-[9px] font-mono border border-amber-800">
+                                    EXP
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-500 font-mono">
+                                Phase {def.phase} · {def.category}
+                              </div>
                             </div>
-                            <div className="text-[10px] text-slate-500 font-mono">
-                              Phase {def.phase} · {def.category}
-                            </div>
+                            <input
+                              type="checkbox"
+                              checked={enabled}
+                              onChange={(e) =>
+                                applySettingPatch('flags', {
+                                  [key]: e.target.checked,
+                                })
+                              }
+                              className="w-4 h-4 rounded text-blue-600 shrink-0"
+                            />
                           </div>
-                          <input
-                            type="checkbox"
-                            checked={enabled}
-                            onChange={(e) =>
-                              settingsStore.updateSettings('flags', {
-                                [key]: e.target.checked,
-                              })
-                            }
-                            className="w-4 h-4 rounded text-blue-600 shrink-0"
-                          />
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 </div>
               )}
@@ -481,7 +557,7 @@ export function SettingsModal(): React.JSX.Element | null {
                       max={200}
                       value={settings.chat.maxToolCalls}
                       onChange={(e) =>
-                        settingsStore.updateSettings('chat', {
+                        applySettingPatch('chat', {
                           maxToolCalls: Number(e.target.value),
                         })
                       }
@@ -498,7 +574,7 @@ export function SettingsModal(): React.JSX.Element | null {
                       type="checkbox"
                       checked={settings.chat.autoArchiveEnabled}
                       onChange={(e) =>
-                        settingsStore.updateSettings('chat', {
+                        applySettingPatch('chat', {
                           autoArchiveEnabled: e.target.checked,
                         })
                       }
@@ -533,7 +609,7 @@ export function SettingsModal(): React.JSX.Element | null {
                       type="checkbox"
                       checked={settings.advanced.debugMode}
                       onChange={(e) =>
-                        settingsStore.updateSettings('advanced', {
+                        applySettingPatch('advanced', {
                           debugMode: e.target.checked,
                         })
                       }
@@ -543,7 +619,10 @@ export function SettingsModal(): React.JSX.Element | null {
 
                   <button
                     type="button"
-                    onClick={() => settingsStore.resetAllToDefaults()}
+                    onClick={() => {
+                      settingsStore.resetAllToDefaults();
+                      persistToServer();
+                    }}
                     className="px-3 py-1.5 rounded bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800 text-rose-300 text-xs font-medium transition-colors"
                   >
                     Reset All Settings to Defaults

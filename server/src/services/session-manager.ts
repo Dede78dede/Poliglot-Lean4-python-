@@ -22,12 +22,17 @@ export interface SessionMetadata {
   pinned: boolean; // Residuo 1: Long-term pinned sessions exemption from 72h TTL & LRU eviction
 }
 
+export function resolveSessionStoreRoot(env: Record<string, string | undefined> = process.env): string {
+  const configured = env['SESSION_STORE_ROOT']?.trim();
+  return configured ? path.resolve(configured) : path.resolve(process.cwd(), 'projects_store');
+}
+
 export class SessionManager {
   private readonly baseDir: string;
   private readonly sessions = new Map<string, SessionMetadata>();
   private cleanupTimer: NodeJS.Timeout | null = null;
 
-  constructor(baseDir = path.resolve(process.cwd(), 'projects_store')) {
+  constructor(baseDir = resolveSessionStoreRoot()) {
     this.baseDir = baseDir;
     this.startPeriodicCleanup();
   }

@@ -1,5 +1,5 @@
 # Multi-Toolchain Lean 4 Runner (Polyglot Code Studio)
-# Isolated runtime: designed to execute with Docker --internal=true (zero outbound network)
+# Isolated runtime: designed to execute on internal Docker network (zero outbound network)
 
 FROM ubuntu:22.04 AS runner-base
 
@@ -22,18 +22,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # 2. Install Elan (Lean toolchain manager)
 RUN curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
 
-# 3. Pre-install all required toolchains at image build time
+# 3. Pre-install all 8 toolchains matching AVAILABLE_LEAN_TOOLCHAINS in lean-runner-config.ts
 # CRITICAL: Containers execute with --internal=true and cannot fetch toolchains at runtime
 RUN elan toolchain install leanprover/lean4:v4.28.0 && \
     elan toolchain install leanprover/lean4:v4.31.0 && \
+    elan toolchain install leanprover/lean4:v4.31.0-rc2 && \
+    elan toolchain install leanprover/lean4:v4.32.2 && \
     elan toolchain install leanprover/lean4:v4.33.1 && \
+    elan toolchain install leanprover/lean4:v4.34.1 && \
     elan toolchain install leanprover/lean4:v4.35.0-rc4 && \
+    elan toolchain install leanprover/lean4:v4.35.0 && \
     elan default leanprover/lean4:v4.35.0-rc4
 
-# 4. Prepare non-root user and shared Mathlib cache volume directory (~20 GB allocation)
+# 4. Prepare non-root user, shared Mathlib cache, shared projects mount, and ephemeral scratch root
 RUN useradd -m -s /bin/bash leanrunner && \
-    mkdir -p /home/leanrunner/.cache/mathlib /workspace/projects /tmp/warmup && \
-    chown -R leanrunner:leanrunner /home/leanrunner /workspace /root/.elan /tmp/warmup
+    mkdir -p /home/leanrunner/.cache/mathlib /workspace/projects /tmp/lean-jobs /tmp/warmup && \
+    chown -R leanrunner:leanrunner /home/leanrunner /workspace /root/.elan /tmp/lean-jobs /tmp/warmup
 
 WORKDIR /workspace
 USER leanrunner
@@ -50,12 +54,12 @@ RUN cd /tmp/warmup && \
     (lake exe cache get || true) && \
     rm -rf /tmp/warmup
 
-# Expose internal runner API port
+# Expose internal runner API port (not published to host)
 EXPOSE 8080
 
-# Healthcheck ensuring elan and all 4 toolchains are present
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD elan toolchain list | grep -q "v4.35.0-rc4" || exit 1
+# Healthcheck verifying real runner /readyz probe (requires auth-free local /readyz check)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -sf http://127.0.0.1:8080/readyz | grep -q '"smokeBuildPassed":true' || exit 1
 
 COPY --chown=leanrunner:leanrunner server.js /workspace/server.js
 

@@ -26,19 +26,19 @@ if str(WORKSPACE_ROOT) not in sys.path:
 
 try:
     from pydantic import TypeAdapter, ValidationError
+
     from schemas.generated_contracts import (
         ConfigChange,
         ConfigProposal,
         LeanExecuteRequest,
-        LeanExecuteResponse,
         ProofReuseQuery,
-        ProofReuseResult,
         ResultEnvelope,
         ResultEnvelopeFailure,
         ResultEnvelopeSuccess,
         SerializedBridgeError,
     )
     PYDANTIC_AVAILABLE = True
+    IMPORT_ERROR_MSG = ""
 except ImportError as exc:
     PYDANTIC_AVAILABLE = False
     IMPORT_ERROR_MSG = str(exc)
@@ -56,8 +56,15 @@ class TestPythonSyntaxAndAST(unittest.TestCase):
         self.assertIsInstance(parsed, ast.Module)
 
     def test_leancert_wrapper_ast_validity(self) -> None:
-        """Validate that server/src/services/leancert/leancert_wrapper.py parses as valid Python AST."""
-        leancert_file = WORKSPACE_ROOT / "server" / "src" / "services" / "leancert" / "leancert_wrapper.py"
+        """Validate leancert_wrapper.py parses as valid Python AST."""
+        leancert_file = (
+            WORKSPACE_ROOT
+            / "server"
+            / "src"
+            / "services"
+            / "leancert"
+            / "leancert_wrapper.py"
+        )
         self.assertTrue(leancert_file.exists(), "leancert_wrapper.py must exist")
         content = leancert_file.read_text(encoding="utf-8")
         parsed = ast.parse(content, filename=str(leancert_file))
@@ -78,7 +85,7 @@ class TestPythonContractsAutonomous(unittest.TestCase):
     def setUp(self) -> None:
         """Verify Pydantic v2 environment availability before each test."""
         if not PYDANTIC_AVAILABLE:
-            self.skipTest(f"Pydantic v2 unavailable: {IMPORT_ERROR_MSG}")
+            self.fail(f"Pydantic v2 unavailable: {IMPORT_ERROR_MSG}")
 
     def test_result_envelope_success_branch(self) -> None:
         """Validate that ResultEnvelope validates a success payload."""
@@ -96,7 +103,7 @@ class TestPythonContractsAutonomous(unittest.TestCase):
         self.assertEqual(validated.value["theorem"], "nat_add_zero")
 
     def test_result_envelope_failure_branch(self) -> None:
-        """Validate that ResultEnvelope validates a failure payload with RFC 9457 error."""
+        """Validate ResultEnvelope accepts a failure payload with RFC 9457 error."""
         adapter: TypeAdapter[Any] = TypeAdapter(ResultEnvelope)
         payload: dict[str, Any] = {
             "ok": False,
@@ -131,7 +138,7 @@ class TestPythonContractsAutonomous(unittest.TestCase):
         """Validate that frozen=True prevents mutation of instantiated attributes."""
         req = LeanExecuteRequest(code="theorem t : True := trivial", timeoutMs=5000)
         with self.assertRaises(ValidationError):
-            req.code = "mutated_code"  # type: ignore[misc]
+            req.code = "mutated_code"
 
     def test_rfc9457_problem_details_structure(self) -> None:
         """Validate that SerializedBridgeError enforces required fields."""
@@ -155,7 +162,15 @@ class TestPythonContractsAutonomous(unittest.TestCase):
             title="Enable Translation Fidelity",
             rationale="High benchmark confidence",
             source="benchmark",
-            changes=[ConfigChange(**{"flag": "ENABLE_TRANSLATION_FIDELITY", "from": False, "to": True})],
+            changes=[
+                ConfigChange.model_validate(
+                    {
+                        "flag": "ENABLE_TRANSLATION_FIDELITY",
+                        "from": False,
+                        "to": True,
+                    }
+                )
+            ],
             confidence="high",
             createdAt="2026-11-04T12:00:00Z",
         )
@@ -180,7 +195,10 @@ def run_contract_verification() -> int:
     if result.wasSuccessful():
         print("✓ All Python boundary contracts verified successfully (100% pass).\n")
         return 0
-    print(f"✗ Python contract verification failed with {len(result.errors)} errors, {len(result.failures)} failures.\n")
+    print(
+        f"✗ Python contract verification failed with "
+        f"{len(result.errors)} errors, {len(result.failures)} failures.\n"
+    )
     return 1
 
 

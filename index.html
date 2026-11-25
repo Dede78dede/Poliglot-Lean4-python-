@@ -8,6 +8,87 @@
     <meta name="description" content="A browser-based dual-runtime code editor and formal verification studio for Python 3.14 and Lean 4." />
     <meta property="og:title" content="Polyglot Code Studio" />
     <meta property="og:description" content="A browser-based dual-runtime code editor and formal verification studio for Python 3.14 and Lean 4." />
+    <script>
+      (function () {
+        if (typeof window === 'undefined') return;
+        window.addEventListener(
+          'error',
+          function (event) {
+            if (
+              event &&
+              (event.message === 'ResizeObserver loop completed with undelivered notifications.' ||
+                event.message === 'ResizeObserver loop limit exceeded')
+            ) {
+              event.stopImmediatePropagation();
+              event.preventDefault();
+            }
+          },
+          true
+        );
+
+        var NativeResizeObserver = window.ResizeObserver;
+        if (typeof NativeResizeObserver !== 'function') return;
+
+        var stateMap = new WeakMap();
+        function PatchedResizeObserver(callback) {
+          var state = {
+            rafId: 0,
+            active: true,
+            pending: new Map(),
+            observer: null,
+          };
+          var nativeObserver = new NativeResizeObserver(function (entries, observer) {
+            if (!state.active) return;
+            for (var i = 0; i < entries.length; i++) {
+              state.pending.set(entries[i].target, entries[i]);
+            }
+            if (state.rafId) return;
+            state.rafId = window.requestAnimationFrame(function () {
+              state.rafId = 0;
+              if (!state.active || state.pending.size === 0) return;
+              var batch = Array.from(state.pending.values());
+              state.pending.clear();
+              callback(batch, state.observer || observer);
+            });
+          });
+          state.observer = nativeObserver;
+          stateMap.set(nativeObserver, state);
+          return nativeObserver;
+        }
+
+        var origObserve = NativeResizeObserver.prototype.observe;
+        var origUnobserve = NativeResizeObserver.prototype.unobserve;
+        var origDisconnect = NativeResizeObserver.prototype.disconnect;
+
+        NativeResizeObserver.prototype.observe = function (target, options) {
+          var st = stateMap.get(this);
+          if (st) st.active = true;
+          return origObserve.call(this, target, options);
+        };
+
+        NativeResizeObserver.prototype.unobserve = function (target) {
+          var st = stateMap.get(this);
+          if (st) st.pending.delete(target);
+          return origUnobserve.call(this, target);
+        };
+
+        NativeResizeObserver.prototype.disconnect = function () {
+          var st = stateMap.get(this);
+          if (st) {
+            st.active = false;
+            st.pending.clear();
+            if (st.rafId) {
+              window.cancelAnimationFrame(st.rafId);
+              st.rafId = 0;
+            }
+          }
+          return origDisconnect.call(this);
+        };
+
+        PatchedResizeObserver.prototype = NativeResizeObserver.prototype;
+        window.ResizeObserver = PatchedResizeObserver;
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">

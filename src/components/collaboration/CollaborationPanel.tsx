@@ -30,12 +30,14 @@ import type {
 export interface CollaborationPanelProps {
   readonly activeDocId?: string;
   readonly bufferContent?: string;
+  readonly monacoEditor?: { getModel?: () => unknown } | null;
   readonly onRemoteBufferChange?: (nextContent: string) => void;
 }
 
 export function CollaborationPanel({
   activeDocId = 'Main.lean',
   bufferContent = '',
+  monacoEditor,
   onRemoteBufferChange,
 }: CollaborationPanelProps): React.JSX.Element {
   const isEnabled = useStoreSelector(
@@ -104,6 +106,7 @@ export function CollaborationPanel({
         token: token.trim(),
         userName: userName.trim() || 'Researcher',
         initialText: bufferContent,
+        monacoEditor: monacoEditor ?? undefined,
         onRemoteText: (nextText) => onRemoteBufferChange?.(nextText),
         onStatusChange: (next, detail) => {
           setStatus(next);
@@ -140,10 +143,13 @@ export function CollaborationPanel({
         return 'Offline Queue';
       case 'auth_error':
         return 'Auth Error';
+      case 'protocol_error':
+        return 'Protocol Error';
     }
   };
 
   const isLiveSession = sessionRef.current !== null && (status === 'connected' || status === 'connecting');
+  const isErrorStatus = status === 'auth_error' || status === 'protocol_error';
 
   return (
     <div className="flex flex-col h-full p-4 bg-slate-900 text-slate-100 overflow-y-auto space-y-4">
@@ -158,7 +164,7 @@ export function CollaborationPanel({
           className={`text-xs font-mono tabular-nums whitespace-nowrap shrink-0 ${
             status === 'connected'
               ? 'text-emerald-400'
-              : status === 'auth_error'
+              : isErrorStatus
               ? 'text-rose-400'
               : status === 'connecting'
               ? 'text-amber-400'
@@ -266,9 +272,9 @@ export function CollaborationPanel({
 
             {statusDetail && (
               <p
-                role={status === 'auth_error' ? 'alert' : 'status'}
+                role={isErrorStatus ? 'alert' : 'status'}
                 className={`text-xs ${
-                  status === 'auth_error' ? 'text-rose-400' : 'text-slate-400'
+                  isErrorStatus ? 'text-rose-400' : 'text-slate-400'
                 }`}
               >
                 {statusDetail}

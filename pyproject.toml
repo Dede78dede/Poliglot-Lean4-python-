@@ -43,6 +43,8 @@ ignore = []
 [tool.mypy]
 python_version = "3.11"
 strict = true
+explicit_package_bases = true
+namespace_packages = true
 exclude = ["scripts/archive/"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
@@ -59,6 +61,7 @@ strict = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
+pythonpath = ["."]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]

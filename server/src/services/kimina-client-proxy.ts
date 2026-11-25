@@ -3,13 +3,21 @@ import type { KiminaConfig } from '../config/kimina-config';
 import { KiminaSimulator } from './kimina-simulator';
 import { evaluateFormalVerification } from './verification-formula';
 import {
-  attachServerProvenance,
   CANONICAL_VERIFICATION_PROTOCOL,
   STANDARD_AXIOM_ALLOWLIST,
   type AxiomAuditReport,
   type EngineEvidence,
   type VerificationRequestV1,
 } from './verification/hybrid-adjudicator';
+import { ENGINE_MODES } from '../../../src/types/verification-ui';
+
+function assertRealModeInProduction(mode: KiminaConfig['mode']): void {
+  if (process.env['NODE_ENV'] === 'production' && mode !== ENGINE_MODES.REAL) {
+    throw new Error(
+      `CRITICAL PRODUCTION GUARD: KiminaClientProxy mode "${mode}" is strictly forbidden in production.`,
+    );
+  }
+}
 
 export interface KiminaSorry {
   readonly line?: number;
@@ -159,24 +167,31 @@ export class KiminaClientProxy {
   private readonly simulator: KiminaSimulator;
 
   constructor(config: KiminaConfig) {
+    assertRealModeInProduction(config.mode);
     this.config = config;
     this.simulator = new KiminaSimulator();
   }
 
   async verify(code: string, timeoutMs: number): Promise<LeanServerResult> {
-    switch (this.config.mode) {
-      case 'real':
+    assertRealModeInProduction(this.config.mode);
+    const mode = this.config.mode;
+    switch (mode) {
+      case ENGINE_MODES.REAL:
         return this.verifyReal(code, timeoutMs);
-      case 'simulator':
+      case ENGINE_MODES.SIMULATOR:
         console.warn('[KiminaClientProxy] Executing in SIMULATOR mode — not real verification.');
         return this.simulator.verify(code);
-      case 'auto':
+      case ENGINE_MODES.AUTO:
         return this.verifyAuto(code, timeoutMs);
+      default: {
+        const exhaustive: never = mode;
+        throw new Error(`Unsupported Kimina mode: ${String(exhaustive)}`);
+      }
     }
   }
 
   async checkReady(): Promise<boolean> {
-    if (this.config.mode === 'simulator') return false;
+    if (this.config.mode === ENGINE_MODES.SIMULATOR) return false;
     const baseUrl = 'baseUrl' in this.config ? this.config.baseUrl : 'http://localhost:8000';
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), Math.min(2000, this.config.timeoutMs));
@@ -194,7 +209,10 @@ export class KiminaClientProxy {
     }
   }
 
-  toEngineEvidence(req: VerificationRequestV1, result: LeanServerResult): EngineEvidence {
+  toEngineEvidence(
+    req: VerificationRequestV1,
+    result: LeanServerResult,
+  ): Omit<EngineEvidence, 'provenance'> {
     const diagnostics = (result.diagnostics ?? []).map((d) => ({
       severity: d.severity,
       message: d.message,
@@ -258,7 +276,7 @@ export class KiminaClientProxy {
         ? 'inconclusive'
         : 'rejected';
 
-    return attachServerProvenance({
+    return {
       engine: 'kimina',
       contractVersion: CANONICAL_VERIFICATION_PROTOCOL,
       outcome,
@@ -274,7 +292,7 @@ export class KiminaClientProxy {
       diagnostics,
       axiomAudit,
       error: passed ? null : result.stderr || 'Kimina kernel did not pass verification and axiom audit.',
-    });
+    };
   }
 
   private async verifyAuto(code: string, timeoutMs: number): Promise<LeanServerResult> {

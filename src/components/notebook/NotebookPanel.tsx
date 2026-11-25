@@ -7,7 +7,8 @@ import {
   importFromIpynb,
 } from '../../types/notebook';
 import { notebookKernel } from '../../workers/notebook.worker';
-import { Play, RotateCcw, Plus, Download, Upload, Trash2, CheckCircle2, Clock } from 'lucide-react';
+import { Play, RotateCcw, Plus, Download, Trash2, CheckCircle2, Clock } from 'lucide-react';
+import { authorizedFetch } from '../../services/auth/api-client';
 
 const INITIAL_NOTEBOOK: Notebook = {
   id: 'nb-initial',
@@ -41,11 +42,29 @@ export const NotebookPanel: React.FC = () => {
   const [activeCellId, setActiveCellId] = useState<string>(INITIAL_NOTEBOOK.cells[0]?.id ?? '');
   const [kernelStatus, setKernelStatus] = useState<'ready' | 'running' | 'restarted'>('ready');
   const [runningCellId, setRunningCellId] = useState<string | null>(null);
+  const [confirmRestart, setConfirmRestart] = useState(false);
 
   useEffect(() => {
     // Sync initial cell 1 variables into kernel on mount
     notebookKernel.executeCell(notebook.cells[0].id, notebook.cells[0].code).catch(() => {});
   }, []);
+
+  const syncNotebookSession = async (action: 'run' | 'restart', cellId?: string) => {
+    try {
+      await authorizedFetch('/api/v1/notebook/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notebookId: notebook.id,
+          action,
+          cellId,
+          cellCount: notebook.cells.length,
+        }),
+      });
+    } catch {
+      // Local notebook worker continues seamlessly when offline/unauthenticated
+    }
+  };
 
   const handleRunCell = async (cellId: string) => {
     const cell = notebook.cells.find((c) => c.id === cellId);
@@ -75,6 +94,7 @@ export const NotebookPanel: React.FC = () => {
             : c
         ),
       }));
+      void syncNotebookSession('run', cell.id);
     } finally {
       setKernelStatus('ready');
       setRunningCellId(null);
@@ -87,12 +107,12 @@ export const NotebookPanel: React.FC = () => {
     }
   };
 
-  const handleRestartKernel = () => {
-    if (confirm('Restart kernel? All in-memory variables and state will be cleared.')) {
-      notebookKernel.restartKernel();
-      setKernelStatus('restarted');
-      setTimeout(() => setKernelStatus('ready'), 3000);
-    }
+  const handleConfirmRestartKernel = () => {
+    notebookKernel.restartKernel();
+    setConfirmRestart(false);
+    setKernelStatus('restarted');
+    void syncNotebookSession('restart');
+    setTimeout(() => setKernelStatus('ready'), 3000);
   };
 
   const handleAddCell = () => {
@@ -164,13 +184,34 @@ export const NotebookPanel: React.FC = () => {
             <Play className="w-3.5 h-3.5" />
             Run All
           </button>
-          <button
-            onClick={handleRestartKernel}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-md transition-colors whitespace-nowrap"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Restart Kernel
-          </button>
+          {confirmRestart ? (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-950/60 border border-rose-800/70">
+              <span className="text-[11px] text-rose-200 whitespace-nowrap">Clear kernel?</span>
+              <button
+                type="button"
+                onClick={handleConfirmRestartKernel}
+                className="px-2 py-0.5 text-[11px] font-medium bg-rose-600 hover:bg-rose-500 text-white rounded"
+              >
+                Confirm
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmRestart(false)}
+                className="px-2 py-0.5 text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmRestart(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-md transition-colors whitespace-nowrap"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Restart Kernel
+            </button>
+          )}
           <button
             onClick={handleAddCell}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-md transition-colors whitespace-nowrap"

@@ -286,18 +286,21 @@ export function createDiscoveryRouter(): Router {
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), 3500);
 
+          const ghHeaders: Record<string, string> = {
+            Accept: 'application/vnd.github.v3+json',
+            'User-Agent': 'Polyglot-Code-Studio/1.1',
+          };
+          const ghToken = req.headers['x-github-token'];
+          if (typeof ghToken === 'string' && ghToken.trim()) {
+            ghHeaders['Authorization'] = `Bearer ${ghToken.trim()}`;
+          }
+
           const ghRes = await fetch(
             `https://api.github.com/search/repositories?q=${encodeURIComponent(
               q,
             )}+language:${lang}+stars:>0&sort=stars&order=desc&per_page=5`,
             {
-              headers: {
-                Accept: 'application/vnd.github.v3+json',
-                'User-Agent': 'Polyglot-Code-Studio/1.1',
-                ...(req.headers['authorization']
-                  ? { Authorization: req.headers['authorization'] as string }
-                  : {}),
-              },
+              headers: ghHeaders,
               signal: controller.signal,
             },
           );
@@ -396,7 +399,11 @@ export function createDiscoveryRouter(): Router {
 
   // POST /api/v1/discovery/import (Gap 1 & Gap 2)
   router.post('/import', async (req: Request, res: Response): Promise<void> => {
-    const body = req.body as {
+    const SAFE_IDENT_REGEX = /^[a-zA-Z0-9._-]{1,100}$/;
+    const SAFE_REF_REGEX = /^[a-zA-Z0-9._/-]{1,128}$/;
+    const ALLOWED_GITHUB_HOSTS = new Set(['github.com', 'www.github.com']);
+
+    const body = (req.body ?? {}) as {
       owner?: string;
       repo?: string;
       ref?: string;
@@ -404,35 +411,56 @@ export function createDiscoveryRouter(): Router {
       token?: string;
     };
 
-    let owner = body.owner?.trim();
-    let repo = body.repo?.trim();
-    const ref = body.ref?.trim() || 'HEAD';
-    const token = body.token || (req.headers['authorization']?.replace(/^Bearer\s+/i, '') ?? '');
+    let owner = typeof body.owner === 'string' ? body.owner.trim() : undefined;
+    let repo = typeof body.repo === 'string' ? body.repo.trim() : undefined;
+    const ref = typeof body.ref === 'string' && body.ref.trim() ? body.ref.trim() : 'HEAD';
+    const tokenHeader = req.headers['x-github-token'];
+    const token =
+      (typeof body.token === 'string' ? body.token.trim() : '') ||
+      (typeof tokenHeader === 'string' ? tokenHeader.trim() : '');
 
-    if (!owner || !repo) {
-      if (body.repositoryUrl) {
-        try {
-          const parsed = new URL(body.repositoryUrl);
-          const segments = parsed.pathname.split('/').filter(Boolean);
-          if (segments.length >= 2) {
-            owner = segments[0];
-            repo = segments[1]?.replace(/\.git$/, '');
-          }
-        } catch {
-          // invalid url
+    if ((!owner || !repo) && typeof body.repositoryUrl === 'string' && body.repositoryUrl.trim()) {
+      try {
+        const parsed = new URL(body.repositoryUrl.trim());
+        if (parsed.protocol !== 'https:' || !ALLOWED_GITHUB_HOSTS.has(parsed.hostname.toLowerCase())) {
+          res.status(400).json({
+            error: 'INVALID_REPOSITORY_URL',
+            message: 'Only HTTPS URLs on github.com are allowed.',
+          });
+          return;
         }
+        const segments = parsed.pathname.split('/').filter(Boolean);
+        if (segments.length >= 2) {
+          owner = segments[0];
+          repo = segments[1]?.replace(/\.git$/, '');
+        }
+      } catch {
+        res.status(400).json({
+          error: 'INVALID_REPOSITORY_URL',
+          message: 'Invalid repositoryUrl format.',
+        });
+        return;
       }
     }
 
-    if (!owner || !repo) {
+    if (
+      !owner ||
+      !repo ||
+      !SAFE_IDENT_REGEX.test(owner) ||
+      !SAFE_IDENT_REGEX.test(repo) ||
+      owner.includes('..') ||
+      repo.includes('..') ||
+      !SAFE_REF_REGEX.test(ref) ||
+      ref.includes('..')
+    ) {
       res.status(400).json({
         error: 'INVALID_PARAMETERS',
-        message: 'Must provide owner and repo, or a valid GitHub repositoryUrl.',
+        message: 'Must provide valid owner, repo, and ref (or valid https://github.com/owner/repo URL).',
       });
       return;
     }
 
-    const zipballUrl = `https://api.github.com/repos/${owner}/${repo}/zipball/${encodeURIComponent(ref)}`;
+    const zipballUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/zipball/${encodeURIComponent(ref)}`;
     const headers: Record<string, string> = {
       'User-Agent': 'Polyglot-Code-Studio/1.1',
       Accept: 'application/vnd.github.v3+json',

@@ -1,4 +1,14 @@
 import { Router, type Request, type Response } from 'express';
+import { z } from 'zod';
+
+const DeviceCodeSchema = z.object({
+  clientId: z.string().trim().regex(/^[a-zA-Z0-9._-]{4,128}$/).optional(),
+});
+
+const DeviceTokenSchema = z.object({
+  clientId: z.string().trim().regex(/^[a-zA-Z0-9._-]{4,128}$/).optional(),
+  deviceCode: z.string().trim().min(1).max(256),
+});
 
 export function createGitHubAuthRouter(): Router {
   const router = Router();
@@ -6,9 +16,16 @@ export function createGitHubAuthRouter(): Router {
   // POST /api/v1/auth/github/device/code
   router.post('/device/code', async (req: Request, res: Response) => {
     try {
-      const { clientId } = req.body as { clientId?: string };
-      const resolvedClientId = clientId?.trim() || process.env.GITHUB_CLIENT_ID;
+      const parsed = DeviceCodeSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        res.status(400).json({
+          error: 'INVALID_CLIENT_ID',
+          message: 'clientId must be a valid alphanumeric GitHub OAuth Client ID.',
+        });
+        return;
+      }
 
+      const resolvedClientId = parsed.data.clientId || process.env.GITHUB_CLIENT_ID;
       if (!resolvedClientId) {
         res.status(400).json({
           error: 'MISSING_CLIENT_ID',
@@ -40,7 +57,6 @@ export function createGitHubAuthRouter(): Router {
 
       res.json(data);
     } catch (err: unknown) {
-      console.error('[GitHub Device Code Error]', err);
       res.status(500).json({
         error: 'INTERNAL_ERROR',
         message: err instanceof Error ? err.message : 'Unknown server error',
@@ -51,13 +67,20 @@ export function createGitHubAuthRouter(): Router {
   // POST /api/v1/auth/github/device/token
   router.post('/device/token', async (req: Request, res: Response) => {
     try {
-      const { clientId, deviceCode } = req.body as { clientId?: string; deviceCode?: string };
-      const resolvedClientId = clientId?.trim() || process.env.GITHUB_CLIENT_ID;
-
-      if (!resolvedClientId || !deviceCode) {
+      const parsed = DeviceTokenSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
         res.status(400).json({
           error: 'MISSING_PARAMETERS',
-          message: 'Both clientId and deviceCode are required to poll for authorization token.',
+          message: 'Valid clientId and deviceCode are required to poll for authorization token.',
+        });
+        return;
+      }
+
+      const resolvedClientId = parsed.data.clientId || process.env.GITHUB_CLIENT_ID;
+      if (!resolvedClientId) {
+        res.status(400).json({
+          error: 'MISSING_CLIENT_ID',
+          message: 'GitHub OAuth Client ID is required.',
         });
         return;
       }
@@ -70,7 +93,7 @@ export function createGitHubAuthRouter(): Router {
         },
         body: JSON.stringify({
           client_id: resolvedClientId,
-          device_code: deviceCode,
+          device_code: parsed.data.deviceCode,
           grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
         }),
       });
@@ -78,7 +101,6 @@ export function createGitHubAuthRouter(): Router {
       const data = await response.json();
       res.json(data);
     } catch (err: unknown) {
-      console.error('[GitHub Device Token Error]', err);
       res.status(500).json({
         error: 'INTERNAL_ERROR',
         message: err instanceof Error ? err.message : 'Unknown server error',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
 import { Check, X, Columns2, Rows2, GitCompare } from 'lucide-react';
 
@@ -24,6 +24,31 @@ export function DiffViewer({
   onClose,
 }: DiffViewerProps): React.JSX.Element {
   const [isSideBySide, setIsSideBySide] = useState(true);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const diffEditorRef = useRef<{ layout?: () => void } | null>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let rafId: number | null = null;
+    const observer = new ResizeObserver(() => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        diffEditorRef.current?.layout?.();
+      });
+    });
+    observer.observe(el);
+    return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      observer.disconnect();
+      diffEditorRef.current = null;
+    };
+  }, []);
 
   // Simple line diff stats for summary header
   const originalLines = original.split('\n');
@@ -118,13 +143,18 @@ export function DiffViewer({
       </div>
 
       {/* Monaco DiffEditor */}
-      <div className="flex-1 relative overflow-hidden">
+      <div ref={containerRef} className="flex-1 min-w-0 min-h-0 relative overflow-hidden">
         <DiffEditor
           height="100%"
           width="100%"
+          className="h-full w-full min-w-0 min-h-0 overflow-hidden"
+          wrapperProps={{ className: 'min-w-0 min-h-0 overflow-hidden' }}
           language={language === 'lean4' ? 'lean4' : 'python'}
           original={original}
           modified={modified}
+          onMount={(editor) => {
+            diffEditorRef.current = editor as unknown as { layout?: () => void };
+          }}
           theme="vs-dark"
           options={{
             readOnly: false,
@@ -132,7 +162,7 @@ export function DiffViewer({
             fontSize: 13,
             fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
             scrollBeyondLastLine: false,
-            automaticLayout: true,
+            automaticLayout: false,
             smoothScrolling: true,
             renderIndicators: true,
           }}

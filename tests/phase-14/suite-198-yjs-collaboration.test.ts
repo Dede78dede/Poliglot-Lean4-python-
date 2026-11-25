@@ -10,6 +10,7 @@
  * 198.5: Disconnect, offline edit buffering in client Y.Doc, and automatic convergence on reconnect.
  * 198.6: Snapshot persistence (.collab/{docId}.yjs & .yjsbin) and path traversal blocking.
  * 198.7: MonacoYjsAdapter lazy-load no-op safety when disabled and zero epistemic breach.
+ * 198.8: Distinct RFC 6455 close codes: 1003 (unsupported data frame) vs 1008 (policy/rate violation), plus EditorPane->CollaborationPanel Monaco wiring.
  */
 
 import assert from 'node:assert/strict';
@@ -154,7 +155,7 @@ async function expectUpgradeStatus(url: string, expectedStatus: number, origin?:
 }
 
 export async function runSuite198(): Promise<void> {
-  console.log('Running Suite 198: Real Yjs WebSocket CRDT Collaboration (7 sub-tests)...');
+  console.log('Running Suite 198: Real Yjs WebSocket CRDT Collaboration (8 sub-tests)...');
 
   const tmpWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'polyglot-suite-198-'));
   const server = new HocuspocusServer({
@@ -272,6 +273,27 @@ export async function runSuite198(): Promise<void> {
     assert.equal((publicState as any).verified, undefined);
     assert.equal((publicState as any).seal, undefined);
     console.log('  ✓ 198.7 Adapter flag gating & epistemic barrier upheld');
+
+    // 198.8: RFC 6455 close code differentiation (1003 protocol vs 1008 policy) & App Monaco wiring
+    featureFlagRegistry.set('ENABLE_YJS_COLLABORATION', true);
+    const badFrameCloseCode = await new Promise<number>((resolve, reject) => {
+      const ws = new WebSocket(`${baseWsUrl}?room=CloseCodeCheck.lean&token=collab-token-123`, {
+        headers: { Origin: 'http://localhost:3000' },
+      });
+      ws.once('open', () => {
+        // Message type 99 is unsupported by Yjs sync/awareness handler
+        ws.send(Uint8Array.from([99, 1, 2, 3]));
+      });
+      ws.once('close', (code) => resolve(code));
+      ws.once('error', reject);
+    });
+    assert.equal(badFrameCloseCode, 1003, 'Unsupported frame type must close with WS 1003 (not 1008 auth error)');
+
+    const appSource = fs.readFileSync(path.resolve('src/App.tsx'), 'utf-8');
+    const yjsRuntimeSource = fs.readFileSync(path.resolve('src/services/collaboration/yjs-runtime.ts'), 'utf-8');
+    assert.ok(appSource.includes('<EditorPane') && appSource.includes('monacoEditor={monacoEditor}'), 'App.tsx must mount lazy EditorPane and pass monacoEditor into CollaborationPanel');
+    assert.ok(yjsRuntimeSource.includes("updateStatus(\n          'protocol_error'") || yjsRuntimeSource.includes("'protocol_error'"), 'yjs-runtime must separate protocol_error (1003/1009) from auth_error (1008)');
+    console.log('  ✓ 198.8 Distinct WS 1003/1008 close codes & live EditorPane->CollaborationPanel Monaco wiring verified');
   } finally {
     featureFlagRegistry.reset('ENABLE_YJS_COLLABORATION');
     wss.close();

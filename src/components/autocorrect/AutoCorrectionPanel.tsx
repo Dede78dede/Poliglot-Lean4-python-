@@ -27,6 +27,7 @@ import {
   type LeanCodeAction,
 } from '../../services/autocorrect/lean-lsp-actions';
 import { runDeterministicPythonFixer } from '../../services/autocorrect/python-deterministic-fixer';
+import { authorizedFetch } from '../../services/auth/api-client';
 
 export interface AutoCorrectionPanelProps {
   readonly isOpen: boolean;
@@ -182,7 +183,7 @@ export function AutoCorrectionPanel({
 
     try {
       if (language === 'python') {
-        const res = await fetch('/api/v1/autocorrect/deterministic', {
+        const res = await authorizedFetch('/api/v1/autocorrect/deterministic', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: currentCode, allowUnsafe }),
@@ -235,7 +236,7 @@ export function AutoCorrectionPanel({
 
     try {
       if (language === 'python') {
-        const res = await fetch('/api/v1/autocorrect/python-feedback', {
+        const res = await authorizedFetch('/api/v1/autocorrect/python-feedback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: currentCode }),
@@ -253,7 +254,7 @@ export function AutoCorrectionPanel({
         }
       } else {
         // LeanProbe REPL
-        const res = await fetch('/api/v1/autocorrect/feedback-loop', {
+        const res = await authorizedFetch('/api/v1/autocorrect/feedback-loop', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: currentCode, maxAttempts: l2MaxAttempts }),
@@ -297,7 +298,7 @@ export function AutoCorrectionPanel({
 
     try {
       if (language === 'python') {
-        const res = await fetch('/api/v1/autocorrect/python-specialized', {
+        const res = await authorizedFetch('/api/v1/autocorrect/python-specialized', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: currentCode }),
@@ -323,7 +324,7 @@ export function AutoCorrectionPanel({
         }
       } else {
         // Leanstral 1.5
-        const res = await fetch('/api/v1/autocorrect/specialized', {
+        const res = await authorizedFetch('/api/v1/autocorrect/specialized', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ brokenProof: currentCode }),
@@ -369,7 +370,7 @@ export function AutoCorrectionPanel({
     const t0 = performance.now();
 
     try {
-      const res = await fetch('/api/v1/autocorrect/cloud', {
+      const res = await authorizedFetch('/api/v1/autocorrect/cloud', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brokenProof: currentCode, consentGiven: cloudConsentGiven }),
@@ -418,7 +419,7 @@ export function AutoCorrectionPanel({
     const t0 = performance.now();
 
     try {
-      const res = await fetch('/api/v1/autocorrect/certified-cas', {
+      const res = await authorizedFetch('/api/v1/autocorrect/certified-cas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ goal: currentCode }),

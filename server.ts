@@ -1,200 +1,56 @@
 /**
- * Full-Stack Express Server (Phase 11.3)
+ * Full-Stack Express Server (Phase 15)
  *
  * Runs Express on port 3000 mounting Vite dev middlewares in development
  * or serving static production assets in production.
  */
 
-import express from 'express';
 import http from 'node:http';
-import path from 'path';
+import path from 'node:path';
+import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import { proofReuseRouter } from './server/src/routes/proof-reuse';
-import { proposalLoopRouter } from './server/src/routes/proposal-loop';
-import { translationRouter } from './server/src/routes/translation';
-import { contractsRouter } from './server/src/routes/contracts';
-import { notebookRouter } from './server/src/routes/notebook';
-import { configRouter } from './server/src/routes/config';
-import { searchRouter } from './server/src/routes/search';
-import { diffRouter } from './server/src/routes/diff';
-import { createMcpServerRouter } from './server/src/routes/mcp-server-router';
-import { createLeanRouter } from './server/src/routes/lean';
-import { createProjectsRouter } from './server/src/routes/projects';
-import { createTelemetryRouter } from './server/src/routes/telemetry';
-import { createProofAutomationRouter } from './server/src/routes/proof-automation';
-import { KiminaClientProxy } from './server/src/services/kimina-client-proxy';
+import { createApp } from './server/src/app';
 import { resolveKiminaConfig } from './server/src/config/kimina-config';
-import { LeanProjectRunner } from './server/src/services/lean-project-runner';
 import { resolveLeanRunnerConfig } from './server/src/config/lean-runner-config';
-import { ProofCoordinator } from './server/src/services/proof/proof-coordinator';
-import { AxleAdvancedService } from './server/src/services/proof/axle-advanced';
-import { BlueprintSyncService } from './server/src/services/proof/blueprint-sync';
-import { WorkspaceStore } from './server/src/services/collaboration/workspace-store';
-import { authMiddleware } from './src/middleware/auth';
-import { standardRateLimiter, mcpRateLimiter } from './src/middleware/rate-limit';
-import { automationMetrics } from './src/services/proof/metrics/automation-metrics';
-import { backendOtelEngine } from './src/services/telemetry/otel-backend';
-import { runWithTraceContext } from './src/services/logging/logger';
+import { resolveServerProvenanceKeyRing } from './server/src/services/verification/server-provenance';
+import { ENGINE_MODES } from './src/types/verification-ui';
 import { hocuspocusServer } from './src/services/collaboration/hocuspocus-server';
-import { featureFlagRegistry } from './src/services/flags/feature-flag-registry';
 
 const PORT = 3000;
 
-async function startServer(): Promise<void> {
-  const app = express();
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  if (process.env.ENABLE_YJS_COLLABORATION === 'true') {
-    featureFlagRegistry.set('ENABLE_YJS_COLLABORATION', true);
+export function assertProductionSecurityPosture(env: Record<string, string | undefined> = process.env): void {
+  if (env['NODE_ENV'] !== 'production') {
+    return;
   }
 
-  app.use(express.json());
+  // 1. Validate canonical JCS HMAC provenance secret and single-instance lock
+  resolveServerProvenanceKeyRing(env);
 
-  // CORS Origin Middleware
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Vary', 'Origin');
-    } else {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-    }
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, X-Polyglot-Test-Secret, Mcp-Method, Mcp-Name, X-Correlation-ID, traceparent, tracestate'
+  // 2. Forbid CI auth bypass in production
+  if (env['ALLOW_CI_BYPASS'] === 'true') {
+    throw new Error('CRITICAL SECURITY VIOLATION: ALLOW_CI_BYPASS=true is strictly forbidden in production.');
+  }
+
+  // 3. Enforce real-mode & bearer tokens for external kernel runners
+  const kiminaCfg = resolveKiminaConfig(env);
+  if (kiminaCfg.mode !== ENGINE_MODES.REAL || !kiminaCfg.authToken) {
+    throw new Error(
+      'CRITICAL SECURITY VIOLATION: Production requires KIMINA_MODE=real with non-empty KIMINA_AUTH_TOKEN.',
     );
-    if (req.method === 'OPTIONS') return res.sendStatus(204);
-    next();
-  });
+  }
 
-  // Conditional OpenTelemetry Trace Correlation Middleware (Phase 15 Wave 1)
-  app.use((req, res, next) => {
-    if (!backendOtelEngine.isEnabled()) {
-      return next();
-    }
-    const startTime = Date.now();
-    const rawTraceparent = typeof req.headers.traceparent === 'string' ? req.headers.traceparent : '';
-    const rawTracestate = typeof req.headers.tracestate === 'string' ? req.headers.tracestate : undefined;
-    const parentCtx = rawTraceparent ? backendOtelEngine.parseTraceparent(rawTraceparent) : null;
-    const serverSpanCtx = backendOtelEngine.createChildSpanContext(parentCtx, rawTracestate);
+  const runnerCfg = resolveLeanRunnerConfig(env);
+  if (runnerCfg.mode !== ENGINE_MODES.REAL || !runnerCfg.authToken) {
+    throw new Error(
+      'CRITICAL SECURITY VIOLATION: Production requires LEAN_RUNNER_MODE=real with non-empty LEAN_RUNNER_AUTH_TOKEN.',
+    );
+  }
+}
 
-    res.setHeader('X-Trace-ID', serverSpanCtx.traceId);
-    res.on('finish', () => {
-      const endTime = Date.now();
-      backendOtelEngine.recordSpan({
-        spanId: serverSpanCtx.spanId,
-        traceId: serverSpanCtx.traceId,
-        ...(serverSpanCtx.parentSpanId ? { parentSpanId: serverSpanCtx.parentSpanId } : {}),
-        name: `http_${req.method}_${req.path}`,
-        startTime,
-        endTime,
-        durationMs: endTime - startTime,
-        attributes: {
-          'http.method': req.method,
-          'http.status_code': res.statusCode,
-        },
-        status: { code: res.statusCode >= 500 ? 'ERROR' : 'OK' },
-        events: [],
-      });
-    });
-
-    runWithTraceContext(serverSpanCtx, () => next());
-  });
-
-  const kiminaConfig = resolveKiminaConfig();
-  const kiminaProxy = new KiminaClientProxy(kiminaConfig);
-  const leanRunnerConfig = resolveLeanRunnerConfig();
-  const leanRunner = new LeanProjectRunner(leanRunnerConfig);
-  const proofCoordinator = new ProofCoordinator();
-  const axleService = new AxleAdvancedService();
-  const blueprintSync = new BlueprintSyncService();
-  const workspaceStore = new WorkspaceStore();
-
-  // Health, liveness, and readiness endpoints (Public, Unauthenticated)
-  app.get('/healthz', (_req, res) => {
-    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
-  app.get('/readyz', async (_req, res) => {
-    const [kiminaReady, runnerReady] = await Promise.all([
-      kiminaConfig.mode === 'real' ? kiminaProxy.checkReady() : Promise.resolve(false),
-      leanRunnerConfig.mode === 'real' ? leanRunner.checkReady() : Promise.resolve(false),
-    ]);
-
-    const realKiminaRequired = kiminaConfig.mode === 'real';
-    const realRunnerRequired = leanRunnerConfig.mode === 'real';
-    const isReady =
-      (!realKiminaRequired || (Boolean(kiminaConfig.baseUrl) && kiminaReady)) &&
-      (!realRunnerRequired || (Boolean(leanRunnerConfig.runnerUrl) && runnerReady));
-
-    if (isReady) {
-      res.status(200).json({
-        status: 'ready',
-        timestamp: new Date().toISOString(),
-        kimina: { mode: kiminaConfig.mode, reachable: kiminaReady },
-        runner: { mode: leanRunnerConfig.mode, reachable: runnerReady },
-      });
-    } else {
-      res.status(503).json({
-        status: 'not_ready',
-        error: 'Kimina or Lake runner service unconfigured or unreachable in real mode',
-        kimina: { mode: kiminaConfig.mode, reachable: kiminaReady },
-        runner: { mode: leanRunnerConfig.mode, reachable: runnerReady },
-      });
-    }
-  });
-
-  app.get('/api/health', (_req, res) => {
-    res.json({
-      status: 'healthy',
-      phase: '14.0',
-      compiler: 'annotation',
-      virtualization: 'react-window-v2',
-      wcag: '2.2-AA',
-      proofReuse: true,
-      proposalLoop: true,
-      translationFidelity: true,
-      resultEnvelope: true,
-      contractParity: true,
-      nativeNotebook: true,
-      configManager: true,
-      crossArtifactSearch: true,
-      structuralDiff: true,
-      tokenVault: true,
-      securityObservability: true,
-      kiminaMounted: true,
-      projectsMounted: true,
-      telemetryMounted: true,
-      proofAutomationMounted: true,
-    });
-  });
-
-  // MCP 2026-07-28 Endpoint (Mounted outside Bearer auth with strict 30 req/min rate limit)
-  const mcpRouter = createMcpServerRouter();
-  app.use('/mcp', mcpRateLimiter, mcpRouter);
-  app.use('/api/v1/mcp', mcpRateLimiter, mcpRouter);
-
-  // Protected Routes under Auth & Rate Limiting Middleware
-  app.use('/api/v1', standardRateLimiter, authMiddleware);
-
-  // Modular Routers
-  app.use('/api/v1/lean', createLeanRouter(kiminaProxy, leanRunner));
-  app.use('/api/v1/projects', createProjectsRouter(leanRunner));
-
-  app.use('/api/v1/proof/reuse', proofReuseRouter);
-  app.use('/api/v1/proof/proposal-loop', proposalLoopRouter);
-  app.use('/api/v1/translation', translationRouter);
-  app.use('/api/v1/contracts', contractsRouter);
-  app.use('/api/v1/notebook', notebookRouter);
-  app.use('/api/v1/config', configRouter);
-  app.use('/api/v1/search', searchRouter);
-  app.use('/api/v1/diff', diffRouter);
-  app.get('/api/v1/proof/metrics', (_req, res) => {
-    res.json(automationMetrics.getMetrics());
-  });
-  app.use('/api/v1/proof', createProofAutomationRouter(proofCoordinator, axleService, blueprintSync, workspaceStore));
-  app.use('/api/v1/telemetry', createTelemetryRouter());
+async function startServer(): Promise<void> {
+  assertProductionSecurityPosture(process.env);
+  const app = createApp();
+  const isProduction = process.env.NODE_ENV === 'production';
 
   if (!isProduction) {
     const vite = await createViteServer({

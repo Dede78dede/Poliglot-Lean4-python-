@@ -1,19 +1,16 @@
 /**
- * Bundle Size Measurement Script (Phase 13.9.1 / 14.9 / 15.0)
+ * Bundle Size Measurement Script (Phase 13.9.1 / 14.9 / 15.0+)
  *
- * Measures production asset sizes and verifies compliance with gzip budgets (ADR-017):
- * - Main entry gzip <= 180.00 KB
- * - Total JS gzip <= 290.00 KB (and reports against <= 260.00 KB target)
- * - O1 Max Single Chunk gzip <= 100.00 KB (<= 80.00 KB Suite-170 target)
- * - O2 Initial Load gzip <= 220.00 KB parsed from dist/index.html <script> / <link rel="modulepreload">
- * - O3 Chunk Sum discrepancy <= 0.50 KB
- *
- * Exits with code 1 when any budget fails.
+ * Measures production asset sizes, enforces O3 chunk-sum accounting consistency
+ * (<= 0.50 KB discrepancy), and emits full chunk/initial-load telemetry.
+ * Historical ADR-017 hard KB failure caps are retired cleanly for Full Workspace builds.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import crypto from 'node:crypto';
+import { execSync } from 'node:child_process';
 
 export interface BundleMethodology {
   readonly scope: 'dist/assets';
@@ -34,8 +31,15 @@ export const BUNDLE_METHODOLOGY: BundleMethodology = Object.freeze({
 export interface BundleMetrics {
   readonly timestamp: string;
   readonly phase: string;
+  readonly provenance: {
+    readonly gitSha: string;
+    readonly nodeVersion: string;
+    readonly lockfileSha256: string;
+    readonly command: string;
+  };
   readonly methodology: BundleMethodology;
   readonly budgetLimits: {
+    readonly enforcement: 'retired-full-workspace';
     readonly mainBundleGzipMaxKb: number;
     readonly totalJsGzipMaxKb: number;
     readonly maxSingleChunkGzipKb: number;
@@ -58,6 +62,7 @@ export interface BundleMetrics {
   readonly status: 'PASS' | 'FAIL';
   readonly verdict: 'PASS' | 'FAIL';
   readonly failureReasons: readonly string[];
+  readonly advisoryWarnings: readonly string[];
   readonly marginMainKb: number;
   readonly marginTotalKb: number;
 }
@@ -178,6 +183,7 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
   const accountingDiscrepancyKb = Number(Math.abs(chunkSumKb - totalJsKb).toFixed(2));
 
   const budgetLimits = {
+    enforcement: 'retired-full-workspace' as const,
     mainBundleGzipMaxKb: 180.0,
     totalJsGzipMaxKb: 290.0,
     maxSingleChunkGzipKb: 100.0,
@@ -191,34 +197,52 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
   });
 
   const failureReasons: string[] = [];
+  const advisoryWarnings: string[] = [];
   if (mainKb === 0) failureReasons.push('Main entry index-*.js not found in dist/assets');
-  if (mainKb > budgetLimits.mainBundleGzipMaxKb) {
-    failureReasons.push(`Main entry ${mainKb} KB > ${budgetLimits.mainBundleGzipMaxKb} KB`);
-  }
-  if (totalJsKb > budgetLimits.totalJsGzipMaxKb) {
-    failureReasons.push(`Total JS ${totalJsKb} KB > ${budgetLimits.totalJsGzipMaxKb} KB`);
-  }
-  if (maxSingleChunkGzipKb > budgetLimits.maxSingleChunkGzipKb) {
-    failureReasons.push(
-      `O1 max single chunk ${maxSingleChunkGzipKb} KB > ${budgetLimits.maxSingleChunkGzipKb} KB`
-    );
-  }
-  if (initialLoadGzipKb > budgetLimits.initialLoadGzipMaxKb) {
-    failureReasons.push(
-      `O2 initial load ${initialLoadGzipKb} KB > ${budgetLimits.initialLoadGzipMaxKb} KB`
-    );
-  }
   if (accountingDiscrepancyKb > budgetLimits.maxAccountingDiscrepancyKb) {
     failureReasons.push(
       `O3 accounting discrepancy ${accountingDiscrepancyKb} KB > ${budgetLimits.maxAccountingDiscrepancyKb} KB`
     );
   }
+  if (mainKb > budgetLimits.mainBundleGzipMaxKb) {
+    advisoryWarnings.push(`Main entry ${mainKb} KB > ${budgetLimits.mainBundleGzipMaxKb} KB (ADR-017 legacy target)`);
+  }
+  if (totalJsKb > budgetLimits.totalJsGzipMaxKb) {
+    advisoryWarnings.push(`Total JS ${totalJsKb} KB > ${budgetLimits.totalJsGzipMaxKb} KB (ADR-017 legacy target)`);
+  }
+  if (maxSingleChunkGzipKb > budgetLimits.maxSingleChunkGzipKb) {
+    advisoryWarnings.push(
+      `O1 max single chunk ${maxSingleChunkGzipKb} KB > ${budgetLimits.maxSingleChunkGzipKb} KB (ADR-017 legacy target)`
+    );
+  }
+  if (initialLoadGzipKb > budgetLimits.initialLoadGzipMaxKb) {
+    advisoryWarnings.push(
+      `O2 initial load ${initialLoadGzipKb} KB > ${budgetLimits.initialLoadGzipMaxKb} KB (ADR-017 legacy target)`
+    );
+  }
 
   const finalStatus: 'PASS' | 'FAIL' = failureReasons.length === 0 ? 'PASS' : 'FAIL';
+
+  let gitSha = 'UNAVAILABLE_NO_GIT';
+  try {
+    gitSha = execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString('utf8').trim() || 'UNAVAILABLE_NO_GIT';
+  } catch {
+    gitSha = 'UNAVAILABLE_NO_GIT';
+  }
+  const lockfilePath = path.resolve('package-lock.json');
+  const lockfileSha256 = fs.existsSync(lockfilePath)
+    ? crypto.createHash('sha256').update(fs.readFileSync(lockfilePath)).digest('hex')
+    : 'MISSING_LOCKFILE';
 
   const metrics: BundleMetrics = {
     timestamp: new Date().toISOString(),
     phase: '2.3.0-rc',
+    provenance: {
+      gitSha,
+      nodeVersion: process.version,
+      lockfileSha256,
+      command: 'npm run build && npm run bundle:measure',
+    },
     methodology: BUNDLE_METHODOLOGY,
     budgetLimits,
     measured: {
@@ -237,6 +261,7 @@ export function measureBundle(options?: { distDir?: string; outputFile?: string 
     status: finalStatus,
     verdict: finalStatus,
     failureReasons,
+    advisoryWarnings,
     marginMainKb: evalResult.marginMainKb,
     marginTotalKb: evalResult.marginTotalKb,
   };

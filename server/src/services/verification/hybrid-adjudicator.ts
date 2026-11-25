@@ -12,11 +12,13 @@
 
 import {
   isValidSha256Digest,
-  mintServerExecutionProvenance,
   normalizeSha256,
+  serverReplayStore,
   verifyServerExecutionProvenance,
+  type VerifyProvenanceOptions,
   type ServerExecutionProvenance,
 } from './server-provenance';
+import { EPISTEMIC_BADGES } from '../../../../src/types/verification-ui';
 
 export const CANONICAL_VERIFICATION_PROTOCOL = 'polyglot.verification.v1' as const;
 export const STANDARD_AXIOM_POLICY = 'polyglot.axioms.standard.v1' as const;
@@ -124,32 +126,6 @@ export type AdjudicationResultV1 = {
   readonly reason: string;
   readonly diagnostics: readonly unknown[];
 };
-
-const consumedProvenanceIds = new Set<string>();
-
-/**
- * Attaches server-owned HMAC provenance to an authentic engine execution evidence record.
- */
-export function attachServerProvenance(
-  evidence: Omit<EngineEvidence, 'provenance'> & { readonly engine: 'kimina' | 'lake' },
-): EngineEvidence {
-  const provenance = mintServerExecutionProvenance({
-    requestId: evidence.requestId,
-    engine: evidence.engine,
-    sourceDigest: evidence.sourceDigest,
-    contextDigest: evidence.contextDigest,
-    manifestDigest: evidence.manifestDigest,
-    toolchain: evidence.toolchain,
-    imageDigest: evidence.imageDigest,
-    outcome: evidence.outcome,
-    exitCode: evidence.exitCode,
-  });
-
-  return {
-    ...evidence,
-    provenance,
-  };
-}
 
 /**
  * Validates whether evidence from Kimina and Lake are epistemically comparable.
@@ -324,12 +300,13 @@ export function adjudicateHybridConsensus(
   req: VerificationRequestV1,
   kimina: EngineEvidence,
   lake: EngineEvidence,
+  provenanceOptions?: VerifyProvenanceOptions,
 ): HybridAdjudicationResult {
   // 1. Simulation Guard
   if (kimina.outcome === 'simulated' || lake.outcome === 'simulated') {
     return unconfirmedResult(req, kimina, lake, {
       comparable: false,
-      badge: '⚠ SIMULATED — NON-CERTIFYING',
+      badge: EPISTEMIC_BADGES.SIMULATED_NON_CERTIFYING,
       reason: 'Simulation detected in verification evidence. No formal kernel certification was performed.',
       axiomAuditStatus: 'not_run',
     });
@@ -340,7 +317,7 @@ export function adjudicateHybridConsensus(
     const unavail = kimina.outcome === 'unavailable' ? 'Kimina server' : 'Lake runner';
     return unconfirmedResult(req, kimina, lake, {
       comparable: false,
-      badge: 'UNVERIFIED',
+      badge: EPISTEMIC_BADGES.UNVERIFIED,
       reason: `Verification engine unavailable: ${unavail} did not respond.`,
       axiomAuditStatus: 'not_run',
     });
@@ -349,7 +326,7 @@ export function adjudicateHybridConsensus(
   if (kimina.outcome === 'inconclusive' || lake.outcome === 'inconclusive') {
     return unconfirmedResult(req, kimina, lake, {
       comparable: false,
-      badge: 'UNVERIFIED',
+      badge: EPISTEMIC_BADGES.UNVERIFIED,
       reason: 'Verification engine returned inconclusive evidence.',
       axiomAuditStatus: 'not_run',
     });
@@ -360,36 +337,39 @@ export function adjudicateHybridConsensus(
   if (!compEval.comparable) {
     return unconfirmedResult(req, kimina, lake, {
       comparable: false,
-      badge: 'UNVERIFIED',
+      badge: EPISTEMIC_BADGES.UNVERIFIED,
       reason: `Verdict not confirmed — Context not comparable: ${compEval.reasons.join('; ')}`,
       axiomAuditStatus: 'not_run',
     });
   }
 
-  // 4. Cryptographic Server-Owned Provenance & Anti-Replay Guard
-  const kProv = verifyServerExecutionProvenance(kimina, kimina.provenance);
-  const lProv = verifyServerExecutionProvenance(lake, lake.provenance);
+  // 4. Cryptographic Server-Owned Provenance & Atomic Anti-Replay Guard
+  const kProv = verifyServerExecutionProvenance(kimina, kimina.provenance, provenanceOptions);
+  const lProv = verifyServerExecutionProvenance(lake, lake.provenance, provenanceOptions);
   if (!kProv.valid || !lProv.valid) {
     return unconfirmedResult(req, kimina, lake, {
       comparable: false,
-      badge: 'UNVERIFIED',
+      badge: EPISTEMIC_BADGES.UNVERIFIED,
       reason: `Verdict not confirmed — Invalid server execution provenance: ${kProv.reason ?? lProv.reason}`,
       axiomAuditStatus: 'not_run',
     });
   }
 
-  const kProvId = kimina.provenance!.provenanceId;
-  const lProvId = lake.provenance!.provenanceId;
-  if (kProvId === lProvId || consumedProvenanceIds.has(kProvId) || consumedProvenanceIds.has(lProvId)) {
+  const isProd = process.env['NODE_ENV'] === 'production';
+  const replayCheckNow = isProd ? Date.now() : (provenanceOptions?.nowMs ?? Date.now());
+  const replayResult = serverReplayStore.tryConsumePair(
+    kimina.provenance!,
+    lake.provenance!,
+    replayCheckNow,
+  );
+  if (!replayResult.ok) {
     return unconfirmedResult(req, kimina, lake, {
       comparable: false,
-      badge: 'UNVERIFIED',
-      reason: 'Verdict not confirmed — Provenance replay detected.',
+      badge: EPISTEMIC_BADGES.UNVERIFIED,
+      reason: `Verdict not confirmed — ${replayResult.reason}`,
       axiomAuditStatus: 'not_run',
     });
   }
-  consumedProvenanceIds.add(kProvId);
-  consumedProvenanceIds.add(lProvId);
 
   // 5. Transitive Axiom Audit
   const kiminaAxioms = auditAxioms(kimina.axiomAudit);
@@ -402,7 +382,7 @@ export function adjudicateHybridConsensus(
     if (kimina.exitCode !== 0 || lake.exitCode !== 0) {
       return unconfirmedResult(req, kimina, lake, {
         comparable: true,
-        badge: 'UNVERIFIED',
+        badge: EPISTEMIC_BADGES.UNVERIFIED,
         reason: `Verdict not confirmed — Non-zero or missing exit code (Kimina=${kimina.exitCode}, Lake=${lake.exitCode}).`,
         axiomAuditStatus: axiomPassed ? 'passed' : 'failed',
       });
@@ -414,7 +394,7 @@ export function adjudicateHybridConsensus(
     if (hasDiagnosticError || hasDiagnosticSorry) {
       return unconfirmedResult(req, kimina, lake, {
         comparable: true,
-        badge: 'UNVERIFIED',
+        badge: EPISTEMIC_BADGES.UNVERIFIED,
         reason: 'Verdict not confirmed — Diagnostics contain errors or unproven sorry/admit markers.',
         axiomAuditStatus: 'failed',
       });
@@ -423,7 +403,7 @@ export function adjudicateHybridConsensus(
     if (!axiomPassed) {
       return unconfirmedResult(req, kimina, lake, {
         comparable: true,
-        badge: 'UNVERIFIED',
+        badge: EPISTEMIC_BADGES.UNVERIFIED,
         reason: `Verdict not confirmed — Axiom policy violation detected: disallowed axioms [${allViolations.join(', ')}]`,
         axiomAuditStatus: 'failed',
       });
@@ -449,7 +429,7 @@ export function adjudicateHybridConsensus(
       verdict: 'confirmed_invalid',
       verified: false,
       comparable: true,
-      badge: 'UNVERIFIED',
+      badge: EPISTEMIC_BADGES.UNVERIFIED,
       reason: 'Rejected — Both engines rejected the proof obligation.',
       axiomAuditStatus: axiomPassed ? 'passed' : 'failed',
       engines: { kimina, lake },
@@ -458,7 +438,7 @@ export function adjudicateHybridConsensus(
 
   return unconfirmedResult(req, kimina, lake, {
     comparable: true,
-    badge: 'UNVERIFIED',
+    badge: EPISTEMIC_BADGES.UNVERIFIED,
     reason: `Verdict not confirmed — Engines disagree: Kimina reported "${kimina.outcome}", Lake reported "${lake.outcome}".`,
     axiomAuditStatus: axiomPassed ? 'passed' : 'not_run',
   });

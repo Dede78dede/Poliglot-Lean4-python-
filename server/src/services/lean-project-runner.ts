@@ -10,13 +10,21 @@ import { parseLeanProjectSyntax } from './lean-parser-fallback';
 import { evaluateFormalVerification } from './verification-formula';
 import { assertPathContained } from './verification/server-provenance';
 import {
-  attachServerProvenance,
   CANONICAL_VERIFICATION_PROTOCOL,
   STANDARD_AXIOM_ALLOWLIST,
   type AxiomAuditReport,
   type EngineEvidence,
   type VerificationRequestV1,
 } from './verification/hybrid-adjudicator';
+import { ENGINE_MODES } from '../../../src/types/verification-ui';
+
+function assertRealRunnerModeInProduction(mode: LeanRunnerConfig['mode']): void {
+  if (process.env['NODE_ENV'] === 'production' && mode !== ENGINE_MODES.REAL) {
+    throw new Error(
+      `CRITICAL PRODUCTION GUARD: LeanProjectRunner mode "${mode}" is strictly forbidden in production.`,
+    );
+  }
+}
 
 const MAX_PROJECT_FILES = 500;
 const MAX_SINGLE_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -70,6 +78,7 @@ export class LeanProjectRunner {
   private readonly config: LeanRunnerConfig;
 
   constructor(config: LeanRunnerConfig) {
+    assertRealRunnerModeInProduction(config.mode);
     this.config = config;
   }
 
@@ -77,6 +86,7 @@ export class LeanProjectRunner {
     sessionId: string,
     files: readonly LeanProjectFile[],
   ): Promise<LeanBuildResultData> {
+    assertRealRunnerModeInProduction(this.config.mode);
     if (files.length > MAX_PROJECT_FILES) {
       throw new Error(`PROJECT_QUOTA_EXCEEDED: File count ${files.length} exceeds limit of ${MAX_PROJECT_FILES}.`);
     }
@@ -112,27 +122,36 @@ export class LeanProjectRunner {
       (f) => f.path === 'lean-toolchain' || f.path.endsWith('/lean-toolchain'),
     );
     let toolchainNotice: string | undefined;
+    let resolvedToolchain = DEFAULT_LEAN_TOOLCHAIN as string;
 
     if (toolchainFile) {
       const requested = toolchainFile.content.trim().replace(/^leanprover\/lean4:/, '');
       if (requested && !AVAILABLE_LEAN_TOOLCHAINS.includes(requested as any)) {
         throw new ToolchainNotInstalledError(requested, AVAILABLE_LEAN_TOOLCHAINS);
       }
+      if (requested) {
+        resolvedToolchain = requested;
+      }
     } else {
       toolchainNotice = `[Diagnostic Notice] No lean-toolchain file detected; defaulting to pre-installed ${DEFAULT_LEAN_TOOLCHAIN}.`;
     }
 
     let result: LeanBuildResultData;
-    switch (this.config.mode) {
-      case 'real':
-        result = await this.buildReal(sessionId, sessionDir, files);
+    const runnerMode = this.config.mode;
+    switch (runnerMode) {
+      case ENGINE_MODES.REAL:
+        result = await this.buildReal(sessionId, files, resolvedToolchain);
         break;
-      case 'simulator':
+      case ENGINE_MODES.SIMULATOR:
         result = this.buildWithParser(files);
         break;
-      case 'auto':
-        result = await this.buildAuto(sessionId, sessionDir, files);
+      case ENGINE_MODES.AUTO:
+        result = await this.buildAuto(sessionId, files, resolvedToolchain);
         break;
+      default: {
+        const exhaustive: never = runnerMode;
+        throw new Error(`Unsupported LeanProjectRunner mode: ${String(exhaustive)}`);
+      }
     }
 
     if (toolchainNotice) {
@@ -146,7 +165,7 @@ export class LeanProjectRunner {
   }
 
   async checkReady(): Promise<boolean> {
-    if (this.config.mode === 'simulator') return false;
+    if (this.config.mode === ENGINE_MODES.SIMULATOR) return false;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), Math.min(2000, this.config.timeoutMs));
     try {
@@ -155,7 +174,9 @@ export class LeanProjectRunner {
         headers['Authorization'] = `Bearer ${this.config.authToken}`;
       }
       const res = await fetch(`${this.config.runnerUrl}/readyz`, { headers, signal: controller.signal });
-      return res.ok;
+      if (!res.ok) return false;
+      const body = (await res.json()) as { status?: string; smokeBuildPassed?: boolean };
+      return body.status === 'ready' && body.smokeBuildPassed === true;
     } catch {
       return false;
     } finally {
@@ -163,7 +184,10 @@ export class LeanProjectRunner {
     }
   }
 
-  toEngineEvidence(req: VerificationRequestV1, result: LeanBuildResultData): EngineEvidence {
+  toEngineEvidence(
+    req: VerificationRequestV1,
+    result: LeanBuildResultData,
+  ): Omit<EngineEvidence, 'provenance'> {
     const output = `${result.stdout}\n${result.stderr}`;
     const hasSorry = /uses 'sorry'|sorryAx/i.test(output);
     const explicitAxioms = result.axioms;
@@ -243,7 +267,7 @@ export class LeanProjectRunner {
         ? 'inconclusive'
         : 'rejected';
 
-    return attachServerProvenance({
+    return {
       engine: 'lake',
       contractVersion: CANONICAL_VERIFICATION_PROTOCOL,
       outcome,
@@ -259,16 +283,16 @@ export class LeanProjectRunner {
       diagnostics,
       axiomAudit,
       error: passed ? null : result.stderr || 'Lake build did not pass formal verification and axiom audit.',
-    });
+    };
   }
 
   private async buildAuto(
     sessionId: string,
-    sessionDir: string,
     files: readonly LeanProjectFile[],
+    toolchain: string,
   ): Promise<LeanBuildResultData> {
     try {
-      return await this.buildReal(sessionId, sessionDir, files);
+      return await this.buildReal(sessionId, files, toolchain);
     } catch (err: unknown) {
       console.warn(
         `[LeanProjectRunner] Lake runner at "${this.config.runnerUrl}" unreachable. Falling back to syntax validator. Notice: Forbidden in production.`,
@@ -280,8 +304,8 @@ export class LeanProjectRunner {
 
   private async buildReal(
     sessionId: string,
-    sessionDir: string,
     files: readonly LeanProjectFile[],
+    toolchain: string,
   ): Promise<LeanBuildResultData> {
     const startTime = performance.now();
     const controller = new AbortController();
@@ -301,8 +325,8 @@ export class LeanProjectRunner {
         headers,
         body: JSON.stringify({
           sessionId,
-          projectPath: sessionDir,
           target: 'default',
+          toolchain,
         }),
         signal: controller.signal,
       });
